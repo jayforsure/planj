@@ -3,19 +3,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS aw_event (
-    bucket      TEXT    NOT NULL,
-    event_id    INTEGER NOT NULL,
-    kind        TEXT    NOT NULL,  -- window | afk | web
-    start_utc   TEXT    NOT NULL,
-    duration_s  REAL    NOT NULL,
-    app         TEXT,
-    title       TEXT,
-    url         TEXT,
-    afk         INTEGER,
-    PRIMARY KEY (bucket, event_id)
+CREATE TABLE IF NOT EXISTS activity_span (
+    start_utc TEXT    PRIMARY KEY,
+    end_utc   TEXT    NOT NULL,
+    app       TEXT    NOT NULL,
+    idle      INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS aw_event_start ON aw_event (start_utc);
 
 CREATE TABLE IF NOT EXISTS weather_hourly (
     hour_local     TEXT PRIMARY KEY,

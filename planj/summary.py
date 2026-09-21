@@ -1,5 +1,4 @@
 import sqlite3
-from bisect import bisect_right
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
@@ -24,41 +23,16 @@ class DaySummary:
     mood_note: str | None = None
 
 
-def _events(conn, kind, day_start, day_end):
-    # Look back a day so events that began before midnight but run into this day are included.
+def _active_spans(conn, day_start, day_end):
     rows = conn.execute(
-        "SELECT start_utc, duration_s, app, afk FROM aw_event "
-        "WHERE kind = ? AND start_utc >= ? AND start_utc < ?",
-        (kind, to_utc_iso(day_start - timedelta(days=1)), to_utc_iso(day_end)),
+        "SELECT start_utc, end_utc, app FROM activity_span "
+        "WHERE idle = 0 AND start_utc < ? AND end_utc > ? ORDER BY start_utc",
+        (to_utc_iso(day_end), to_utc_iso(day_start)),
     ).fetchall()
-    out = []
     for r in rows:
-        s = datetime.fromisoformat(r["start_utc"])
-        e = s + timedelta(seconds=r["duration_s"])
-        s, e = max(s, day_start), min(e, day_end)
-        if e > s:
-            out.append((s, e, r))
-    return out
-
-
-def _merge(intervals):
-    merged = []
-    for s, e in sorted(intervals):
-        if merged and s <= merged[-1][1]:
-            merged[-1][1] = max(merged[-1][1], e)
-        else:
-            merged.append([s, e])
-    return merged
-
-
-def _overlap_s(merged, ends, s, e) -> float:
-    total = 0.0
-    for i in range(bisect_right(ends, s), len(merged)):
-        ms, me = merged[i]
-        if ms >= e:
-            break
-        total += (min(e, me) - max(s, ms)).total_seconds()
-    return total
+        s = max(datetime.fromisoformat(r["start_utc"]), day_start)
+        e = min(datetime.fromisoformat(r["end_utc"]), day_end)
+        yield s, e, r["app"]
 
 
 def _calendar(conn, start, end, tz) -> list[tuple[str, str]]:
@@ -78,17 +52,14 @@ def summarize(conn: sqlite3.Connection, day: date, tz: ZoneInfo, top_n: int = 8)
     day_end = day_start + timedelta(days=1)
     out = DaySummary(day=day)
 
-    active = _merge((s, e) for s, e, r in _events(conn, "afk", day_start, day_end) if r["afk"] == 0)
-    if active:
-        out.active_s = sum((e - s).total_seconds() for s, e in active)
-        out.first_active = active[0][0].astimezone(tz)
-        out.last_active = active[-1][1].astimezone(tz)
-
-    ends = [e for _, e in active]
     per_app: dict[str, float] = defaultdict(float)
-    for s, e, r in _events(conn, "window", day_start, day_end):
-        per_app[r["app"] or "(unknown)"] += _overlap_s(active, ends, s, e)
-    out.top_apps = sorted(((a, t) for a, t in per_app.items() if t > 0), key=lambda x: -x[1])[:top_n]
+    for s, e, app in _active_spans(conn, day_start, day_end):
+        secs = (e - s).total_seconds()
+        out.active_s += secs
+        per_app[app] += secs
+        out.first_active = out.first_active or s.astimezone(tz)
+        out.last_active = e.astimezone(tz)
+    out.top_apps = sorted(per_app.items(), key=lambda x: -x[1])[:top_n]
 
     out.rainy_hours = [
         r["hour_local"][11:16]

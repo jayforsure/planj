@@ -1,52 +1,46 @@
+import json
 from datetime import date
 from zoneinfo import ZoneInfo
 
 from planj.db import connect
-from planj.sources.activitywatch import to_row
+from planj.sources import tracker
 from planj.summary import summarize
 
 KL = ZoneInfo("Asia/Kuala_Lumpur")
 
 
-def _insert(conn, bucket, kind, events):
-    conn.executemany(
-        "INSERT OR REPLACE INTO aw_event VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [to_row(bucket, kind, e) for e in events],
-    )
+def _spans(conn, *spans):
+    conn.executemany("INSERT INTO activity_span VALUES (?, ?, ?, ?)", spans)
 
 
-def test_to_row_parses_afk_and_window():
-    afk = to_row("aw-watcher-afk_pc", "afk", {"id": 1, "timestamp": "2026-09-21T01:00:00+00:00", "duration": 60, "data": {"status": "not-afk"}})
-    assert afk[3] == "2026-09-21T01:00:00.000000+00:00"
-    assert afk[8] == 0
-    win = to_row("aw-watcher-window_pc", "window", {"id": 2, "timestamp": "2026-09-21T01:00:00.5+00:00", "duration": 1.5, "data": {"app": "Code.exe", "title": "x"}})
-    assert win[5] == "Code.exe" and win[8] is None
+def test_read_spans_skips_old_files_and_partial_lines(tmp_path):
+    line = json.dumps({"start": "2026-09-21T01:00:00.000Z", "end": "2026-09-21T01:01:00.000Z", "app": "Code.exe", "idle": False})
+    (tmp_path / "2026-09-21.jsonl").write_text(line + '\n{"start": "2026-09-21T01:0', encoding="utf-8")
+    (tmp_path / "2026-09-01.jsonl").write_text(line + "\n", encoding="utf-8")
+    (tmp_path / "notes.jsonl").write_text("ignored\n", encoding="utf-8")
+    rows = tracker.read_spans(tmp_path, since=date(2026, 9, 20))
+    assert rows == [("2026-09-21T01:00:00.000000+00:00", "2026-09-21T01:01:00.000000+00:00", "Code.exe", 0)]
 
 
-def test_app_time_only_counts_non_afk_overlap():
+def test_active_time_and_top_apps_exclude_idle():
     conn = connect(":memory:")
-    # KL 09:00-10:00 active, 10:00-11:00 away
-    _insert(conn, "afk", "afk", [
-        {"id": 1, "timestamp": "2026-09-21T01:00:00+00:00", "duration": 3600, "data": {"status": "not-afk"}},
-        {"id": 2, "timestamp": "2026-09-21T02:00:00+00:00", "duration": 3600, "data": {"status": "afk"}},
-    ])
-    # Code open 09:30-10:30 → only 30 min is while active
-    _insert(conn, "win", "window", [
-        {"id": 1, "timestamp": "2026-09-21T01:00:00+00:00", "duration": 1800, "data": {"app": "chrome.exe"}},
-        {"id": 2, "timestamp": "2026-09-21T01:30:00+00:00", "duration": 3600, "data": {"app": "Code.exe"}},
-    ])
+    # KL 09:00-09:30 Code, 09:30-10:00 Edge, 10:00-11:00 idle
+    _spans(
+        conn,
+        ("2026-09-21T01:00:00.000000+00:00", "2026-09-21T01:30:00.000000+00:00", "Code.exe", 0),
+        ("2026-09-21T01:30:00.000000+00:00", "2026-09-21T02:00:00.000000+00:00", "msedge.exe", 0),
+        ("2026-09-21T02:00:00.000000+00:00", "2026-09-21T03:00:00.000000+00:00", "vlc.exe", 1),
+    )
     s = summarize(conn, date(2026, 9, 21), KL)
     assert s.active_s == 3600
-    assert dict(s.top_apps) == {"chrome.exe": 1800, "Code.exe": 1800}
-    assert s.first_active.hour == 9 and s.last_active.hour == 10
+    assert dict(s.top_apps) == {"Code.exe": 1800, "msedge.exe": 1800}
+    assert (s.first_active.hour, s.last_active.hour) == (9, 10)
 
 
-def test_event_crossing_midnight_is_clipped_to_day():
+def test_span_crossing_midnight_is_clipped_to_day():
     conn = connect(":memory:")
     # KL 23:30 on the 20th → 00:30 on the 21st
-    _insert(conn, "afk", "afk", [
-        {"id": 1, "timestamp": "2026-09-20T15:30:00+00:00", "duration": 3600, "data": {"status": "not-afk"}},
-    ])
+    _spans(conn, ("2026-09-20T15:30:00.000000+00:00", "2026-09-20T16:30:00.000000+00:00", "Code.exe", 0))
     assert summarize(conn, date(2026, 9, 21), KL).active_s == 1800
     assert summarize(conn, date(2026, 9, 20), KL).active_s == 1800
 

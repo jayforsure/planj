@@ -1,11 +1,11 @@
 import argparse
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from urllib.error import URLError
 
 from planj import config
 from planj.db import connect, now_utc_iso
-from planj.sources import activitywatch, calendar, weather
+from planj.sources import calendar, tracker, weather
 from planj.summary import summarize
 
 
@@ -20,12 +20,11 @@ def _today() -> date:
 
 def cmd_sync(args, conn) -> int:
     failed = False
-    try:
-        counts = activitywatch.sync(conn, config.AW_URL, args.days)
-        print("ActivityWatch: " + (", ".join(f"{n} {k}" for k, n in counts.items()) or "no buckets found"))
-    except URLError as exc:
-        failed = True
-        print(f"ActivityWatch unreachable at {config.AW_URL} ({exc.reason}). Is it running on Windows?", file=sys.stderr)
+    if config.TRACKER_DIR:
+        n = tracker.sync(conn, config.TRACKER_DIR, _today() - timedelta(days=args.days))
+        print(f"PC tracker: {n} spans")
+    else:
+        print("PC tracker: no data folder yet — is planj-tracker installed on Windows?")
     try:
         print(f"Weather: {weather.sync(conn, config.LAT, config.LON)} hourly rows")
     except URLError as exc:
