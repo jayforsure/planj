@@ -10,6 +10,13 @@ CREATE TABLE IF NOT EXISTS activity_span (
     idle      INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS phone_event (
+    t_utc TEXT NOT NULL,
+    event TEXT NOT NULL,  -- app_fg | app_bg | screen_on | screen_off | unlock | shutdown | startup
+    app   TEXT NOT NULL,  -- package name for app_* events, '' otherwise
+    PRIMARY KEY (t_utc, event, app)
+);
+
 CREATE TABLE IF NOT EXISTS weather_hourly (
     hour_local     TEXT PRIMARY KEY,
     temperature_c  REAL,

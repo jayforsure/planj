@@ -1,0 +1,9 @@
+{
+    // This machine has little memory; the Android project is built from the terminal,
+    // so stop the Java/Gradle extensions importing it (they start ~1.5 GB of JVMs).
+    "java.server.launchMode": "LightWeight",
+    "java.import.gradle.enabled": false,
+    "java.import.maven.enabled": false,
+    "java.autobuild.enabled": false,
+    "gradle.autoDetect": "off"
+}

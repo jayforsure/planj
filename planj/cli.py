@@ -5,7 +5,7 @@ from urllib.error import URLError
 
 from planj import config
 from planj.db import connect, now_utc_iso
-from planj.sources import calendar, tracker, weather
+from planj.sources import calendar, phone, tracker, weather
 from planj.summary import summarize
 
 
@@ -25,6 +25,7 @@ def cmd_sync(args, conn) -> int:
         print(f"PC tracker: {n} spans")
     else:
         print("PC tracker: no data folder yet — is planj-tracker installed on Windows?")
+    print(f"Phone: {phone.sync(conn, config.PHONE_DIRS)} new events")
     try:
         print(f"Weather: {weather.sync(conn, config.LAT, config.LON)} hourly rows")
     except URLError as exc:
@@ -62,6 +63,12 @@ def cmd_today(args, conn) -> int:
             print(f"  {app:<28} {_fmt_dur(secs)}")
     else:
         print("Active on PC: no data (run `planj sync`)")
+    if s.phone_screen_s or s.phone_unlocks:
+        print(f"Phone: {_fmt_dur(s.phone_screen_s)} screen on, {s.phone_unlocks} unlocks")
+        for app, secs in s.phone_top_apps:
+            print(f"  {app:<40} {_fmt_dur(secs)}")
+    else:
+        print("Phone: no data (export from the planj app, then `planj sync`)")
     print("Rain likely at: " + (", ".join(s.rainy_hours) if s.rainy_hours else "no hours ≥50%"))
     for label, events in (("Calendar today", s.events_today), ("Tomorrow", s.events_tomorrow)):
         print(f"{label}: " + ("; ".join(f"{t} {name}" for t, name in events) if events else "nothing"))
