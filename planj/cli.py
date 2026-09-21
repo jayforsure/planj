@@ -25,7 +25,8 @@ def cmd_sync(args, conn) -> int:
         print(f"PC tracker: {n} spans")
     else:
         print("PC tracker: no data folder yet — is planj-tracker installed on Windows?")
-    print(f"Phone: {phone.sync(conn, config.PHONE_DIRS)} new events")
+    events, moods = phone.sync(conn, config.PHONE_DIRS)
+    print(f"Phone: {events} new events, {moods} mood entries")
     try:
         print(f"Weather: {weather.sync(conn, config.LAT, config.LON)} hourly rows")
     except URLError as exc:
