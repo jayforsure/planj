@@ -44,9 +44,11 @@ final class MoodStore {
         }
         File dir = UsageCollector.eventsDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+        byte[] bytes = (line + "\n").getBytes(StandardCharsets.UTF_8);
         try (OutputStream out = new FileOutputStream(new File(dir, "mood.jsonl"), true)) {
-            out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write(bytes);
         }
+        RelaySync.append(ctx, bytes);
         prefs(ctx).edit().putString("day", day.toString()).putInt("mood", mood).apply();
     }
 

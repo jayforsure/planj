@@ -10,26 +10,37 @@ import android.util.Log;
 
 import java.util.concurrent.TimeUnit;
 
-/** Periodically saves new usage events so nothing ages out of Android's short retention window. */
+/** Hourly: saves new usage events before Android's short retention drops them, then syncs to the PC. */
 public class SnapshotJob extends JobService {
     private static final int JOB_ID = 1;
 
     static void schedule(Context ctx) {
         JobInfo job = new JobInfo.Builder(JOB_ID, new ComponentName(ctx, SnapshotJob.class))
-                .setPeriodic(TimeUnit.HOURS.toMillis(6))
+                .setPeriodic(TimeUnit.HOURS.toMillis(1))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setPersisted(true)
                 .build();
         ctx.getSystemService(JobScheduler.class).schedule(job);
     }
 
+    /** Collect then upload; used by the job and whenever the app is opened. */
+    static void collectAndSync(Context ctx) {
+        try {
+            UsageCollector.collect(ctx);
+        } catch (Exception e) {
+            Log.w("planj", "collect failed", e);
+        }
+        try {
+            RelaySync.upload(ctx);
+        } catch (Exception e) {
+            Log.w("planj", "sync failed", e);
+        }
+    }
+
     @Override
     public boolean onStartJob(JobParameters params) {
         new Thread(() -> {
-            try {
-                UsageCollector.collect(this);
-            } catch (Exception e) {
-                Log.w("planj", "snapshot failed", e);
-            }
+            collectAndSync(this);
             jobFinished(params, false);
         }).start();
         return true;

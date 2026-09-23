@@ -28,8 +28,16 @@ TRACKER_DIR = Path(os.environ["PLANJ_TRACKER_DIR"]) if "PLANJ_TRACKER_DIR" in os
 if TRACKER_DIR and not TRACKER_DIR.is_dir():
     TRACKER_DIR = None
 
-# Phone exports can be dropped in data/phone, or simply left in the Windows Downloads folder.
-PHONE_DIRS = [d for d in (DB_PATH.parent / "phone", WIN_HOME and WIN_HOME / "Downloads") if d and d.is_dir()]
+# Phone data arrives via the relay (the tracker's inbox), or as manual exports in data/phone or Downloads.
+PHONE_DIRS = [
+    d
+    for d in (
+        WIN_HOME and WIN_HOME / "AppData" / "Local" / "planj" / "phone",
+        DB_PATH.parent / "phone",
+        WIN_HOME and WIN_HOME / "Downloads",
+    )
+    if d and d.is_dir()
+]
 
 TZ = ZoneInfo(os.environ.get("PLANJ_TZ", "Asia/Kuala_Lumpur"))
 LAT = float(os.environ.get("PLANJ_LAT", "3.1390"))

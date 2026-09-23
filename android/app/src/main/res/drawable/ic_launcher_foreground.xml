@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three ascending marks: a forecast trending upward. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F4F4F6"
+        android:pathData="M34,66 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#F4F4F6"
+        android:pathData="M54,56 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#6C63FF"
+        android:pathData="M74,42 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:strokeColor="#F4F4F6"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.45"
+        android:strokeLineCap="round"
+        android:pathData="M34,66 L54,56 L74,42" />
+</vector>

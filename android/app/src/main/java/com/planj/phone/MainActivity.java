@@ -2,6 +2,7 @@ package com.planj.phone;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,6 +11,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
 import android.provider.Settings;
+import android.text.InputType;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -26,87 +32,75 @@ public class MainActivity extends Activity {
     private static final int REQ_EXPORT = 1;
     private static final String[] MOOD_LABELS = {"Awful", "Bad", "Okay", "Good", "Great"};
 
-    private TextView moodTitle;
-    private final Button[] moodButtons = new Button[5];
+    private final TextView[] moodButtons = new TextView[MOOD_LABELS.length];
+    private TextView moodTitle, moodState, trackingDetail, syncDetail;
+    private View dotTracking, dotSync;
     private EditText note;
-    private Button reminder;
-    private TextView status;
-    private Button grant;
-    private Button export;
+    private Button grant, pair, reminder, export;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        int pad = (int) (24 * getResources().getDisplayMetrics().density);
+        setContentView(R.layout.activity_main);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad * 2, pad, pad);
+        moodTitle = findViewById(R.id.mood_title);
+        moodState = findViewById(R.id.mood_state);
+        trackingDetail = findViewById(R.id.tracking_detail);
+        syncDetail = findViewById(R.id.sync_detail);
+        dotTracking = findViewById(R.id.dot_tracking);
+        dotSync = findViewById(R.id.dot_sync);
+        note = findViewById(R.id.note);
+        buildMoodRow(findViewById(R.id.mood_row));
 
-        TextView title = new TextView(this);
-        title.setText("planj");
-        title.setTextSize(28);
-        root.addView(title);
-
-        moodTitle = new TextView(this);
-        moodTitle.setTextSize(18);
-        moodTitle.setPadding(0, pad, 0, pad / 2);
-        root.addView(moodTitle);
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 0; i < 5; i++) {
-            int mood = i + 1;
-            Button b = new Button(this);
-            b.setText(mood + "\n" + MOOD_LABELS[i]);
-            b.setAllCaps(false);
-            b.setOnClickListener(v -> saveMood(mood));
-            row.addView(b, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-            moodButtons[i] = b;
-        }
-        root.addView(row);
-
-        note = new EditText(this);
-        note.setHint("Note (optional) — e.g. lost on a trade, didn't prep");
-        note.setTextSize(14);
-        root.addView(note);
-
-        reminder = new Button(this);
-        reminder.setText("Turn on 21:30 reminder");
-        reminder.setAllCaps(false);
+        grant = findViewById(R.id.btn_grant);
+        grant.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        pair = findViewById(R.id.btn_pair);
+        pair.setOnClickListener(v -> askPairingCode());
+        reminder = findViewById(R.id.btn_reminder);
         reminder.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())));
-        root.addView(reminder);
-
-        status = new TextView(this);
-        status.setTextSize(15);
-        status.setPadding(0, pad, 0, pad / 2);
-        root.addView(status);
-
-        grant = new Button(this);
-        grant.setText("Grant usage access");
-        grant.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
-        root.addView(grant);
-
-        export = new Button(this);
-        export.setText("Export data");
+        export = findViewById(R.id.btn_export);
         export.setOnClickListener(v -> startExport());
-        root.addView(export);
-
-        TextView privacy = new TextView(this);
-        privacy.setText("Only which app is open, screen on/off, unlocks and your mood ratings are saved — never "
-                + "notifications, messages, websites or what you type. Everything stays on this phone until you export it.");
-        privacy.setTextSize(13);
-        privacy.setPadding(0, pad, 0, 0);
-        root.addView(privacy);
-
-        setContentView(root);
 
         MoodReminder.ensureChannel(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 0);
         }
+    }
+
+    private void buildMoodRow(LinearLayout row) {
+        for (int i = 0; i < MOOD_LABELS.length; i++) {
+            int mood = i + 1;
+            LinearLayout column = new LinearLayout(this);
+            column.setOrientation(LinearLayout.VERTICAL);
+            column.setGravity(Gravity.CENTER_HORIZONTAL);
+
+            TextView circle = new TextView(this);
+            circle.setText(String.valueOf(mood));
+            circle.setGravity(Gravity.CENTER);
+            circle.setTextColor(getColorStateList(R.color.mood_text));
+            circle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+            circle.setBackgroundResource(R.drawable.mood_circle);
+            circle.setOnClickListener(v -> saveMood(mood, v));
+            int size = dp(52);
+            column.addView(circle, new LinearLayout.LayoutParams(size, size));
+
+            TextView label = new TextView(this);
+            label.setText(MOOD_LABELS[i]);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            label.setTextColor(getColor(R.color.muted));
+            label.setPadding(0, dp(8), 0, 0);
+            column.addView(label);
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            row.addView(column, lp);
+            moodButtons[i] = circle;
+        }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override
@@ -116,49 +110,105 @@ public class MainActivity extends Activity {
         refresh();
         if (hasUsageAccess()) {
             SnapshotJob.schedule(this);
-            new Thread(() -> {
-                try {
-                    UsageCollector.collect(this);
-                } catch (Exception e) {
-                    toast("Could not read usage: " + e.getMessage());
-                }
-                runOnUiThread(this::refresh);
-            }).start();
+            syncInBackground();
         }
     }
 
-    private void saveMood(int mood) {
+    private void syncInBackground() {
+        new Thread(() -> {
+            SnapshotJob.collectAndSync(this);
+            runOnUiThread(this::refresh);
+        }).start();
+    }
+
+    private void saveMood(int mood, View tapped) {
+        tapped.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+        tapped.animate().scaleX(0.88f).scaleY(0.88f).setDuration(90)
+                .withEndAction(() -> tapped.animate().scaleX(1f).scaleY(1f).setDuration(140).start()).start();
         LocalDate day = MoodStore.today();
         try {
             MoodStore.save(this, day, mood, note.getText().toString());
             note.setText("");
-            toast("Saved " + mood + "/5 for " + day.format(DateTimeFormatter.ofPattern("EEE d MMM")));
+            note.clearFocus();
+            syncInBackground();
         } catch (Exception e) {
             toast("Could not save: " + e.getMessage());
         }
         refresh();
     }
 
+    private void askPairingCode() {
+        EditText input = new EditText(this);
+        input.setHint("XXXXX-XXXXX-XXXXX-XXXXX");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        int pad = dp(24);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setPadding(pad, dp(8), pad, 0);
+        wrap.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Pair with PC")
+                .setMessage("On your PC, open planj-tracker again to see its 20-character code, then type it here.")
+                .setView(wrap)
+                .setPositiveButton("Pair", (d, w) -> {
+                    try {
+                        RelaySync.pair(this, input.getText().toString());
+                        toast("Paired — sending your history to the PC");
+                        syncInBackground();
+                    } catch (IllegalArgumentException e) {
+                        toast(e.getMessage());
+                    } catch (Exception e) {
+                        toast("Could not pair: " + e.getMessage());
+                    }
+                    refresh();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void refresh() {
         LocalDate day = MoodStore.today();
         int logged = MoodStore.moodFor(this, day);
-        moodTitle.setText("How was " + day.format(DateTimeFormatter.ofPattern("EEEE, d MMM")) + "?"
-                + (logged > 0 ? "  — " + logged + "/5 ✓" : ""));
-        for (int i = 0; i < 5; i++) {
-            moodButtons[i].setAlpha(logged == 0 || logged == i + 1 ? 1f : 0.45f);
+        moodTitle.setText("How was " + day.format(DateTimeFormatter.ofPattern("EEEE")) + "?");
+        moodState.setText(logged == 0
+                ? day.format(DateTimeFormatter.ofPattern("d MMMM")) + " · not logged yet"
+                : day.format(DateTimeFormatter.ofPattern("d MMMM")) + " · logged " + logged + "/5");
+        for (int i = 0; i < moodButtons.length; i++) {
+            moodButtons[i].setSelected(logged == i + 1);
+            moodButtons[i].setAlpha(logged == 0 || logged == i + 1 ? 1f : 0.55f);
         }
-        reminder.setVisibility(MoodReminder.enabled(this) ? Button.GONE : Button.VISIBLE);
 
         boolean granted = hasUsageAccess();
-        grant.setVisibility(granted ? Button.GONE : Button.VISIBLE);
-        export.setEnabled(granted);
-        if (!granted) {
-            status.setText("To track phone use, allow planj to read app usage.\nTap the button, find planj in the list and switch it on.");
-            return;
-        }
+        setDot(dotTracking, granted ? R.color.ok : R.color.warn);
         long last = UsageCollector.lastEventMs(this);
-        status.setText("Tracking is on · " + UsageCollector.savedCount(this) + " events saved"
-                + (last > 0 ? "\nLatest: " + DateFormat.getDateTimeInstance().format(new Date(last)) : ""));
+        trackingDetail.setText(!granted
+                ? "Usage access is off — tap below to allow it"
+                : UsageCollector.savedCount(this) + " events saved"
+                + (last > 0 ? " · latest " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(last)) : ""));
+        grant.setVisibility(granted ? View.GONE : View.VISIBLE);
+        export.setEnabled(granted);
+
+        String code = RelaySync.pairedCode(this);
+        String error = RelaySync.lastError(this);
+        long synced = RelaySync.lastSyncMs(this);
+        setDot(dotSync, code == null ? R.color.idle : error != null ? R.color.warn : R.color.ok);
+        pair.setText(code == null ? "Pair with PC" : "Paired · change code");
+        if (code == null) {
+            syncDetail.setText("Not paired — data stays on this phone");
+        } else if (error != null) {
+            syncDetail.setText("Retrying · " + error);
+        } else {
+            syncDetail.setText(synced == 0 ? "Paired · waiting for first sync"
+                    : "Last sync " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(synced)));
+        }
+
+        reminder.setVisibility(MoodReminder.enabled(this) ? View.GONE : View.VISIBLE);
+    }
+
+    private void setDot(View dot, int colorRes) {
+        dot.getBackground().mutate().setTint(getColor(colorRes));
     }
 
     private boolean hasUsageAccess() {

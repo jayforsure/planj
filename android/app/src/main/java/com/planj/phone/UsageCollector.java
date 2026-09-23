@@ -104,11 +104,14 @@ final class UsageCollector {
 
         File dir = eventsDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+        StringBuilder all = new StringBuilder();
         for (Map.Entry<String, StringBuilder> day : byDay.entrySet()) {
             try (OutputStream out = new FileOutputStream(new File(dir, day.getKey() + ".jsonl"), true)) {
                 out.write(day.getValue().toString().getBytes(StandardCharsets.UTF_8));
             }
+            all.append(day.getValue());
         }
+        RelaySync.append(ctx, all.toString().getBytes(StandardCharsets.UTF_8));
         p.edit().putLong(KEY_LAST, last).putLong(KEY_COUNT, p.getLong(KEY_COUNT, 0) + saved).apply();
         return saved;
     }

@@ -7,10 +7,15 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only used to upload end-to-end encrypted data to the planj relay for your paired PC. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="false"
-        android:label="planj">
+        android:icon="@mipmap/ic_launcher"
+        android:label="planj"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.Planj">
 
         <activity
             android:name=".MainActivity"
