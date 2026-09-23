@@ -121,7 +121,12 @@ final class UsageCollector {
 
     /** Today's screen-on milliseconds and unlock count, rebuilt from the saved events. */
     static long[] todayStats(Context ctx) {
-        File file = new File(eventsDir(ctx), LocalDate.now().toString() + ".jsonl");
+        return dayStats(ctx, LocalDate.now());
+    }
+
+    /** Screen-on milliseconds and unlocks for one day; a screen still on counts up to now. */
+    static long[] dayStats(Context ctx, LocalDate day) {
+        File file = new File(eventsDir(ctx), day.toString() + ".jsonl");
         long screenMs = 0, unlocks = 0, onSince = -1;
         try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             for (String line; (line = r.readLine()) != null; ) {
@@ -140,7 +145,7 @@ final class UsageCollector {
         } catch (IOException | JSONException | RuntimeException e) {
             return new long[]{0, 0}; // no file yet, or a half-written last line
         }
-        if (onSince >= 0) screenMs += System.currentTimeMillis() - onSince; // still on right now
+        if (onSince >= 0 && day.equals(LocalDate.now())) screenMs += System.currentTimeMillis() - onSince;
         return new long[]{screenMs, unlocks};
     }
 

@@ -21,6 +21,19 @@ final class MoodStore {
     // Logging "how was today" after midnight almost always means the day that just ended.
     private static final int DAY_ROLLOVER_HOUR = 4;
 
+    /** What is saved for a day: mood 1–5, the note, and when it was last saved. */
+    static final class Entry {
+        final int mood;
+        final String note;
+        final long savedAtMs;
+
+        Entry(int mood, String note, long savedAtMs) {
+            this.mood = mood;
+            this.note = note;
+            this.savedAtMs = savedAtMs;
+        }
+    }
+
     private MoodStore() {}
 
     static LocalDate moodDay(ZonedDateTime now) {
@@ -32,13 +45,14 @@ final class MoodStore {
     }
 
     static synchronized void save(Context ctx, LocalDate day, int mood, String note) throws IOException {
+        String trimmed = note == null ? "" : note.trim();
         JSONObject line = new JSONObject();
         try {
             line.put("t", Instant.now().toString());
             line.put("event", "mood");
             line.put("day", day.toString());
             line.put("mood", mood);
-            if (note != null && !note.trim().isEmpty()) line.put("note", note.trim());
+            if (!trimmed.isEmpty()) line.put("note", trimmed);
         } catch (JSONException e) {
             throw new IOException(e);
         }
@@ -49,13 +63,46 @@ final class MoodStore {
             out.write(bytes);
         }
         RelaySync.append(ctx, bytes);
-        prefs(ctx).edit().putString("day", day.toString()).putInt("mood", mood).apply();
+        prefs(ctx).edit()
+                .putString("day", day.toString())
+                .putInt("mood", mood)
+                .putString("note", trimmed)
+                .putLong("saved_ms", System.currentTimeMillis())
+                .apply();
     }
 
-    /** The mood logged for {@code day}, or 0 if none. */
-    static int moodFor(Context ctx, LocalDate day) {
+    /** The entry saved for {@code day}, or null if none. */
+    static Entry entryFor(Context ctx, LocalDate day) {
         SharedPreferences p = prefs(ctx);
-        return day.toString().equals(p.getString("day", null)) ? p.getInt("mood", 0) : 0;
+        if (!day.toString().equals(p.getString("day", null))) return null;
+        if (!p.contains("note")) {
+            // Saved by an older version that kept only the mood; the file has the rest.
+            Entry fromFile = lastInFile(ctx, day);
+            if (fromFile != null) return fromFile;
+        }
+        return new Entry(p.getInt("mood", 0), p.getString("note", ""), p.getLong("saved_ms", 0));
+    }
+
+    private static Entry lastInFile(Context ctx, LocalDate day) {
+        Entry found = null;
+        File file = new File(UsageCollector.eventsDir(ctx), "mood.jsonl");
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(file, StandardCharsets.UTF_8))) {
+            for (String line; (line = r.readLine()) != null; ) {
+                JSONObject o = new JSONObject(line);
+                if (day.toString().equals(o.optString("day"))) {
+                    found = new Entry(o.getInt("mood"), o.optString("note", ""),
+                            Instant.parse(o.getString("t")).toEpochMilli());
+                }
+            }
+        } catch (IOException | JSONException | RuntimeException e) {
+            return null;
+        }
+        return found;
+    }
+
+    static int moodFor(Context ctx, LocalDate day) {
+        Entry e = entryFor(ctx, day);
+        return e == null ? 0 : e.mood;
     }
 
     private static SharedPreferences prefs(Context ctx) {
