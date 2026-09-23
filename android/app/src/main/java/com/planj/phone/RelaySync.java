@@ -22,7 +22,7 @@ import java.util.Arrays;
  */
 final class RelaySync {
     // Where the relay is deployed; empty disables sync.
-    static final String RELAY_URL = "";
+    static final String RELAY_URL = "https://planj-relay-production.up.railway.app";
 
     private static final String PREFS = "planj_relay";
     private static final int CHUNK_BYTES = 2 << 20; // stays well under the relay's 4 MB limit
