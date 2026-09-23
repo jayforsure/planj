@@ -1,35 +1,45 @@
 package com.planj.phone;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
-/** Daily mood ratings, appended to the same folder the export reads. */
+/** Daily mood entries, kept as an append-only file; the last line for a day wins. */
 final class MoodStore {
-    private static final String PREFS = "planj_mood";
     // Logging "how was today" after midnight almost always means the day that just ended.
     private static final int DAY_ROLLOVER_HOUR = 4;
+    static final String[] TAGS = {
+            "study", "work", "exercise", "social", "family", "sick",
+            "tired", "trading", "anime", "gaming", "travel", "alone",
+    };
 
-    /** What is saved for a day: mood 1–5, the note, and when it was last saved. */
     static final class Entry {
         final int mood;
         final String note;
+        final List<String> tags;
         final long savedAtMs;
 
-        Entry(int mood, String note, long savedAtMs) {
+        Entry(int mood, String note, List<String> tags, long savedAtMs) {
             this.mood = mood;
             this.note = note;
+            this.tags = tags;
             this.savedAtMs = savedAtMs;
         }
     }
@@ -44,7 +54,7 @@ final class MoodStore {
         return moodDay(ZonedDateTime.now());
     }
 
-    static synchronized void save(Context ctx, LocalDate day, int mood, String note) throws IOException {
+    static synchronized void save(Context ctx, LocalDate day, int mood, String note, List<String> tags) throws IOException {
         String trimmed = note == null ? "" : note.trim();
         JSONObject line = new JSONObject();
         try {
@@ -53,6 +63,7 @@ final class MoodStore {
             line.put("day", day.toString());
             line.put("mood", mood);
             if (!trimmed.isEmpty()) line.put("note", trimmed);
+            if (tags != null && !tags.isEmpty()) line.put("tags", new JSONArray(tags));
         } catch (JSONException e) {
             throw new IOException(e);
         }
@@ -63,49 +74,38 @@ final class MoodStore {
             out.write(bytes);
         }
         RelaySync.append(ctx, bytes);
-        prefs(ctx).edit()
-                .putString("day", day.toString())
-                .putInt("mood", mood)
-                .putString("note", trimmed)
-                .putLong("saved_ms", System.currentTimeMillis())
-                .apply();
     }
 
-    /** The entry saved for {@code day}, or null if none. */
-    static Entry entryFor(Context ctx, LocalDate day) {
-        SharedPreferences p = prefs(ctx);
-        if (!day.toString().equals(p.getString("day", null))) return null;
-        if (!p.contains("note")) {
-            // Saved by an older version that kept only the mood; the file has the rest.
-            Entry fromFile = lastInFile(ctx, day);
-            if (fromFile != null) return fromFile;
-        }
-        return new Entry(p.getInt("mood", 0), p.getString("note", ""), p.getLong("saved_ms", 0));
-    }
-
-    private static Entry lastInFile(Context ctx, LocalDate day) {
-        Entry found = null;
+    /** Every day that has an entry, oldest first. */
+    static synchronized Map<LocalDate, Entry> all(Context ctx) {
+        Map<LocalDate, Entry> out = new TreeMap<>();
         File file = new File(UsageCollector.eventsDir(ctx), "mood.jsonl");
-        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(file, StandardCharsets.UTF_8))) {
+        try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             for (String line; (line = r.readLine()) != null; ) {
-                JSONObject o = new JSONObject(line);
-                if (day.toString().equals(o.optString("day"))) {
-                    found = new Entry(o.getInt("mood"), o.optString("note", ""),
-                            Instant.parse(o.getString("t")).toEpochMilli());
+                try {
+                    JSONObject o = new JSONObject(line);
+                    List<String> tags = new ArrayList<>();
+                    JSONArray arr = o.optJSONArray("tags");
+                    if (arr != null) for (int i = 0; i < arr.length(); i++) tags.add(arr.getString(i));
+                    out.put(LocalDate.parse(o.getString("day")), new Entry(
+                            o.getInt("mood"), o.optString("note", ""), tags,
+                            Instant.parse(o.getString("t")).toEpochMilli()));
+                } catch (JSONException | RuntimeException e) {
+                    // skip a bad line rather than lose the rest
                 }
             }
-        } catch (IOException | JSONException | RuntimeException e) {
-            return null;
+        } catch (IOException e) {
+            // no entries yet
         }
-        return found;
+        return out;
+    }
+
+    static Entry entryFor(Context ctx, LocalDate day) {
+        return all(ctx).get(day);
     }
 
     static int moodFor(Context ctx, LocalDate day) {
         Entry e = entryFor(ctx, day);
         return e == null ? 0 : e.mood;
-    }
-
-    private static SharedPreferences prefs(Context ctx) {
-        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 }

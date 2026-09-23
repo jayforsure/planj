@@ -91,7 +91,7 @@ def test_correlations_need_enough_days_then_rank_by_strength():
     for i in range(8):
         day = (DAY + timedelta(days=i)).isoformat()
         mood = 1 + i % 5
-        conn.execute("INSERT INTO mood_log VALUES (?, ?, NULL, 'x')", (day, mood))
+        conn.execute("INSERT INTO mood_log (day, mood, note, logged_at_utc) VALUES (?, ?, NULL, 'x')", (day, mood))
         conn.executemany("INSERT INTO day_feature VALUES (?, ?, ?)", [
             (day, "sleep_h", 4.0 + mood),
             (day, "pc_active_h", 10.0 - mood),

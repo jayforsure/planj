@@ -52,7 +52,7 @@ def cmd_sync(args, conn) -> int:
 def cmd_log(args, conn) -> int:
     day = args.day or _today()
     conn.execute(
-        "INSERT OR REPLACE INTO mood_log VALUES (?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO mood_log (day, mood, note, logged_at_utc) VALUES (?, ?, ?, ?)",
         (day.isoformat(), args.mood, args.note, now_utc_iso()),
     )
     conn.commit()

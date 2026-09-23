@@ -14,7 +14,8 @@ def read_export(path: Path) -> tuple[list[tuple], list[tuple]]:
         except json.JSONDecodeError:
             continue
         if r["event"] == "mood":
-            moods.append((r["day"], r["mood"], r.get("note"), to_utc_iso(r["t"])))
+            tags = ",".join(r["tags"]) if r.get("tags") else None
+            moods.append((r["day"], r["mood"], r.get("note"), to_utc_iso(r["t"]), tags))
         else:
             events.append((to_utc_iso(r["t"]), r["event"], r.get("app") or ""))
     return events, moods
@@ -33,8 +34,9 @@ def sync(conn: sqlite3.Connection, folders: list[Path]) -> tuple[int, int]:
             before = conn.total_changes
             # Whichever entry was logged last wins, whether it came from the phone or `planj log`.
             conn.executemany(
-                "INSERT INTO mood_log VALUES (?, ?, ?, ?) ON CONFLICT (day) DO UPDATE SET "
-                "mood = excluded.mood, note = excluded.note, logged_at_utc = excluded.logged_at_utc "
+                "INSERT INTO mood_log (day, mood, note, logged_at_utc, tags) VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT (day) DO UPDATE SET mood = excluded.mood, note = excluded.note, "
+                "logged_at_utc = excluded.logged_at_utc, tags = excluded.tags "
                 "WHERE excluded.logged_at_utc > mood_log.logged_at_utc",
                 moods,
             )

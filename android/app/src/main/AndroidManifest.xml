@@ -12,6 +12,14 @@
     <!-- Required by the system for a scheduled job that waits for a network connection. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Lets the app resolve the names and icons of the apps it reports on. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -27,6 +35,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".DayDetailActivity" android:exported="false" />
+        <activity android:name=".AppDetailActivity" android:exported="false" />
 
         <!-- Exported only so the system can deliver BOOT_COMPLETED to re-arm the reminder. -->
         <receiver

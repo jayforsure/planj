@@ -31,6 +31,11 @@ public class BarChartView extends View {
         invalidate();
     }
 
+    void setHighlightColor(int color) {
+        highlightColor = color;
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);

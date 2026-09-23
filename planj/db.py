@@ -47,9 +47,16 @@ CREATE TABLE IF NOT EXISTS mood_log (
     day           TEXT PRIMARY KEY,
     mood          INTEGER NOT NULL CHECK (mood BETWEEN 1 AND 5),
     note          TEXT,
-    logged_at_utc TEXT NOT NULL
+    logged_at_utc TEXT NOT NULL,
+    tags          TEXT  -- comma-separated, from the phone's quick tags
 );
 """
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(mood_log)")}
+    if "tags" not in columns:
+        conn.execute("ALTER TABLE mood_log ADD COLUMN tags TEXT")
 
 
 def connect(path: Path | str) -> sqlite3.Connection:
@@ -58,6 +65,7 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 

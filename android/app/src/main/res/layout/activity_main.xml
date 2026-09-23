@@ -1,385 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:scrollbars="none">
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
     <FrameLayout
+        android:id="@+id/tabs"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:clipChildren="false">
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
-        <!-- Soft accent glow bleeding off the top-right corner. -->
-        <View
-            android:layout_width="320dp"
-            android:layout_height="320dp"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="-140dp"
-            android:layout_marginEnd="-120dp"
-            android:background="@drawable/glow" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border" />
+
+    <LinearLayout
+        android:id="@+id/nav"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/bg"
+        android:orientation="horizontal">
 
         <LinearLayout
-            android:id="@+id/content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="44dp"
-            android:paddingBottom="28dp">
+            android:id="@+id/nav_today"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/btn_text"
+            android:gravity="center"
+            android:orientation="vertical">
 
-            <!-- Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="bottom"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="-0.03"
-                    android:text="planj"
-                    android:textColor="@color/text"
-                    android:textSize="34sp" />
-
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginBottom="11dp"
-                    android:background="@drawable/dot"
-                    android:backgroundTint="@color/accent" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/header_date"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:letterSpacing="0.12"
-                    android:textColor="@color/muted"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- Today -->
-            <LinearLayout
-                android:id="@+id/card_today"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:letterSpacing="0.12"
-                    android:text="TODAY"
-                    android:textColor="@color/muted"
-                    android:textSize="11sp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:baselineAligned="false"
-                    android:orientation="horizontal">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/stat_screen"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-light"
-                            android:letterSpacing="-0.03"
-                            android:textColor="@color/text"
-                            android:textSize="40sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:letterSpacing="0.08"
-                            android:text="ON SCREEN"
-                            android:textColor="@color/muted"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="44dp"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginEnd="20dp"
-                        android:background="@color/border" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/stat_unlocks"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-light"
-                            android:letterSpacing="-0.03"
-                            android:textColor="@color/text"
-                            android:textSize="40sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:letterSpacing="0.08"
-                            android:text="UNLOCKS"
-                            android:textColor="@color/muted"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:letterSpacing="0.12"
-                    android:text="LAST 7 DAYS"
-                    android:textColor="@color/muted"
-                    android:textSize="11sp" />
-
-                <com.planj.phone.BarChartView
-                    android:id="@+id/chart"
-                    android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginTop="6dp" />
-            </LinearLayout>
-
-            <!-- Mood -->
-            <LinearLayout
-                android:id="@+id/card_mood"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/mood_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/text"
-                    android:textSize="18sp" />
-
-                <TextView
-                    android:id="@+id/mood_state"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-
-                <LinearLayout
-                    android:id="@+id/mood_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:baselineAligned="false"
-                    android:orientation="horizontal" />
-
-                <EditText
-                    android:id="@+id/note"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:background="@drawable/field_bg"
-                    android:hint="What shaped today? (optional)"
-                    android:importantForAutofill="no"
-                    android:inputType="textCapSentences|textMultiLine"
-                    android:maxLines="4"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="14dp"
-                    android:textColor="@color/text"
-                    android:textColorHint="@color/muted"
-                    android:textCursorDrawable="@null"
-                    android:textSize="14sp" />
-
-                <Button
-                    android:id="@+id/btn_save_note"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:layout_gravity="end"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/btn_text"
-                    android:fontFamily="sans-serif-medium"
-                    android:paddingHorizontal="16dp"
-                    android:text="Save note"
-                    android:textAllCaps="false"
-                    android:textColor="@color/accent"
-                    android:textSize="14sp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- Status -->
-            <LinearLayout
-                android:id="@+id/card_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <View
-                        android:id="@+id/dot_tracking"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/dot" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="Tracking"
-                        android:textColor="@color/text"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/tracking_detail"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:gravity="end"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <View
-                        android:id="@+id/dot_sync"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/dot" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="PC sync"
-                        android:textColor="@color/text"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/sync_detail"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:gravity="end"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/btn_grant"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/btn_primary"
-                android:fontFamily="sans-serif-medium"
-                android:text="Allow usage access"
-                android:textAllCaps="false"
-                android:textColor="@color/on_accent"
-                android:textSize="15sp" />
-
-            <Button
-                android:id="@+id/btn_reminder"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/btn_secondary"
-                android:fontFamily="sans-serif-medium"
-                android:text="Turn on evening reminder"
-                android:textAllCaps="false"
-                android:textColor="@color/text"
-                android:textSize="15sp" />
-
-            <LinearLayout
-                android:id="@+id/row_actions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btn_pair"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="5dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_secondary"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Pair with PC"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text"
-                    android:textSize="14sp" />
-
-                <Button
-                    android:id="@+id/btn_export"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="5dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_secondary"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Export a copy"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text"
-                    android:textSize="14sp" />
-            </LinearLayout>
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_today"
+                android:tint="@color/nav_tint" />
 
             <TextView
-                android:id="@+id/privacy"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:lineSpacingExtra="4dp"
-                android:text="Saved on this phone: which app is open, screen on/off, unlocks and your mood. Never notifications, messages, websites or what you type. Sync is end-to-end encrypted with your pairing code."
-                android:textColor="@color/muted"
-                android:textSize="12sp" />
+                android:layout_marginTop="3dp"
+                android:text="Today"
+                android:textColor="@color/nav_tint"
+                android:textSize="11sp" />
         </LinearLayout>
-    </FrameLayout>
-</ScrollView>
+
+        <LinearLayout
+            android:id="@+id/nav_journal"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/btn_text"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_journal"
+                android:tint="@color/nav_tint" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Journal"
+                android:textColor="@color/nav_tint"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_settings"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/btn_text"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_settings"
+                android:tint="@color/nav_tint" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Settings"
+                android:textColor="@color/nav_tint"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

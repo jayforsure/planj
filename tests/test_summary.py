@@ -51,7 +51,7 @@ def test_rain_and_mood():
         "INSERT INTO weather_hourly VALUES (?, ?, ?, ?, ?, ?)",
         [("2026-09-21T15:00", 30, 2.0, 80, 61, "x"), ("2026-09-21T16:00", 29, 0, 20, 3, "x")],
     )
-    conn.execute("INSERT INTO mood_log VALUES ('2026-09-21', 2, 'skipped prep', 'x')")
+    conn.execute("INSERT INTO mood_log (day, mood, note, logged_at_utc) VALUES ('2026-09-21', 2, 'skipped prep', 'x')")
     s = summarize(conn, date(2026, 9, 21), KL)
     assert s.rainy_hours == ["15:00"]
     assert (s.mood, s.mood_note) == (2, "skipped prep")

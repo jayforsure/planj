@@ -25,6 +25,9 @@ PHONE_CATEGORIES = {
     "trading": ("tradingview", "binance", "metatrader", "moomoo", "webull"),
 }
 
+# Quick tags offered by the phone app; each becomes a 0/1 feature on logged days.
+TAGS = ("study", "work", "exercise", "social", "family", "sick", "tired", "trading", "anime", "gaming", "travel", "alone")
+
 LATE_NIGHT = (time(0, 0), time(5, 0))
 MIN_SLEEP_HOURS = 2.0
 RAIN_PROB_THRESHOLD = 50
@@ -140,9 +143,12 @@ def compute(conn: sqlite3.Connection, day: date, tz: ZoneInfo) -> dict[str, floa
     ).fetchone()[0]
 
     out["weekday"] = day.weekday()
-    mood = conn.execute("SELECT mood FROM mood_log WHERE day = ?", (day.isoformat(),)).fetchone()
+    mood = conn.execute("SELECT mood, tags FROM mood_log WHERE day = ?", (day.isoformat(),)).fetchone()
     if mood:
         out["mood"] = mood["mood"]
+        chosen = set((mood["tags"] or "").split(","))
+        for tag in TAGS:
+            out[f"tag_{tag}"] = 1.0 if tag in chosen else 0.0
     return out
 
 
