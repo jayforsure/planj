@@ -39,9 +39,12 @@ final class AppRows {
             View fill = row.findViewById(R.id.app_fill);
             fill.getBackground().mutate().setTint(AppPalette.color(pkg));
             float share = (float) e.getValue() / total;
-            track.post(() -> {
-                fill.getLayoutParams().width = Math.max(4, Math.round(track.getWidth() * share));
-                fill.requestLayout();
+            track.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                int width = Math.max(4, Math.round((r - l) * share));
+                if (fill.getLayoutParams().width != width) {
+                    fill.getLayoutParams().width = width;
+                    fill.requestLayout();
+                }
             });
 
             LocalDate day = usage.day;

@@ -20,7 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +32,7 @@ final class UsageCollector {
     private static final String PREFS = "planj";
     private static final String KEY_LAST = "last_event_ms";
     private static final String KEY_COUNT = "saved_count";
+    static final String PRIVATE_APP = "private";
 
     // UsageEvents.Event type values; named here because several constants are newer than minSdk.
     private static final int ACTIVITY_RESUMED = 1;
@@ -91,11 +94,16 @@ final class UsageCollector {
             String kind = kind(e.getEventType());
             if (kind == null) continue;
             long t = e.getTimeStamp();
+            // Private mode drops app identity entirely; private apps are recorded as "private"
+            // so the time still counts, without saying which app it was.
+            if (kind.startsWith("app_") && PrivateMode.covers(ctx, t)) continue;
+            String pkg = e.getPackageName();
+            if (kind.startsWith("app_") && PrivateMode.isPrivateApp(ctx, pkg)) pkg = PRIVATE_APP;
             JSONObject line = new JSONObject();
             try {
                 line.put("t", Instant.ofEpochMilli(t).toString());
                 line.put("event", kind);
-                if (kind.startsWith("app_")) line.put("app", e.getPackageName());
+                if (kind.startsWith("app_")) line.put("app", pkg);
             } catch (JSONException ex) {
                 throw new IOException(ex);
             }
@@ -116,7 +124,67 @@ final class UsageCollector {
         }
         RelaySync.append(ctx, all.toString().getBytes(StandardCharsets.UTF_8));
         p.edit().putLong(KEY_LAST, last).putLong(KEY_COUNT, p.getLong(KEY_COUNT, 0) + saved).apply();
+        saved += sampleState(ctx);
         return saved;
+    }
+
+    /**
+     * Records charging, next-alarm and Do Not Disturb changes. These sharpen the sleep
+     * estimate: a quiet night on charge with an alarm set is far more likely to be sleep
+     * than a quiet evening in front of the TV.
+     */
+    private static int sampleState(Context ctx) throws IOException {
+        SharedPreferences p = prefs(ctx);
+        List<String> lines = new ArrayList<>();
+        long now = System.currentTimeMillis();
+
+        android.content.Intent battery = ctx.registerReceiver(null,
+                new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+        boolean charging = battery != null && battery.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0;
+        if (!p.contains("charging") || p.getBoolean("charging", false) != charging) {
+            lines.add(stateLine(now, charging ? "charging_on" : "charging_off", null));
+        }
+
+        android.app.AlarmManager.AlarmClockInfo next = ctx.getSystemService(android.app.AlarmManager.class).getNextAlarmClock();
+        String alarm = next == null ? "" : Instant.ofEpochMilli(next.getTriggerTime()).toString();
+        if (!alarm.equals(p.getString("alarm", null))) {
+            lines.add(stateLine(now, "next_alarm", alarm));
+        }
+
+        int filter = ctx.getSystemService(android.app.NotificationManager.class).getCurrentInterruptionFilter();
+        boolean dnd = filter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+                && filter != android.app.NotificationManager.INTERRUPTION_FILTER_UNKNOWN;
+        if (!p.contains("dnd") || p.getBoolean("dnd", false) != dnd) {
+            lines.add(stateLine(now, dnd ? "dnd_on" : "dnd_off", null));
+        }
+
+        if (lines.isEmpty()) return 0;
+        File dir = eventsDir(ctx);
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+        String day = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate().toString();
+        StringBuilder all = new StringBuilder();
+        for (String l : lines) all.append(l).append('\n');
+        byte[] bytes = all.toString().getBytes(StandardCharsets.UTF_8);
+        try (OutputStream out = new FileOutputStream(new File(dir, day + ".jsonl"), true)) {
+            out.write(bytes);
+        }
+        RelaySync.append(ctx, bytes);
+        p.edit().putBoolean("charging", charging).putString("alarm", alarm).putBoolean("dnd", dnd).apply();
+        return lines.size();
+    }
+
+    private static String stateLine(long t, String event, String value) throws IOException {
+        try {
+            JSONObject o = new JSONObject().put("t", Instant.ofEpochMilli(t).toString()).put("event", event);
+            if (value != null && !value.isEmpty()) o.put("app", value); // reuses the app slot for the alarm time
+            return o.toString();
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    static boolean lastKnownCharging(Context ctx) {
+        return prefs(ctx).getBoolean("charging", false);
     }
 
     /** Today's screen-on milliseconds and unlock count, rebuilt from the saved events. */

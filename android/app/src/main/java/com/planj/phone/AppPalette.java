@@ -49,6 +49,7 @@ final class AppPalette {
     }
 
     static int color(String pkg) {
+        if (pkg.equals(UsageCollector.PRIVATE_APP)) return 0xFF5A544E;
         String low = pkg.toLowerCase();
         for (Map.Entry<String, Integer> e : BRAND.entrySet()) {
             if (low.contains(e.getKey())) return e.getValue();
@@ -57,6 +58,7 @@ final class AppPalette {
     }
 
     static String label(Context ctx, String pkg) {
+        if (pkg.equals(UsageCollector.PRIVATE_APP)) return "Private";
         try {
             PackageManager pm = ctx.getPackageManager();
             ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
@@ -69,6 +71,7 @@ final class AppPalette {
     }
 
     static Drawable icon(Context ctx, String pkg) {
+        if (pkg.equals(UsageCollector.PRIVATE_APP)) return ctx.getDrawable(R.drawable.ic_private);
         try {
             return ctx.getPackageManager().getApplicationIcon(pkg);
         } catch (PackageManager.NameNotFoundException e) {

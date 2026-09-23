@@ -23,37 +23,67 @@ final class TodayTab {
 
     private final MainActivity a;
     private final View root;
-    private final TextView headerDate, greeting, statScreen, statUnlocks, statSleep, moodTitle, moodState, moodNote;
+    private final ViewGroup content;
+    private final TextView headerDate, greeting, statScreen, statUnlocks, statQuiet, statQuietLabel,
+            weekRange, appsTitle, moodTitle, moodState, moodNote, privateBanner;
     private final StackedBarChartView chart;
     private final LinearLayout legend, topApps;
     private final MoodPicker picker;
+    private LocalDate shown = LocalDate.now();
 
     TodayTab(MainActivity a, ViewGroup container) {
         this.a = a;
         root = a.getLayoutInflater().inflate(R.layout.tab_today, container, false);
         container.addView(root);
+        content = root.findViewById(R.id.content);
         headerDate = root.findViewById(R.id.header_date);
         greeting = root.findViewById(R.id.greeting);
         statScreen = root.findViewById(R.id.stat_screen);
         statUnlocks = root.findViewById(R.id.stat_unlocks);
-        statSleep = root.findViewById(R.id.stat_sleep);
+        statQuiet = root.findViewById(R.id.stat_quiet);
+        statQuietLabel = root.findViewById(R.id.stat_quiet_label);
+        weekRange = root.findViewById(R.id.week_range);
+        appsTitle = root.findViewById(R.id.apps_title);
         chart = root.findViewById(R.id.chart);
         legend = root.findViewById(R.id.legend);
         topApps = root.findViewById(R.id.top_apps);
         moodTitle = root.findViewById(R.id.mood_title);
         moodState = root.findViewById(R.id.mood_state);
         moodNote = root.findViewById(R.id.mood_note);
+        privateBanner = root.findViewById(R.id.private_banner);
         picker = new MoodPicker(a, root.findViewById(R.id.mood_row), mood -> {
-            MoodStore.Entry e = MoodStore.entryFor(a, MoodStore.today());
-            a.saveEntry(MoodStore.today(), mood, e == null ? "" : e.note, e == null ? List.of() : e.tags);
+            MoodStore.Entry e = MoodStore.entryFor(a, moodDay());
+            a.saveEntry(moodDay(), mood, e == null ? "" : e.note, e == null ? List.of() : e.tags);
         });
-        root.findViewById(R.id.see_all).setOnClickListener(v -> openDay(LocalDate.now()));
-        moodNote.setOnClickListener(v -> a.showJournal(MoodStore.today()));
-        animateEntrance(root.findViewById(R.id.content));
+        root.findViewById(R.id.see_all).setOnClickListener(v -> openDay(shown));
+        moodNote.setOnClickListener(v -> a.showJournal(moodDay()));
+        privateBanner.setOnClickListener(v -> a.setPrivate(false));
+
+        ((GestureScrollView) root).setGestureListener(new GestureScrollView.Listener() {
+            @Override
+            public void onSwipe(int direction) {
+                LocalDate next = shown.minusDays(direction); // swipe left = older
+                if (next.isAfter(LocalDate.now())) return;
+                shown = next;
+                refresh(a.hasUsageAccess());
+                content.setTranslationX(-direction * 40 * a.getResources().getDisplayMetrics().density);
+                content.animate().translationX(0).setDuration(220).start();
+            }
+
+            @Override
+            public void onPinch(boolean in) {
+                a.setPrivate(in);
+            }
+        });
+        animateEntrance(content);
     }
 
     View view() {
         return root;
+    }
+
+    private LocalDate moodDay() {
+        return shown.equals(LocalDate.now()) ? MoodStore.today() : shown;
     }
 
     private void animateEntrance(ViewGroup content) {
@@ -72,24 +102,37 @@ final class TodayTab {
     }
 
     void refresh(boolean granted) {
-        LocalDate today = LocalDate.now();
-        headerDate.setText(today.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)).toUpperCase(Locale.ENGLISH));
+        boolean isToday = shown.equals(LocalDate.now());
+        headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)).toUpperCase(Locale.ENGLISH));
         int hour = LocalTime.now().getHour();
-        greeting.setText(hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+        greeting.setText(!isToday ? Fmt.shortDate(shown)
+                : hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+        appsTitle.setText(isToday ? "TODAY'S APPS" : "APPS THAT DAY");
+
+        boolean priv = PrivateMode.isOn(a);
+        privateBanner.setVisibility(priv ? View.VISIBLE : View.GONE);
+        for (int i = 1; i < content.getChildCount(); i++) content.getChildAt(i).setAlpha(priv ? 0.45f : 1f);
 
         if (granted) {
             List<DayUsage> week = new ArrayList<>();
             Map<String, Long> weekTotals = new HashMap<>();
             for (int i = CHART_DAYS - 1; i >= 0; i--) {
-                DayUsage u = DayUsage.load(a, today.minusDays(i));
+                DayUsage u = DayUsage.load(a, shown.minusDays(i));
                 week.add(u);
                 for (Map.Entry<String, Long> e : u.appMs.entrySet()) weekTotals.merge(e.getKey(), e.getValue(), Long::sum);
             }
-            DayUsage now = week.get(week.size() - 1);
-            statScreen.setText(Fmt.shortDuration(now.screenMs));
-            statUnlocks.setText(String.valueOf(now.unlocks));
-            long sleep = DayUsage.estimateSleepMs(a, today);
-            statSleep.setText(sleep > 0 ? Fmt.shortDuration(sleep) : "—");
+            DayUsage day = week.get(week.size() - 1);
+            statScreen.setText(Fmt.shortDuration(day.screenMs));
+            statUnlocks.setText(String.valueOf(day.unlocks));
+            DayUsage.Quiet q = DayUsage.quiet(a, shown);
+            statQuiet.setText(q == null ? "—" : Fmt.shortDuration(q.ms()));
+            statQuietLabel.setText(q != null && q.charging ? "DEVICE-FREE · CHARGED" : "DEVICE-FREE");
+
+            LocalDate first = shown.minusDays(CHART_DAYS - 1);
+            String range = first.getMonth() == shown.getMonth()
+                    ? first.getDayOfMonth() + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))
+                    : first.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)) + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
+            weekRange.setText(range.toUpperCase(Locale.ENGLISH));
 
             List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
             ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
@@ -97,16 +140,16 @@ final class TodayTab {
             for (int i = 0; i < Math.min(LEGEND_APPS, ranked.size()); i++) order.add(ranked.get(i).getKey());
             chart.setData(week, order, this::openDay);
             fillLegend(order);
-            AppRows.fill(a, topApps, now, 4);
+            AppRows.fill(a, topApps, day, 4);
         } else {
             statScreen.setText("—");
             statUnlocks.setText("—");
-            statSleep.setText("—");
+            statQuiet.setText("—");
         }
 
-        LocalDate day = MoodStore.today();
-        MoodStore.Entry entry = MoodStore.entryFor(a, day);
-        moodTitle.setText("How was " + day.format(DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)) + "?");
+        LocalDate md = moodDay();
+        MoodStore.Entry entry = MoodStore.entryFor(a, md);
+        moodTitle.setText("How was " + (isToday ? md.format(DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)) : "that day") + "?");
         if (entry == null) {
             moodState.setText("Not logged yet");
             moodNote.setText("Add a note in Journal ›");

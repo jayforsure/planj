@@ -17,6 +17,8 @@ final class SettingsTab {
     private final View dotTracking, dotSync;
     private final TextView trackingDetail, syncDetail;
     private final Button grant, reminder, pair, export;
+    private final TextView privateState;
+    private final Button privateToggle;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -35,6 +37,21 @@ final class SettingsTab {
         pair.setOnClickListener(v -> askPairingCode());
         export = root.findViewById(R.id.btn_export);
         export.setOnClickListener(v -> a.startExport());
+
+        privateState = root.findViewById(R.id.private_state);
+        privateToggle = root.findViewById(R.id.btn_private);
+        privateToggle.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
+        root.findViewById(R.id.btn_private_apps).setOnClickListener(v ->
+                a.startActivity(new Intent(a, PrivateAppsActivity.class)));
+        Button tile = root.findViewById(R.id.btn_tile);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            tile.setOnClickListener(v -> a.getSystemService(android.app.StatusBarManager.class).requestAddTileService(
+                    new android.content.ComponentName(a, PrivateTileService.class), "planj Private",
+                    android.graphics.drawable.Icon.createWithResource(a, R.drawable.ic_private),
+                    a.getMainExecutor(), result -> {}));
+        } else {
+            tile.setOnClickListener(v -> a.toast("Swipe down, tap the pencil, and drag “planj Private” into your tiles"));
+        }
     }
 
     View view() {
@@ -69,6 +86,10 @@ final class SettingsTab {
             syncDetail.setText(synced == 0 ? "Waiting for first sync" : "Waiting for PC");
         }
         reminder.setVisibility(MoodReminder.enabled(a) ? View.GONE : View.VISIBLE);
+
+        boolean priv = PrivateMode.isOn(a);
+        privateState.setText(priv ? "Private mode is on — since " + Fmt.clock(PrivateMode.since(a)) : "Recording normally");
+        privateToggle.setText(priv ? "Resume recording" : "Turn on private mode");
     }
 
     private void setDot(View dot, int colorRes) {

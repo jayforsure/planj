@@ -53,7 +53,7 @@ def test_day_features_cover_both_devices():
     assert f["weekday"] == 0  # 21 Sep 2026 is a Monday
 
 
-def test_sleep_is_the_longest_overnight_quiet_gap():
+def test_quiet_is_the_longest_overnight_gap():
     conn = connect(":memory:")
     prev = DAY - timedelta(days=1)
     add_pc(conn, kl(22, 0, prev), kl(23, 30, prev))  # last use before bed
@@ -61,12 +61,12 @@ def test_sleep_is_the_longest_overnight_quiet_gap():
     add_pc(conn, kl(9), kl(12))
 
     f = features.compute(conn, DAY, KL)
-    assert f["sleep_h"] == 8.0
-    assert f["sleep_start_hour"] == 23.5
-    assert f["sleep_end_hour"] == 7.5
+    assert f["quiet_h"] == 8.0
+    assert f["quiet_start_hour"] == 23.5
+    assert f["quiet_end_hour"] == 7.5
 
 
-def test_night_notifications_do_not_break_sleep():
+def test_night_notifications_do_not_break_quiet():
     conn = connect(":memory:")
     prev = DAY - timedelta(days=1)
     add_pc(conn, kl(22, 0, prev), kl(23, 30, prev))
@@ -75,14 +75,14 @@ def test_night_notifications_do_not_break_sleep():
     add_screen(conn, kl(7, 30), kl(8, 0))
 
     f = features.compute(conn, DAY, KL)
-    assert f["sleep_h"] == 8.0  # not split into 3.5h + 4.5h
+    assert f["quiet_h"] == 8.0  # not split into 3.5h + 4.5h
 
 
-def test_short_gaps_are_not_sleep():
+def test_short_gaps_are_not_quiet():
     conn = connect(":memory:")
     add_pc(conn, kl(9), kl(10))
     add_pc(conn, kl(11), kl(12))  # a one-hour break is not sleep
-    assert "sleep_h" not in features.compute(conn, DAY, KL)
+    assert "quiet_h" not in features.compute(conn, DAY, KL)
 
 
 def test_correlations_need_enough_days_then_rank_by_strength():
@@ -93,7 +93,7 @@ def test_correlations_need_enough_days_then_rank_by_strength():
         mood = 1 + i % 5
         conn.execute("INSERT INTO mood_log (day, mood, note, logged_at_utc) VALUES (?, ?, NULL, 'x')", (day, mood))
         conn.executemany("INSERT INTO day_feature VALUES (?, ?, ?)", [
-            (day, "sleep_h", 4.0 + mood),
+            (day, "quiet_h", 4.0 + mood),
             (day, "pc_active_h", 10.0 - mood),
             (day, "events_today", 0.0),
         ])
@@ -103,6 +103,6 @@ def test_correlations_need_enough_days_then_rank_by_strength():
 
     logged, ranked = features.correlations(conn, min_days=7)
     assert logged == 8
-    assert ranked[0] == ("sleep_h", 1.0, 8)
+    assert ranked[0] == ("quiet_h", 1.0, 8)
     assert ("pc_active_h", -1.0, 8) in ranked
     assert all(name != "events_today" for name, _, _ in ranked)  # constant, so dropped

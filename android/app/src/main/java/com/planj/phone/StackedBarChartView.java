@@ -53,7 +53,7 @@ public class StackedBarChartView extends View {
         super.onDraw(canvas);
         int n = days.size();
         if (n == 0) return;
-        float labelHeight = 20 * density, valueHeight = 18 * density;
+        float labelHeight = 34 * density, valueHeight = 18 * density;
         float chartTop = valueHeight, chartBottom = getHeight() - labelHeight;
         float slot = (float) getWidth() / n;
         float barWidth = Math.min(slot * 0.55f, 30 * density);
@@ -101,8 +101,14 @@ public class StackedBarChartView extends View {
             }
             text.setColor(last ? accent : labelColor);
             String label = d.day.format(DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)).substring(0, 1);
-            canvas.drawText(label, cx, getHeight() - 5 * density, text);
+            canvas.drawText(label, cx, getHeight() - 18 * density, text);
+            text.setColor(last ? accent : otherColorLabel());
+            canvas.drawText(String.valueOf(d.day.getDayOfMonth()), cx, getHeight() - 4 * density, text);
         }
+    }
+
+    private int otherColorLabel() {
+        return getContext().getColor(R.color.idle);
     }
 
     @Override

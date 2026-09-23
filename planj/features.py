@@ -29,7 +29,7 @@ PHONE_CATEGORIES = {
 TAGS = ("study", "work", "exercise", "social", "family", "sick", "tired", "trading", "anime", "gaming", "travel", "alone")
 
 LATE_NIGHT = (time(0, 0), time(5, 0))
-MIN_SLEEP_HOURS = 2.0
+MIN_QUIET_HOURS = 2.0
 RAIN_PROB_THRESHOLD = 50
 # A notification lighting the screen for a few seconds is not being awake, and such blips
 # otherwise chop a night's sleep into pieces.
@@ -69,8 +69,9 @@ def _by_category(spans, rules, tz) -> dict[str, float]:
     return {c: _hours(v) for c, v in per_category.items()}
 
 
-def estimate_sleep(conn, day: date, tz: ZoneInfo) -> dict[str, float]:
-    """The longest quiet gap across both devices overnight, used instead of a watch."""
+def estimate_quiet(conn, day: date, tz: ZoneInfo) -> dict[str, float]:
+    """The longest device-free gap overnight. Not sleep: a quiet evening in front of the TV
+    looks the same. Charging through the gap, and an alarm set for its end, make sleep likelier."""
     day_start = datetime.combine(day, time.min, tz)
     window_start, window_end = day_start - timedelta(hours=6), day_start + timedelta(hours=14)
     used = [(s, e) for s, e, _ in timeline.pc_active(conn, window_start, window_end)]
@@ -84,13 +85,34 @@ def estimate_sleep(conn, day: date, tz: ZoneInfo) -> dict[str, float]:
         if next_use - end_of_use > longest:
             gap_start, gap_end, longest = end_of_use, next_use, next_use - end_of_use
     hours = longest.total_seconds() / 3600
-    if hours < MIN_SLEEP_HOURS:
+    if hours < MIN_QUIET_HOURS:
         return {}
-    return {
-        "sleep_h": round(hours, 2),
-        "sleep_start_hour": _local_hour(gap_start, tz),
-        "sleep_end_hour": _local_hour(gap_end, tz),
+    out = {
+        "quiet_h": round(hours, 2),
+        "quiet_start_hour": _local_hour(gap_start, tz),
+        "quiet_end_hour": _local_hour(gap_end, tz),
     }
+    # Charging state at the middle of the gap is whatever the last change before it said.
+    mid = gap_start + longest / 2
+    last = conn.execute(
+        "SELECT event FROM phone_event WHERE event IN ('charging_on', 'charging_off') AND t_utc <= ? "
+        "ORDER BY t_utc DESC LIMIT 1",
+        (to_utc_iso(mid),),
+    ).fetchone()
+    if last:
+        out["quiet_charging"] = 1.0 if last["event"] == "charging_on" else 0.0
+    alarm = conn.execute(
+        "SELECT app FROM phone_event WHERE event = 'next_alarm' AND app != '' AND t_utc <= ? ORDER BY t_utc DESC LIMIT 1",
+        (to_utc_iso(gap_start),),
+    ).fetchone()
+    if alarm:
+        try:
+            when = datetime.fromisoformat(alarm["app"].replace("Z", "+00:00"))
+            if gap_start <= when <= gap_end + timedelta(hours=2):
+                out["alarm_hour"] = _local_hour(when, tz)
+        except ValueError:
+            pass
+    return out
 
 
 def compute(conn: sqlite3.Connection, day: date, tz: ZoneInfo) -> dict[str, float]:
@@ -122,7 +144,7 @@ def compute(conn: sqlite3.Connection, day: date, tz: ZoneInfo) -> dict[str, floa
         for category, hours in _by_category(apps, PHONE_CATEGORIES, tz).items():
             out[f"phone_{category}_h"] = hours
 
-    out.update(estimate_sleep(conn, day, tz))
+    out.update(estimate_quiet(conn, day, tz))
 
     weather = conn.execute(
         "SELECT COUNT(*) FILTER (WHERE precip_prob >= ?), MAX(temperature_c) "

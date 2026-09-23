@@ -113,8 +113,7 @@ final class JournalTab {
         for (int i = 0; i < chips.length; i++) chips[i].setSelected(e != null && e.tags.contains(MoodStore.TAGS[i]));
 
         DayUsage usage = DayUsage.load(a, selected);
-        long sleep = DayUsage.estimateSleepMs(a, selected);
         entryUsage.setText(usage.screenMs == 0 ? "" : Fmt.duration(usage.screenMs) + " on screen · " + usage.unlocks + " unlocks"
-                + (sleep > 0 ? " · slept ≈ " + Fmt.shortDuration(sleep) : "") + "  ›");
+                + Fmt.quietSuffix(DayUsage.quiet(a, selected)) + "  ›");
     }
 }

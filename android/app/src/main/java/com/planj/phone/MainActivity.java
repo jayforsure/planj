@@ -21,10 +21,10 @@ public class MainActivity extends Activity {
     private static final int REQ_EXPORT = 1;
 
     private TodayTab today;
+    private OddsTab odds;
     private JournalTab journal;
     private SettingsTab settings;
-    private View navToday, navJournal, navSettings;
-    private View current;
+    private View navToday, navOdds, navJournal, navSettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,13 +32,16 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         ViewGroup tabs = findViewById(R.id.tabs);
         today = new TodayTab(this, tabs);
+        odds = new OddsTab(this, tabs);
         journal = new JournalTab(this, tabs);
         settings = new SettingsTab(this, tabs);
 
         navToday = findViewById(R.id.nav_today);
+        navOdds = findViewById(R.id.nav_odds);
         navJournal = findViewById(R.id.nav_journal);
         navSettings = findViewById(R.id.nav_settings);
         navToday.setOnClickListener(v -> select(today.view(), navToday));
+        navOdds.setOnClickListener(v -> select(odds.view(), navOdds));
         navJournal.setOnClickListener(v -> select(journal.view(), navJournal));
         navSettings.setOnClickListener(v -> select(settings.view(), navSettings));
         select(today.view(), navToday);
@@ -51,11 +54,10 @@ public class MainActivity extends Activity {
     }
 
     private void select(View tab, View navItem) {
-        for (View v : new View[]{today.view(), journal.view(), settings.view()}) v.setVisibility(View.GONE);
-        for (View v : new View[]{navToday, navJournal, navSettings}) setNavSelected(v, false);
+        for (View v : new View[]{today.view(), odds.view(), journal.view(), settings.view()}) v.setVisibility(View.GONE);
+        for (View v : new View[]{navToday, navOdds, navJournal, navSettings}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
-        current = tab;
     }
 
     private static void setNavSelected(View item, boolean selected) {
@@ -66,6 +68,13 @@ public class MainActivity extends Activity {
     void showJournal(LocalDate day) {
         journal.show(day);
         select(journal.view(), navJournal);
+    }
+
+    void setPrivate(boolean on) {
+        if (on == PrivateMode.isOn(this)) return;
+        PrivateMode.set(this, on);
+        toast(on ? "Private — nothing is recorded until you pinch out or tap the banner" : "Recording again");
+        refresh();
     }
 
     @Override
@@ -82,6 +91,7 @@ public class MainActivity extends Activity {
     void refresh() {
         boolean granted = hasUsageAccess();
         today.refresh(granted);
+        odds.refresh();
         journal.refresh();
         settings.refresh(granted);
     }

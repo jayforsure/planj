@@ -96,6 +96,80 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Private -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.12"
+                android:text="PRIVACY"
+                android:textColor="@color/muted"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/private_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="serif"
+                android:textColor="@color/text"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="3dp"
+                android:text="Money, password, health and dating apps are recorded only as “Private” from the start. Private mode pauses everything else too — from the Quick Settings tile, or by pinching in on Today."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_private"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/btn_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:textAllCaps="false"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btn_private_apps"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/btn_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:text="Choose private apps"
+                android:textAllCaps="false"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btn_tile"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/btn_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:text="Add Private tile to Quick Settings"
+                android:textAllCaps="false"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/btn_grant"
             style="?android:attr/borderlessButtonStyle"

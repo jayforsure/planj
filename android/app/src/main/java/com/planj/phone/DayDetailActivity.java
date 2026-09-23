@@ -16,10 +16,9 @@ public class DayDetailActivity extends Activity {
         findViewById(R.id.back).setOnClickListener(v -> finish());
 
         DayUsage usage = DayUsage.load(this, day);
-        long sleep = DayUsage.estimateSleepMs(this, day);
         ((TextView) findViewById(R.id.title)).setText(day.equals(LocalDate.now()) ? "Today" : Fmt.longDate(day));
         ((TextView) findViewById(R.id.subtitle)).setText(Fmt.duration(usage.screenMs) + " on screen · "
-                + usage.unlocks + " unlocks" + (sleep > 0 ? " · slept ≈ " + Fmt.shortDuration(sleep) : ""));
+                + usage.unlocks + " unlocks" + Fmt.quietSuffix(DayUsage.quiet(this, day)));
         AppRows.fill(this, findViewById(R.id.list), usage, Integer.MAX_VALUE);
     }
 }

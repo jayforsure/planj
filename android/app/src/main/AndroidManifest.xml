@@ -38,6 +38,19 @@
 
         <activity android:name=".DayDetailActivity" android:exported="false" />
         <activity android:name=".AppDetailActivity" android:exported="false" />
+        <activity android:name=".PrivateAppsActivity" android:exported="false" />
+
+        <service
+            android:name=".PrivateTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_private"
+            android:label="planj Private"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
 
         <!-- Exported only so the system can deliver BOOT_COMPLETED to re-arm the reminder. -->
         <receiver

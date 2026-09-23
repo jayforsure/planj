@@ -89,7 +89,7 @@ def cmd_today(args, conn) -> int:
 
 
 FEATURE_COLUMNS = [
-    ("sleep_h", "sleep"),
+    ("quiet_h", "quiet"),
     ("pc_active_h", "pc"),
     ("phone_screen_h", "phone"),
     ("phone_unlocks", "unlocks"),

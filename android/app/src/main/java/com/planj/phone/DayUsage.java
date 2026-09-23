@@ -120,18 +120,36 @@ final class DayUsage {
         return total;
     }
 
+    /** The longest device-free stretch overnight, and whether the phone was charging through it. */
+    static final class Quiet {
+        final long startMs, endMs;
+        final boolean charging;
+
+        Quiet(long startMs, long endMs, boolean charging) {
+            this.startMs = startMs;
+            this.endMs = endMs;
+            this.charging = charging;
+        }
+
+        long ms() {
+            return endMs - startMs;
+        }
+    }
+
     /**
-     * Sleep as the longest quiet stretch across the night before {@code day}, ignoring brief
-     * screen wakes from notifications. Returns 0 when there is no gap worth calling sleep.
+     * Device-free time is not sleep: someone watching TV is just as silent. The longest
+     * overnight gap is reported as what it is, and "on charge" makes sleep more likely.
+     * Returns null when no gap is long enough to mean anything.
      */
-    static long estimateSleepMs(Context ctx, LocalDate day) {
+    static Quiet quiet(Context ctx, LocalDate day) {
         ZoneId zone = ZoneId.systemDefault();
         long windowStart = day.minusDays(1).atTime(18, 0).atZone(zone).toInstant().toEpochMilli();
         long windowEnd = day.atTime(14, 0).atZone(zone).toInstant().toEpochMilli();
         long brief = TimeUnit.MINUTES.toMillis(3);
 
         List<long[]> awake = new ArrayList<>();
-        for (LocalDate d : new LocalDate[]{day.minusDays(1), day}) {
+        List<long[]> chargeChanges = new ArrayList<>(); // {time, 1 on / 0 off}
+        for (LocalDate d : new LocalDate[]{day.minusDays(2), day.minusDays(1), day}) {
             File file = new File(UsageCollector.eventsDir(ctx), d + ".jsonl");
             long onSince = -1;
             try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
@@ -139,12 +157,26 @@ final class DayUsage {
                     JSONObject o = new JSONObject(line);
                     String event = o.optString("event");
                     long t = Instant.parse(o.getString("t")).toEpochMilli();
-                    if (event.equals("screen_on")) {
-                        if (onSince < 0) onSince = t;
-                    } else if ((event.equals("screen_off") || event.equals("shutdown")) && onSince >= 0) {
-                        long s = Math.max(onSince, windowStart), e = Math.min(t, windowEnd);
-                        if (e - s >= brief) awake.add(new long[]{s, e});
-                        onSince = -1;
+                    switch (event) {
+                        case "screen_on":
+                            if (onSince < 0) onSince = t;
+                            break;
+                        case "screen_off":
+                        case "shutdown":
+                            if (onSince >= 0) {
+                                long s = Math.max(onSince, windowStart), e = Math.min(t, windowEnd);
+                                if (e - s >= brief) awake.add(new long[]{s, e});
+                                onSince = -1;
+                            }
+                            break;
+                        case "charging_on":
+                            chargeChanges.add(new long[]{t, 1});
+                            break;
+                        case "charging_off":
+                            chargeChanges.add(new long[]{t, 0});
+                            break;
+                        default:
+                            break;
                     }
                 }
             } catch (IOException | JSONException | RuntimeException e) {
@@ -152,10 +184,22 @@ final class DayUsage {
             }
         }
         awake.sort((a, b) -> Long.compare(a[0], b[0]));
-        long longest = 0;
+        long bestStart = 0, bestEnd = 0;
         for (int i = 1; i < awake.size(); i++) {
-            longest = Math.max(longest, awake.get(i)[0] - awake.get(i - 1)[1]);
+            long s = awake.get(i - 1)[1], e = awake.get(i)[0];
+            if (e - s > bestEnd - bestStart) {
+                bestStart = s;
+                bestEnd = e;
+            }
         }
-        return longest >= TimeUnit.HOURS.toMillis(2) ? longest : 0;
+        if (bestEnd - bestStart < TimeUnit.HOURS.toMillis(2)) return null;
+
+        // Charging state at the middle of the gap: the last change before it decides.
+        long mid = (bestStart + bestEnd) / 2;
+        boolean charging = false;
+        for (long[] c : chargeChanges) {
+            if (c[0] <= mid) charging = c[1] == 1;
+        }
+        return new Quiet(bestStart, bestEnd, charging);
     }
 }

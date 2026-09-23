@@ -26,6 +26,12 @@ final class Fmt {
         return day.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH));
     }
 
+    /** " · device-free 7h 40m, on charge" or "" — never the word sleep, which we cannot measure. */
+    static String quietSuffix(DayUsage.Quiet q) {
+        if (q == null) return "";
+        return " · device-free " + shortDuration(q.ms()) + (q.charging ? ", on charge" : "");
+    }
+
     static String clock(long ms) {
         return java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(ms));
     }
