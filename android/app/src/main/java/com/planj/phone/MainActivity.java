@@ -6,6 +6,11 @@ import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,6 +36,7 @@ import java.util.Date;
 public class MainActivity extends Activity {
     private static final int REQ_EXPORT = 1;
     private static final String[] MOOD_LABELS = {"Awful", "Bad", "Okay", "Good", "Great"};
+    private static final int[] MOOD_COLORS = {0xFFF87171, 0xFFFB923C, 0xFFFBBF24, 0xFFA3E635, 0xFF4ADE80};
 
     private final TextView[] moodButtons = new TextView[MOOD_LABELS.length];
     private TextView moodTitle, moodState, trackingDetail, syncDetail;
@@ -79,9 +85,11 @@ public class MainActivity extends Activity {
             TextView circle = new TextView(this);
             circle.setText(String.valueOf(mood));
             circle.setGravity(Gravity.CENTER);
-            circle.setTextColor(getColorStateList(R.color.mood_text));
+            circle.setTextColor(new ColorStateList(
+                    new int[][]{{android.R.attr.state_selected}, {}},
+                    new int[]{getColor(R.color.bg), getColor(R.color.muted)}));
             circle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-            circle.setBackgroundResource(R.drawable.mood_circle);
+            circle.setBackground(moodCircle(MOOD_COLORS[i]));
             circle.setOnClickListener(v -> saveMood(mood, v));
             int size = dp(52);
             column.addView(circle, new LinearLayout.LayoutParams(size, size));
@@ -101,6 +109,27 @@ public class MainActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    /** Outlined while unselected, filled with the mood's own colour once chosen. */
+    private Drawable moodCircle(int selectedColor) {
+        GradientDrawable selected = new GradientDrawable();
+        selected.setShape(GradientDrawable.OVAL);
+        selected.setColor(selectedColor);
+
+        GradientDrawable idle = new GradientDrawable();
+        idle.setShape(GradientDrawable.OVAL);
+        idle.setColor(getColor(R.color.surface_alt));
+        idle.setStroke(dp(1), getColor(R.color.border));
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_selected}, selected);
+        states.addState(new int[]{}, idle);
+
+        GradientDrawable mask = new GradientDrawable();
+        mask.setShape(GradientDrawable.OVAL);
+        mask.setColor(0xFFFFFFFF);
+        return new RippleDrawable(ColorStateList.valueOf(getColor(R.color.ripple)), states, mask);
     }
 
     @Override
@@ -182,29 +211,43 @@ public class MainActivity extends Activity {
 
         boolean granted = hasUsageAccess();
         setDot(dotTracking, granted ? R.color.ok : R.color.warn);
-        long last = UsageCollector.lastEventMs(this);
+        long[] stats = UsageCollector.todayStats(this);
         trackingDetail.setText(!granted
                 ? "Usage access is off — tap below to allow it"
-                : UsageCollector.savedCount(this) + " events saved"
-                + (last > 0 ? " · latest " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(last)) : ""));
+                : formatDuration(stats[0]) + " on screen today · " + stats[1] + " unlocks");
         grant.setVisibility(granted ? View.GONE : View.VISIBLE);
         export.setEnabled(granted);
 
         String code = RelaySync.pairedCode(this);
         String error = RelaySync.lastError(this);
         long synced = RelaySync.lastSyncMs(this);
-        setDot(dotSync, code == null ? R.color.idle : error != null ? R.color.warn : R.color.ok);
+        long confirmed = RelaySync.confirmedMs(this);
         pair.setText(code == null ? "Pair with PC" : "Paired · change code");
         if (code == null) {
+            setDot(dotSync, R.color.idle);
             syncDetail.setText("Not paired — data stays on this phone");
         } else if (error != null) {
+            setDot(dotSync, R.color.warn);
             syncDetail.setText("Retrying · " + error);
+        } else if (confirmed > 0) {
+            setDot(dotSync, R.color.ok);
+            syncDetail.setText("PC confirmed " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(confirmed)));
+        } else if (RelaySync.confirmationOverdue(this)) {
+            // No PC with this code has answered for a while: almost always a mistyped code.
+            setDot(dotSync, R.color.warn);
+            syncDetail.setText("Your PC has not answered — check the code, and that the PC is on");
         } else {
+            setDot(dotSync, R.color.idle);
             syncDetail.setText(synced == 0 ? "Paired · waiting for first sync"
-                    : "Last sync " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(synced)));
+                    : "Paired · waiting for your PC to confirm");
         }
 
         reminder.setVisibility(MoodReminder.enabled(this) ? View.GONE : View.VISIBLE);
+    }
+
+    private static String formatDuration(long ms) {
+        long minutes = ms / 60000;
+        return minutes < 60 ? minutes + "m" : (minutes / 60) + "h " + (minutes % 60) + "m";
     }
 
     private void setDot(View dot, int colorRes) {

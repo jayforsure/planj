@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,32 @@ func TestDeriveVector(t *testing.T) {
 	}
 	if p.Mailbox != vectorMailbox || hex.EncodeToString(p.key) != vectorKey {
 		t.Fatalf("mailbox=%s key=%x", p.Mailbox, p.key)
+	}
+	if p.Reply == p.Mailbox || len(p.Reply) != 64 {
+		t.Fatalf("reply mailbox must differ from the upload mailbox, got %s", p.Reply)
+	}
+}
+
+func TestConfirmPostsToReplyMailbox(t *testing.T) {
+	p, _ := Derive(vectorCode)
+	var gotPath string
+	var gotBody []byte
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer ts.Close()
+
+	if err := Confirm(context.Background(), ts.Client(), ts.URL, p, 3); err != nil {
+		t.Fatal(err)
+	}
+	if gotPath != "/v1/mailbox/"+p.Reply {
+		t.Fatalf("posted to %s", gotPath)
+	}
+	out, err := p.Open(gotBody)
+	if err != nil || !strings.Contains(string(out), `"event":"pc_ack"`) || !strings.Contains(string(out), `"uploads":3`) {
+		t.Fatalf("ack payload %q, %v", out, err)
 	}
 }
 

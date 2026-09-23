@@ -4,8 +4,12 @@ package main
 //
 //   code    = 20 Crockford base32 chars, shown as XXXXX-XXXXX-XXXXX-XXXXX (100 bits)
 //   mailbox = hex(HKDF-SHA256(ikm=code, salt="planj-relay-v1", info="mailbox", 32))
+//   reply   = hex(HKDF-SHA256(ikm=code, salt="planj-relay-v1", info="mailbox-reply", 32))
 //   key     = HKDF-SHA256(ikm=code, salt="planj-relay-v1", info="aes-256-gcm", 32)
 //   blob    = 0x01 || nonce(12) || AES-256-GCM(key, nonce, gzip(jsonl), aad=mailbox)
+//
+// The phone uploads to mailbox and the PC answers in reply, which is how the phone
+// learns the code was typed correctly.
 //
 // The relay only ever sees the mailbox ID and blobs; the code never leaves the two devices.
 
@@ -27,6 +31,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -38,7 +43,8 @@ const (
 
 type Pairing struct {
 	Code    string
-	Mailbox string
+	Mailbox string // phone uploads here
+	Reply   string // the PC confirms receipt here
 	key     []byte
 }
 
@@ -87,11 +93,20 @@ func Derive(code string) (Pairing, error) {
 	if err != nil {
 		return Pairing{}, err
 	}
+	reply, err := hkdf.Key(sha256.New, []byte(c), []byte(relaySalt), "mailbox-reply", 32)
+	if err != nil {
+		return Pairing{}, err
+	}
 	key, err := hkdf.Key(sha256.New, []byte(c), []byte(relaySalt), "aes-256-gcm", 32)
 	if err != nil {
 		return Pairing{}, err
 	}
-	return Pairing{Code: formatCode(c), Mailbox: hex.EncodeToString(box), key: key}, nil
+	return Pairing{
+		Code:    formatCode(c),
+		Mailbox: hex.EncodeToString(box),
+		Reply:   hex.EncodeToString(reply),
+		key:     key,
+	}, nil
 }
 
 func (p Pairing) gcm() (cipher.AEAD, error) {
@@ -186,6 +201,30 @@ func Pull(ctx context.Context, client *http.Client, baseURL string, p Pairing,
 			return stored, nil
 		}
 	}
+}
+
+// Confirm tells the phone its uploads are arriving, which is how a mistyped code is caught.
+func Confirm(ctx context.Context, client *http.Client, baseURL string, p Pairing, uploads int) error {
+	line := fmt.Sprintf("{\"t\":%q,\"event\":\"pc_ack\",\"uploads\":%d}\n", time.Now().UTC().Format(time.RFC3339), uploads)
+	blob, err := p.Seal([]byte(line))
+	if err != nil {
+		return err
+	}
+	u := strings.TrimRight(baseURL, "/") + "/v1/mailbox/" + p.Reply
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(blob))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("confirm: %s", resp.Status)
+	}
+	return nil
 }
 
 func doJSON(ctx context.Context, client *http.Client, method, u string, out any) error {

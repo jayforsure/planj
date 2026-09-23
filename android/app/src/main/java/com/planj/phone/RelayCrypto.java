@@ -25,12 +25,14 @@ final class RelayCrypto {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     final String code;
-    final String mailbox;
+    final String mailbox; // this phone uploads here
+    final String reply;   // the PC confirms receipt here
     private final byte[] key;
 
-    private RelayCrypto(String code, String mailbox, byte[] key) {
+    private RelayCrypto(String code, String mailbox, String reply, byte[] key) {
         this.code = code;
         this.mailbox = mailbox;
+        this.reply = reply;
         this.key = key;
     }
 
@@ -53,7 +55,8 @@ final class RelayCrypto {
         String c = normalize(typed);
         byte[] ikm = c.getBytes(StandardCharsets.US_ASCII);
         String formatted = c.substring(0, 5) + "-" + c.substring(5, 10) + "-" + c.substring(10, 15) + "-" + c.substring(15);
-        return new RelayCrypto(formatted, hex(hkdf(ikm, "mailbox")), hkdf(ikm, "aes-256-gcm"));
+        return new RelayCrypto(formatted, hex(hkdf(ikm, "mailbox")), hex(hkdf(ikm, "mailbox-reply")),
+                hkdf(ikm, "aes-256-gcm"));
     }
 
     /** HKDF-SHA256 (RFC 5869) for a 32-byte output, which is a single expand block. */
@@ -88,6 +91,26 @@ final class RelayCrypto {
             System.arraycopy(nonce, 0, out, 1, nonce.length);
             System.arraycopy(sealed, 0, out, 1 + nonce.length, sealed.length);
             return out;
+        } catch (GeneralSecurityException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /** Opens a blob sealed for this pairing, e.g. the PC's confirmation. */
+    byte[] open(byte[] blob, String aadMailbox) throws IOException {
+        if (blob.length < 1 + 12 + 16 || blob[0] != BLOB_VERSION) throw new IOException("not a planj blob");
+        byte[] nonce = java.util.Arrays.copyOfRange(blob, 1, 13);
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, nonce));
+            cipher.updateAAD(aadMailbox.getBytes(StandardCharsets.US_ASCII));
+            byte[] gz = cipher.doFinal(blob, 13, blob.length - 13);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (java.util.zip.GZIPInputStream in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz))) {
+                byte[] buf = new byte[8192];
+                for (int r; (r = in.read(buf)) > 0; ) out.write(buf, 0, r);
+            }
+            return out.toByteArray();
         } catch (GeneralSecurityException e) {
             throw new IOException(e);
         }

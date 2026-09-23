@@ -18,14 +18,20 @@ def _today() -> date:
     return datetime.now(config.TZ).date()
 
 
+def import_local(conn, days: int) -> tuple[int, int, int]:
+    """Reads what the tracker and the phone already left on disk. No network."""
+    spans = tracker.sync(conn, config.TRACKER_DIR, _today() - timedelta(days=days)) if config.TRACKER_DIR else 0
+    events, moods = phone.sync(conn, config.PHONE_DIRS)
+    return spans, events, moods
+
+
 def cmd_sync(args, conn) -> int:
     failed = False
+    spans, events, moods = import_local(conn, args.days)
     if config.TRACKER_DIR:
-        n = tracker.sync(conn, config.TRACKER_DIR, _today() - timedelta(days=args.days))
-        print(f"PC tracker: {n} spans")
+        print(f"PC tracker: {spans} spans")
     else:
         print("PC tracker: no data folder yet — is planj-tracker installed on Windows?")
-    events, moods = phone.sync(conn, config.PHONE_DIRS)
     print(f"Phone: {events} new events, {moods} mood entries")
     try:
         print(f"Weather: {weather.sync(conn, config.LAT, config.LON)} hourly rows")
@@ -55,6 +61,8 @@ def cmd_log(args, conn) -> int:
 
 
 def cmd_today(args, conn) -> int:
+    # Import first, so the summary always reflects what the devices have delivered.
+    import_local(conn, args.days)
     s = summarize(conn, args.day or _today(), config.TZ)
     print(f"{s.day}  ({config.TZ.key})")
     if s.active_s:
@@ -101,8 +109,9 @@ def main(argv=None) -> int:
     lp.add_argument("--day", type=date.fromisoformat)
     lp.set_defaults(func=cmd_log)
 
-    tp = sub.add_parser("today", help="summarise a day")
+    tp = sub.add_parser("today", help="summarise a day (imports new device data first)")
     tp.add_argument("--day", type=date.fromisoformat)
+    tp.add_argument("--days", type=int, default=2, help="how far back to re-read device files")
     tp.set_defaults(func=cmd_today)
 
     args = p.parse_args(argv)

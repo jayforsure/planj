@@ -2,7 +2,13 @@ package com.planj.phone;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Base64;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -12,6 +18,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 
@@ -46,6 +53,17 @@ final class RelaySync {
         return prefs(ctx).getLong("last_sync_ms", 0);
     }
 
+    /** When the PC last confirmed receipt; 0 means it never has, which usually means a wrong code. */
+    static long confirmedMs(Context ctx) {
+        return prefs(ctx).getLong("confirmed_ms", 0);
+    }
+
+    /** The PC confirms every 15 minutes, so silence only means trouble after a grace period. */
+    static boolean confirmationOverdue(Context ctx) {
+        long paired = prefs(ctx).getLong("paired_ms", 0);
+        return confirmedMs(ctx) == 0 && paired > 0 && System.currentTimeMillis() - paired > 20 * 60_000L;
+    }
+
     static String lastError(Context ctx) {
         return prefs(ctx).getString("last_error", null);
     }
@@ -61,7 +79,8 @@ final class RelaySync {
                     for (File f : files) out.write(Files.readAllBytes(f.toPath()));
                 }
             }
-            prefs(ctx).edit().putString("code", crypto.code).remove("last_error").apply();
+            prefs(ctx).edit().putString("code", crypto.code).putLong("paired_ms", System.currentTimeMillis())
+                    .remove("confirmed_ms").remove("last_error").apply();
         }
     }
 
@@ -90,6 +109,7 @@ final class RelaySync {
                 sent += chunk.length;
             }
             prefs(ctx).edit().putLong("last_sync_ms", System.currentTimeMillis()).remove("last_error").apply();
+            checkConfirmation(ctx, crypto);
             return sent;
         } catch (IOException e) {
             prefs(ctx).edit().putString("last_error", e.getMessage()).apply();
@@ -121,6 +141,58 @@ final class RelaySync {
             for (int r; (r = in.read(buf)) > 0; ) out.write(buf, 0, r);
         }
         if (!tmp.renameTo(f)) throw new IOException("could not update outbox");
+    }
+
+    /** Reads the PC's confirmations, if any, and clears them from the relay. */
+    private static void checkConfirmation(Context ctx, RelayCrypto crypto) throws IOException {
+        String box = RELAY_URL + "/v1/mailbox/" + crypto.reply;
+        HttpURLConnection conn = (HttpURLConnection) URI.create(box).toURL().openConnection();
+        String body;
+        try {
+            conn.setConnectTimeout(15_000);
+            conn.setReadTimeout(30_000);
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) return;
+            try (InputStream in = conn.getInputStream()) {
+                body = new String(readAll(in), StandardCharsets.UTF_8);
+            }
+        } finally {
+            conn.disconnect();
+        }
+
+        String lastId = null;
+        try {
+            JSONArray items = new JSONObject(body).getJSONArray("items");
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.getJSONObject(i);
+                byte[] blob = Base64.decode(item.getString("data"), Base64.DEFAULT);
+                String line = new String(crypto.open(blob, crypto.mailbox), StandardCharsets.UTF_8);
+                if (line.contains("\"pc_ack\"")) {
+                    prefs(ctx).edit().putLong("confirmed_ms", System.currentTimeMillis()).apply();
+                }
+                lastId = item.getString("id");
+            }
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+        if (lastId != null) delete(box + "?upto=" + lastId);
+    }
+
+    private static byte[] readAll(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        for (int r; (r = in.read(buf)) > 0; ) out.write(buf, 0, r);
+        return out.toByteArray();
+    }
+
+    private static void delete(String url) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+        try {
+            conn.setRequestMethod("DELETE");
+            conn.setConnectTimeout(15_000);
+            conn.getResponseCode();
+        } finally {
+            conn.disconnect();
+        }
     }
 
     private static void post(RelayCrypto crypto, byte[] blob) throws IOException {

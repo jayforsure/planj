@@ -11,9 +11,14 @@ import (
 // defaultRelayURL is where paired phones upload; relay_url.txt in the data folder overrides it.
 const defaultRelayURL = "https://planj-relay-production.up.railway.app"
 
+func readTrimmed(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	return strings.TrimSpace(string(b)), err
+}
+
 func relayURL(root string) string {
-	if b, err := os.ReadFile(filepath.Join(root, "relay_url.txt")); err == nil {
-		return strings.TrimSpace(string(b))
+	if s, err := readTrimmed(filepath.Join(root, "relay_url.txt")); err == nil {
+		return s
 	}
 	return defaultRelayURL
 }

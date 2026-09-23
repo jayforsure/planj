@@ -8,14 +8,17 @@ import android.content.SharedPreferences;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Map;
@@ -114,6 +117,31 @@ final class UsageCollector {
         RelaySync.append(ctx, all.toString().getBytes(StandardCharsets.UTF_8));
         p.edit().putLong(KEY_LAST, last).putLong(KEY_COUNT, p.getLong(KEY_COUNT, 0) + saved).apply();
         return saved;
+    }
+
+    /** Today's screen-on milliseconds and unlock count, rebuilt from the saved events. */
+    static long[] todayStats(Context ctx) {
+        File file = new File(eventsDir(ctx), LocalDate.now().toString() + ".jsonl");
+        long screenMs = 0, unlocks = 0, onSince = -1;
+        try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+            for (String line; (line = r.readLine()) != null; ) {
+                JSONObject o = new JSONObject(line);
+                String event = o.optString("event");
+                long t = Instant.parse(o.getString("t")).toEpochMilli();
+                if (event.equals("screen_on")) {
+                    if (onSince < 0) onSince = t;
+                } else if (event.equals("screen_off") || event.equals("shutdown")) {
+                    if (onSince >= 0) screenMs += t - onSince;
+                    onSince = -1;
+                } else if (event.equals("unlock")) {
+                    unlocks++;
+                }
+            }
+        } catch (IOException | JSONException | RuntimeException e) {
+            return new long[]{0, 0}; // no file yet, or a half-written last line
+        }
+        if (onSince >= 0) screenMs += System.currentTimeMillis() - onSince; // still on right now
+        return new long[]{screenMs, unlocks};
     }
 
     /** Writes every saved day, oldest first, as one JSONL stream. */
