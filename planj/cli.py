@@ -3,7 +3,7 @@ import sys
 from datetime import date, datetime, timedelta
 from urllib.error import URLError
 
-from planj import config
+from planj import config, features
 from planj.db import connect, now_utc_iso
 from planj.sources import calendar, phone, tracker, weather
 from planj.summary import summarize
@@ -88,6 +88,50 @@ def cmd_today(args, conn) -> int:
     return 0
 
 
+FEATURE_COLUMNS = [
+    ("sleep_h", "sleep"),
+    ("pc_active_h", "pc"),
+    ("phone_screen_h", "phone"),
+    ("phone_unlocks", "unlocks"),
+    ("phone_late_night_h", "late"),
+    ("mood", "mood"),
+]
+
+
+def cmd_features(args, conn) -> int:
+    import_local(conn, args.days)
+    built = features.rebuild(conn, args.days, config.TZ, _today())
+
+    print("day          " + "".join(f"{label:>9}" for _, label in FEATURE_COLUMNS))
+    for day in sorted(built, reverse=True):
+        values = built[day]
+        cells = "".join(
+            f"{values[name]:>9.1f}" if name in values else f"{'·':>9}"
+            for name, _ in FEATURE_COLUMNS
+        )
+        print(f"{day}  {cells}")
+
+    extra = sorted({k for v in built.values() for k in v} - {c[0] for c in FEATURE_COLUMNS})
+    print(f"\n{len(extra)} more features stored per day: {', '.join(extra)}")
+    return 0
+
+
+def cmd_correlate(args, conn) -> int:
+    import_local(conn, args.days)
+    features.rebuild(conn, args.days, config.TZ, _today())
+    logged, ranked = features.correlations(conn, args.min_days)
+    if not ranked:
+        print(f"Not enough mood entries yet: {logged} logged, {args.min_days} needed.")
+        print("Tap your mood in the phone app each evening — that is what the forecast learns from.")
+        return 0
+    print(f"How each feature moved with mood, across {logged} logged days:\n")
+    for name, r, days in ranked[: args.top]:
+        bar = "█" * round(abs(r) * 20)
+        print(f"  {name:<22} {r:+.2f} {bar:<20} ({days}d)")
+    print("\nCorrelation is not cause, and early numbers move a lot as days are added.")
+    return 0
+
+
 def _mood(value: str) -> int:
     n = int(value)
     if not 1 <= n <= 5:
@@ -113,6 +157,16 @@ def main(argv=None) -> int:
     tp.add_argument("--day", type=date.fromisoformat)
     tp.add_argument("--days", type=int, default=2, help="how far back to re-read device files")
     tp.set_defaults(func=cmd_today)
+
+    fp = sub.add_parser("features", help="daily numbers the forecast will learn from")
+    fp.add_argument("--days", type=int, default=14)
+    fp.set_defaults(func=cmd_features)
+
+    cp = sub.add_parser("correlate", help="which features move with your mood")
+    cp.add_argument("--days", type=int, default=60)
+    cp.add_argument("--min-days", type=int, default=7)
+    cp.add_argument("--top", type=int, default=15)
+    cp.set_defaults(func=cmd_correlate)
 
     args = p.parse_args(argv)
     with connect(config.DB_PATH) as conn:

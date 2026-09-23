@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS calendar_event (
 );
 CREATE INDEX IF NOT EXISTS calendar_event_start ON calendar_event (start_utc);
 
+CREATE TABLE IF NOT EXISTS day_feature (
+    day   TEXT NOT NULL,
+    name  TEXT NOT NULL,
+    value REAL NOT NULL,
+    PRIMARY KEY (day, name)
+);
+
 CREATE TABLE IF NOT EXISTS mood_log (
     day           TEXT PRIMARY KEY,
     mood          INTEGER NOT NULL CHECK (mood BETWEEN 1 AND 5),
