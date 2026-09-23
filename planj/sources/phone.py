@@ -17,7 +17,8 @@ def read_export(path: Path) -> tuple[list[tuple], list[tuple]]:
             tags = ",".join(r["tags"]) if r.get("tags") else None
             moods.append((r["day"], r["mood"], r.get("note"), to_utc_iso(r["t"]), tags))
         else:
-            events.append((to_utc_iso(r["t"]), r["event"], r.get("app") or ""))
+            detail = json.dumps(r["detail"], separators=(",", ":")) if r.get("detail") is not None else None
+            events.append((to_utc_iso(r["t"]), r["event"], r.get("app") or "", detail))
     return events, moods
 
 
@@ -29,7 +30,9 @@ def sync(conn: sqlite3.Connection, folders: list[Path]) -> tuple[int, int]:
             events, moods = read_export(path)
             # Each export holds all history, so duplicates are expected and skipped.
             before = conn.total_changes
-            conn.executemany("INSERT OR IGNORE INTO phone_event VALUES (?, ?, ?)", events)
+            conn.executemany(
+                "INSERT OR IGNORE INTO phone_event (t_utc, event, app, detail) VALUES (?, ?, ?, ?)", events
+            )
             new_events += conn.total_changes - before
             before = conn.total_changes
             # Whichever entry was logged last wins, whether it came from the phone or `planj log`.

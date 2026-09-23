@@ -62,12 +62,10 @@ final class TodayTab {
         ((GestureScrollView) root).setGestureListener(new GestureScrollView.Listener() {
             @Override
             public void onSwipe(int direction) {
-                LocalDate next = shown.minusDays(direction); // swipe left = older
+                LocalDate next = shown.plusDays(direction); // swipe left (-1) = the day before
                 if (next.isAfter(LocalDate.now())) return;
                 shown = next;
                 refresh(a.hasUsageAccess());
-                content.setTranslationX(-direction * 40 * a.getResources().getDisplayMetrics().density);
-                content.animate().translationX(0).setDuration(220).start();
             }
 
             @Override
@@ -111,7 +109,7 @@ final class TodayTab {
 
         boolean priv = PrivateMode.isOn(a);
         privateBanner.setVisibility(priv ? View.VISIBLE : View.GONE);
-        for (int i = 1; i < content.getChildCount(); i++) content.getChildAt(i).setAlpha(priv ? 0.45f : 1f);
+        ((GestureScrollView) root).setPrivateLook(priv, false);
 
         if (granted) {
             List<DayUsage> week = new ArrayList<>();

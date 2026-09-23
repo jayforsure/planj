@@ -1,5 +1,6 @@
 """Turns raw device data into the daily numbers a forecast can learn from."""
 
+import json
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
@@ -163,6 +164,15 @@ def compute(conn: sqlite3.Connection, day: date, tz: ZoneInfo) -> dict[str, floa
         "SELECT COUNT(*) FROM calendar_event WHERE start_utc < ? AND end_utc > ?",
         (to_utc_iso(day_end + timedelta(days=1)), to_utc_iso(day_end)),
     ).fetchone()[0]
+
+    # Premium: per-topic minutes inside deeply tracked apps, summarised on the phone.
+    for r in conn.execute(
+        "SELECT detail FROM phone_event WHERE event = 'content_topic' AND detail LIKE ?",
+        (f'%"day":"{day.isoformat()}"%',),
+    ):
+        d = json.loads(r["detail"])
+        out[f"content_{d['topic']}_h"] = round(out.get(f"content_{d['topic']}_h", 0.0) + d["ms"] / 3600000, 3)
+        out["content_actions"] = out.get("content_actions", 0.0) + d.get("actions", 0)
 
     out["weekday"] = day.weekday()
     mood = conn.execute("SELECT mood, tags FROM mood_log WHERE day = ?", (day.isoformat(),)).fetchone()

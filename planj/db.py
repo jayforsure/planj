@@ -11,9 +11,10 @@ CREATE TABLE IF NOT EXISTS activity_span (
 );
 
 CREATE TABLE IF NOT EXISTS phone_event (
-    t_utc TEXT NOT NULL,
-    event TEXT NOT NULL,  -- app_fg | app_bg | screen_on | screen_off | unlock | shutdown | startup
-    app   TEXT NOT NULL,  -- package name for app_* events, '' otherwise
+    t_utc  TEXT NOT NULL,
+    event  TEXT NOT NULL,  -- app_fg | app_bg | screen_on | screen_off | unlock | charging_on | ... | content_topic
+    app    TEXT NOT NULL,  -- package name for app_* events, '' otherwise
+    detail TEXT,           -- JSON for events that carry more, e.g. content_topic totals
     PRIMARY KEY (t_utc, event, app)
 );
 
@@ -57,6 +58,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     columns = {r[1] for r in conn.execute("PRAGMA table_info(mood_log)")}
     if "tags" not in columns:
         conn.execute("ALTER TABLE mood_log ADD COLUMN tags TEXT")
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(phone_event)")}
+    if "detail" not in columns:
+        conn.execute("ALTER TABLE phone_event ADD COLUMN detail TEXT")
 
 
 def connect(path: Path | str) -> sqlite3.Connection:

@@ -24,7 +24,7 @@ def add_screen(conn, start, end, app="com.instagram.android"):
         (to_utc_iso(end), "app_bg", app),
         (to_utc_iso(end), "screen_off", ""),
     ]
-    conn.executemany("INSERT OR REPLACE INTO phone_event VALUES (?, ?, ?)", rows)
+    conn.executemany("INSERT OR REPLACE INTO phone_event (t_utc, event, app) VALUES (?, ?, ?)", rows)
 
 
 def test_categorise_falls_back_to_other():
@@ -41,7 +41,7 @@ def test_day_features_cover_both_devices():
     add_pc(conn, kl(13), kl(14), app="msedge.exe")   # 1h browsing
     add_pc(conn, kl(2), kl(3), app="msedge.exe")     # 1h late night
     add_screen(conn, kl(20), kl(21))                 # 1h phone, social
-    conn.execute("INSERT INTO phone_event VALUES (?, 'unlock', '')", (to_utc_iso(kl(20)),))
+    conn.execute("INSERT INTO phone_event (t_utc, event, app) VALUES (?, 'unlock', '')", (to_utc_iso(kl(20)),))
 
     f = features.compute(conn, DAY, KL)
     assert f["pc_active_h"] == 4.0

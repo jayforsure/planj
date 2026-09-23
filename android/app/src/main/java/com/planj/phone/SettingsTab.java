@@ -17,8 +17,8 @@ final class SettingsTab {
     private final View dotTracking, dotSync;
     private final TextView trackingDetail, syncDetail;
     private final Button grant, reminder, pair, export;
-    private final TextView privateState;
-    private final Button privateToggle;
+    private final TextView privateState, deepState;
+    private final Button privateToggle, deepEnable;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -42,7 +42,13 @@ final class SettingsTab {
         privateToggle = root.findViewById(R.id.btn_private);
         privateToggle.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
         root.findViewById(R.id.btn_private_apps).setOnClickListener(v ->
-                a.startActivity(new Intent(a, PrivateAppsActivity.class)));
+                a.startActivity(new Intent(a, AppPickerActivity.class).putExtra(AppPickerActivity.EXTRA_MODE, AppPickerActivity.MODE_PRIVATE)));
+
+        deepState = root.findViewById(R.id.deep_state);
+        deepEnable = root.findViewById(R.id.btn_deep_enable);
+        deepEnable.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        root.findViewById(R.id.btn_deep_apps).setOnClickListener(v ->
+                a.startActivity(new Intent(a, AppPickerActivity.class).putExtra(AppPickerActivity.EXTRA_MODE, AppPickerActivity.MODE_DEEP)));
         Button tile = root.findViewById(R.id.btn_tile);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             tile.setOnClickListener(v -> a.getSystemService(android.app.StatusBarManager.class).requestAddTileService(
@@ -90,6 +96,12 @@ final class SettingsTab {
         boolean priv = PrivateMode.isOn(a);
         privateState.setText(priv ? "Private mode is on — since " + Fmt.clock(PrivateMode.since(a)) : "Recording normally");
         privateToggle.setText(priv ? "Resume recording" : "Turn on private mode");
+
+        boolean deepOn = DeepTraceService.isEnabled(a);
+        int deepApps = ContentStore.deepApps(a).size();
+        deepState.setText(!deepOn ? "Off" : deepApps == 0 ? "On — no apps ticked yet"
+                : "On — " + deepApps + (deepApps == 1 ? " app" : " apps"));
+        deepEnable.setText(deepOn ? "Turn off in Accessibility settings" : "Turn on in Accessibility settings");
     }
 
     private void setDot(View dot, int colorRes) {

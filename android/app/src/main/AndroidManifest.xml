@@ -38,7 +38,20 @@
 
         <activity android:name=".DayDetailActivity" android:exported="false" />
         <activity android:name=".AppDetailActivity" android:exported="false" />
-        <activity android:name=".PrivateAppsActivity" android:exported="false" />
+        <activity android:name=".AppPickerActivity" android:exported="false" />
+
+        <service
+            android:name=".DeepTraceService"
+            android:exported="true"
+            android:label="planj deep tracking"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/deep_trace" />
+        </service>
 
         <service
             android:name=".PrivateTileService"
