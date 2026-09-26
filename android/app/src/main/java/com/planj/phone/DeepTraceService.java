@@ -118,11 +118,25 @@ public class DeepTraceService extends AccessibilityService {
             return url == null ? null : new String[]{"page", domain(url)};
         }
         if (pkg.contains("instagram")) {
-            // Feed posts name their author in row_feed_photo_profile_name; reels and other
-            // surfaces use ids ending in "username". The stories row ("Your story") is not a post.
+            // Feed posts name their author in row_feed_photo_profile_name. Reels and other
+            // surfaces describe their media as "Reel by X" / "Video by X", which survives
+            // layout changes better than any view id. The stories row is not a post.
             String user = firstText(root, pkg + ":id/row_feed_photo_profile_name");
+            String kind = "post";
+            if (user == null) {
+                String[] media = findMediaBy(root);
+                if (media != null) {
+                    kind = media[0];
+                    user = media[1];
+                }
+            }
             if (user == null) user = findBySuffix(root, "username", 2, "Your story");
-            return user == null ? null : new String[]{"post", "@" + user.trim()};
+            if (user == null) return null;
+            user = user.trim();
+            // The caption is the text node that starts with the author's handle; it is what
+            // makes topic classification meaningful, and it stays on this phone.
+            String caption = findCaption(root, user);
+            return new String[]{kind, "@" + user + (caption == null ? "" : " — " + caption)};
         }
         if (isMediaApp(pkg)) {
             return null; // what is playing arrives through the playback notification instead
@@ -133,6 +147,50 @@ public class DeepTraceService extends AccessibilityService {
             String t = text(titles.get(0));
             for (AccessibilityNodeInfo n : titles) n.recycle();
             return t == null ? null : new String[]{"screen", t.trim()};
+        }
+        return null;
+    }
+
+    private static final java.util.regex.Pattern MEDIA_BY = java.util.regex.Pattern.compile(
+            "^(Reel|Video|Photo(?: \\d+ of \\d+)?|Carousel|Post) by ([^,]+?)(?:,|$)", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /** {kind, author} from a media node's description such as "Reel by someone, 12 likes". */
+    private static String[] findMediaBy(AccessibilityNodeInfo n) {
+        if (n == null) return null;
+        CharSequence d = n.getContentDescription();
+        if (d != null) {
+            java.util.regex.Matcher m = MEDIA_BY.matcher(d);
+            if (m.find()) {
+                String kind = m.group(1).toLowerCase().startsWith("reel") ? "reel"
+                        : m.group(1).toLowerCase().startsWith("video") ? "video" : "post";
+                return new String[]{kind, m.group(2).trim()};
+            }
+        }
+        for (int i = 0; i < n.getChildCount(); i++) {
+            AccessibilityNodeInfo c = n.getChild(i);
+            String[] found = findMediaBy(c);
+            if (c != null) c.recycle();
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /** The caption: a text node beginning with the author's handle, trimmed to a snippet. */
+    private static String findCaption(AccessibilityNodeInfo n, String author) {
+        if (n == null) return null;
+        String t = text(n);
+        if (t != null) {
+            String low = t.toLowerCase(), a = author.toLowerCase();
+            if (low.startsWith(a) && t.length() > a.length() + 3) {
+                String rest = t.substring(author.length()).replaceAll("\\s*(…|\\.\\.\\.)?\\s*more$", "").trim();
+                if (rest.length() > 3) return rest.length() > 100 ? rest.substring(0, 100) + "…" : rest;
+            }
+        }
+        for (int i = 0; i < n.getChildCount(); i++) {
+            AccessibilityNodeInfo c = n.getChild(i);
+            String found = findCaption(c, author);
+            if (c != null) c.recycle();
+            if (found != null) return found;
         }
         return null;
     }

@@ -194,11 +194,16 @@ final class DayUsage {
         }
         if (bestEnd - bestStart < TimeUnit.HOURS.toMillis(2)) return null;
 
-        // Charging state at the middle of the gap: the last change before it decides.
-        long mid = (bestStart + bestEnd) / 2;
+        // "On charge" means the phone was plugged in at any point during the gap. Android often
+        // reports "unplugged" once the battery is full at 3am, which is not the person waking.
         boolean charging = false;
         for (long[] c : chargeChanges) {
-            if (c[0] <= mid) charging = c[1] == 1;
+            if (c[1] == 1 && c[0] >= bestStart - TimeUnit.HOURS.toMillis(2) && c[0] <= bestEnd) charging = true;
+        }
+        if (!charging) {
+            boolean state = false;
+            for (long[] c : chargeChanges) if (c[0] <= bestStart) state = c[1] == 1;
+            charging = state;
         }
         return new Quiet(bestStart, bestEnd, charging);
     }

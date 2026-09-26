@@ -93,15 +93,22 @@ def estimate_quiet(conn, day: date, tz: ZoneInfo) -> dict[str, float]:
         "quiet_start_hour": _local_hour(gap_start, tz),
         "quiet_end_hour": _local_hour(gap_end, tz),
     }
-    # Charging state at the middle of the gap is whatever the last change before it said.
-    mid = gap_start + longest / 2
-    last = conn.execute(
-        "SELECT event FROM phone_event WHERE event IN ('charging_on', 'charging_off') AND t_utc <= ? "
-        "ORDER BY t_utc DESC LIMIT 1",
-        (to_utc_iso(mid),),
+    # "On charge" if plugged in during (or just before) the gap. Phones report "unplugged" once
+    # the battery is full in the small hours, which says nothing about the person.
+    plugged = conn.execute(
+        "SELECT 1 FROM phone_event WHERE event = 'charging_on' AND t_utc >= ? AND t_utc <= ? LIMIT 1",
+        (to_utc_iso(gap_start - timedelta(hours=2)), to_utc_iso(gap_end)),
     ).fetchone()
-    if last:
-        out["quiet_charging"] = 1.0 if last["event"] == "charging_on" else 0.0
+    if plugged:
+        out["quiet_charging"] = 1.0
+    else:
+        last = conn.execute(
+            "SELECT event FROM phone_event WHERE event IN ('charging_on', 'charging_off') AND t_utc <= ? "
+            "ORDER BY t_utc DESC LIMIT 1",
+            (to_utc_iso(gap_start),),
+        ).fetchone()
+        if last:
+            out["quiet_charging"] = 1.0 if last["event"] == "charging_on" else 0.0
     alarm = conn.execute(
         "SELECT app FROM phone_event WHERE event = 'next_alarm' AND app != '' AND t_utc <= ? ORDER BY t_utc DESC LIMIT 1",
         (to_utc_iso(gap_start),),
