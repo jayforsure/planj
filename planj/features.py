@@ -205,8 +205,12 @@ def rebuild(conn: sqlite3.Connection, days: int, tz: ZoneInfo, today: date) -> d
     for back in range(days):
         day = today - timedelta(days=back)
         values = compute(conn, day, tz)
+        if "phone_screen_h" not in values and "pc_active_h" not in values:
+            conn.execute("DELETE FROM day_feature WHERE day = ?", (day.isoformat(),))  # a day nobody recorded
+            continue
         store(conn, day, values)
         out[day] = values
+    conn.commit()
     return out
 
 

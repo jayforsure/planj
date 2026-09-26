@@ -3,7 +3,7 @@ import sys
 from datetime import date, datetime, timedelta
 from urllib.error import URLError
 
-from planj import config, features
+from planj import config, features, outcomes
 from planj.db import connect, now_utc_iso
 from planj.sources import calendar, phone, tracker, weather
 from planj.summary import summarize
@@ -132,6 +132,41 @@ def cmd_correlate(args, conn) -> int:
     return 0
 
 
+def cmd_odds(args, conn) -> int:
+    import_local(conn, args.days)
+    features.rebuild(conn, args.days, config.TZ, _today())
+    history = outcomes.load_history(conn)
+    settled = outcomes.settle(conn, history)
+
+    today = _today()
+    made = outcomes.forecast(history, today)
+    stored = outcomes.store(conn, today, made)
+    print(f"Tomorrow ({today + timedelta(days=1):%a %d %b}), from your last {len(history)} days"
+          + (f" · {stored} new forecasts recorded" if stored else " · already recorded tonight") + "\n")
+    if not made:
+        print(f"  Not enough history yet ({len(history)} days with data, {outcomes.MIN_HISTORY} needed).")
+    for fc in made:
+        bar = "█" * round(fc.prob * 20)
+        print(f"  {fc.prob:4.0%}  {fc.question}")
+        print(f"        {bar:<20} base {fc.base_rate:.0%} of {fc.n} days"
+              + (f" · {fc.side_k} of {fc.side_n} {fc.lever_text}" if fc.lever else ""))
+
+    live = outcomes.track_record(conn)
+    back = outcomes.backtest(history)
+    print(f"\nTrack record" + (f" · {settled} forecasts settled this run" if settled else "") + ":")
+    for oc in outcomes.OUTCOMES:
+        r = live.get(oc.name)
+        b = back.get(oc.name)
+        line = f"  {oc.resolved:<22}"
+        line += f" live: {r.hits}/{r.n} right" if r and r.n else " live: none settled yet"
+        if b and b.n:
+            line += (f" · walk-forward: {b.hits}/{b.n} right vs {b.base_hits}/{b.n} guessing your average"
+                     f" · Brier {b.brier / b.n:.2f} vs {b.base_brier / b.n:.2f}")
+        print(line)
+    print("\nWalk-forward = what these forecasts would have scored, made each evening from only the days before it.")
+    return 0
+
+
 def _mood(value: str) -> int:
     n = int(value)
     if not 1 <= n <= 5:
@@ -167,6 +202,10 @@ def main(argv=None) -> int:
     cp.add_argument("--min-days", type=int, default=7)
     cp.add_argument("--top", type=int, default=15)
     cp.set_defaults(func=cmd_correlate)
+
+    op = sub.add_parser("odds", help="tomorrow's forecasts, recorded now and scored after")
+    op.add_argument("--days", type=int, default=45)
+    op.set_defaults(func=cmd_odds)
 
     args = p.parse_args(argv)
     with connect(config.DB_PATH) as conn:

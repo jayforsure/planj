@@ -44,6 +44,20 @@ CREATE TABLE IF NOT EXISTS day_feature (
     PRIMARY KEY (day, name)
 );
 
+CREATE TABLE IF NOT EXISTS forecast (
+    target_day  TEXT NOT NULL,
+    outcome     TEXT NOT NULL,
+    made_on     TEXT NOT NULL,
+    prob        REAL NOT NULL,
+    base_rate   REAL NOT NULL,
+    n           INTEGER NOT NULL,
+    lever       TEXT,
+    lever_text  TEXT,
+    made_at_utc TEXT NOT NULL,
+    actual      INTEGER,        -- filled in once the day's data exists; never edited after
+    PRIMARY KEY (target_day, outcome)
+);
+
 CREATE TABLE IF NOT EXISTS mood_log (
     day           TEXT PRIMARY KEY,
     mood          INTEGER NOT NULL CHECK (mood BETWEEN 1 AND 5),
