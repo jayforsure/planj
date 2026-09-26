@@ -125,23 +125,9 @@ final class UsageCollector {
         RelaySync.append(ctx, all.toString().getBytes(StandardCharsets.UTF_8));
         p.edit().putLong(KEY_LAST, last).putLong(KEY_COUNT, p.getLong(KEY_COUNT, 0) + saved).apply();
         saved += sampleState(ctx);
-        saved += appendLines(ctx, ContentStore.summaryLines(ctx));
         return saved;
     }
 
-    private static int appendLines(Context ctx, List<String> lines) throws IOException {
-        if (lines.isEmpty()) return 0;
-        File dir = eventsDir(ctx);
-        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
-        StringBuilder all = new StringBuilder();
-        for (String l : lines) all.append(l).append('\n');
-        byte[] bytes = all.toString().getBytes(StandardCharsets.UTF_8);
-        try (OutputStream out = new FileOutputStream(new File(dir, LocalDate.now() + ".jsonl"), true)) {
-            out.write(bytes);
-        }
-        RelaySync.append(ctx, bytes);
-        return lines.size();
-    }
 
     /**
      * Records charging, next-alarm and Do Not Disturb changes. These sharpen the sleep

@@ -34,6 +34,7 @@ final class DayUsage {
 
     final LocalDate day;
     long screenMs;
+    long lateNightMs; // screen on between midnight and 05:00 of this day
     int unlocks;
     final Map<String, Long> appMs = new HashMap<>();
     final List<Session> sessions = new ArrayList<>();
@@ -48,6 +49,9 @@ final class DayUsage {
         long onSince = -1, appSince = -1;
         String app = null;
         boolean today = day.equals(LocalDate.now());
+        ZoneId zone = ZoneId.systemDefault();
+        long nightStart = day.atStartOfDay(zone).toInstant().toEpochMilli();
+        long nightEnd = day.atTime(5, 0).atZone(zone).toInstant().toEpochMilli();
         try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             for (String line; (line = r.readLine()) != null; ) {
                 JSONObject o;
@@ -64,7 +68,10 @@ final class DayUsage {
                         break;
                     case "screen_off":
                     case "shutdown":
-                        if (onSince >= 0) u.screenMs += t - onSince;
+                        if (onSince >= 0) {
+                            u.screenMs += t - onSince;
+                            u.lateNightMs += Math.max(0, Math.min(t, nightEnd) - Math.max(onSince, nightStart));
+                        }
                         onSince = -1;
                         if (app != null) u.addSession(app, appSince, t);
                         app = null;

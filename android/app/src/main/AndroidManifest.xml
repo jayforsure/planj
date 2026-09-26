@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required by the system for a scheduled job that waits for a network connection. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Tomorrow's plans come from the calendar the user already keeps. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <!-- Lets the app resolve the names and icons of the apps it reports on. -->
     <queries>
@@ -40,18 +42,6 @@
         <activity android:name=".AppDetailActivity" android:exported="false" />
         <activity android:name=".AppPickerActivity" android:exported="false" />
 
-        <service
-            android:name=".DeepTraceService"
-            android:exported="true"
-            android:label="planj deep tracking"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/deep_trace" />
-        </service>
 
         <service
             android:name=".PrivateTileService"

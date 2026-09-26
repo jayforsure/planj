@@ -47,10 +47,13 @@ public class MainActivity extends Activity {
         select(today.view(), navToday);
 
         MoodReminder.ensureChannel(this);
+        List<String> wanted = new java.util.ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 0);
+            wanted.add(Manifest.permission.POST_NOTIFICATIONS);
         }
+        if (!Agenda.allowed(this)) wanted.add(Manifest.permission.READ_CALENDAR);
+        if (!wanted.isEmpty()) requestPermissions(wanted.toArray(new String[0]), 0);
     }
 
     private void select(View tab, View navItem) {
@@ -58,6 +61,12 @@ public class MainActivity extends Activity {
         for (View v : new View[]{navToday, navOdds, navJournal, navSettings}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(code, perms, results);
+        refresh(); // tomorrow's plans appear as soon as the calendar is allowed
     }
 
     private static void setNavSelected(View item, boolean selected) {

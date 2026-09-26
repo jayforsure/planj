@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="deep_trace_description">Deep tracking (premium). Reads what is on screen only in the apps you tick — the post author, the website, and for video and music apps the title in their playback notification — to measure what you watch and for how long. Never reads what you type, never reads message notifications, never reads private apps, and the details never leave this phone: only topic totals sync to your PC.</string>
-</resources>

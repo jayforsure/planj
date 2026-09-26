@@ -42,7 +42,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:lineSpacingExtra="4dp"
-            android:text="Every number is a count of your own days, not a prediction model. Small counts move a lot as days are added. Mood-aware odds arrive once enough days are logged in Journal."
+            android:text="Every forecast is written down before the day and scored after it. A pattern is only used when replaying your own history shows it beats guessing your average — so early on, most numbers are your average, and that is the honest answer."
             android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>
