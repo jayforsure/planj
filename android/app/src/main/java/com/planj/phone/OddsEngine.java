@@ -230,6 +230,7 @@ final class OddsEngine {
             for (Object[] r : rows) if ((Boolean) r[2]) k++;
             int n = rows.size();
             double base = (double) k / n;
+            if (k == 0 || k == n) continue; // a question that always has the same answer is not worth asking
 
             double bestGap = -1;
             Lever bestLever = null;

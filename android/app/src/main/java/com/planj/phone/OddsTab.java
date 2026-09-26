@@ -80,25 +80,50 @@ final class OddsTab {
         for (OddsEngine.Forecast fc : r.forecasts) list.addView(card(fc));
 
         header("TRACK RECORD");
+        LinearLayout table = new LinearLayout(a);
+        table.setOrientation(LinearLayout.VERTICAL);
+        table.setBackgroundResource(R.drawable.card_bg);
+        table.setPadding(dp(18), dp(12), dp(18), dp(12));
+        table.addView(row("", "Live", "Replay", true));
         boolean anyLive = false;
-        for (OddsEngine.Outcome oc : OddsEngine.OUTCOMES) {
-            OddsEngine.Record lv = r.live.get(oc.id), bk = r.back.get(oc.id);
-            StringBuilder s = new StringBuilder(oc.resolved).append(":  ");
-            if (lv != null && lv.n > 0) {
-                s.append(lv.hits).append(" of ").append(lv.n).append(" right");
-                anyLive = true;
-            } else {
-                s.append("no scored forecasts yet");
-            }
-            if (bk != null && bk.n > 0) {
-                s.append("\n   replaying your history: ").append(bk.hits).append("/").append(bk.n)
-                        .append(" right, vs ").append(bk.baseHits).append("/").append(bk.n).append(" guessing your average");
-            }
-            line(s.toString(), a.getColor(R.color.muted), 13);
+        for (OddsEngine.Forecast fc : r.forecasts) {
+            OddsEngine.Record lv = r.live.get(fc.outcome.id), bk = r.back.get(fc.outcome.id);
+            String live = lv != null && lv.n > 0 ? lv.hits + "/" + lv.n : "–";
+            if (lv != null && lv.n > 0) anyLive = true;
+            String replay = bk != null && bk.n > 0 ? bk.hits + "/" + bk.n + "  ·  avg " + bk.baseHits + "/" + bk.n : "–";
+            table.addView(row(fc.outcome.resolved, live, replay, false));
         }
-        line(anyLive ? "Live scores count forecasts made in the app; the replay shows what the same rules would have scored on earlier days."
-                : "Tonight's forecasts are the first. The replay line shows what these rules would have scored on your earlier days.",
+        list.addView(table);
+        line(anyLive ? "Live: forecasts made here, scored the next morning. Replay: the same rules run on your earlier days, beside what guessing your average scores."
+                : "Tonight's forecasts are the first live ones. Replay: the same rules run on your earlier days, beside what guessing your average would score.",
                 a.getColor(R.color.idle), 12);
+    }
+
+    private View row(String name, String live, String replay, boolean head) {
+        LinearLayout r = new LinearLayout(a);
+        r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setPadding(0, dp(head ? 2 : 7), 0, dp(head ? 6 : 7));
+        int muted = a.getColor(R.color.muted), text = a.getColor(R.color.text);
+        TextView n = cell(name, head ? muted : text, head ? 11 : 14);
+        TextView l = cell(live, muted, head ? 11 : 14);
+        TextView p = cell(replay, muted, head ? 11 : 14);
+        if (head) {
+            for (TextView t : new TextView[]{n, l, p}) t.setLetterSpacing(0.1f);
+        }
+        r.addView(n, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.5f));
+        r.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.6f));
+        r.addView(p, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.3f));
+        return r;
+    }
+
+    private TextView cell(String s, int color, int sp) {
+        TextView t = new TextView(a);
+        t.setText(s);
+        t.setTextColor(color);
+        t.setTextSize(sp);
+        t.setMaxLines(1);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        return t;
     }
 
     private void header(String text) {
