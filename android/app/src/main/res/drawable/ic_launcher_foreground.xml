@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Three ascending marks: a forecast trending upward. -->
+<!-- The odds ring: a thick ring, most of it off-white, the last stretch teal. A gauge of
+     how likely, with a deliberate gap so it never reads as "complete". -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#EDEFF2"
-        android:pathData="M34,66 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
-    <path
-        android:fillColor="#EDEFF2"
-        android:pathData="M54,56 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
-    <path
-        android:fillColor="#2EC4B6"
-        android:pathData="M74,42 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <!-- off-white arc, 0° to 250° clockwise from 12 o'clock -->
     <path
         android:strokeColor="#EDEFF2"
-        android:strokeWidth="3"
-        android:strokeAlpha="0.45"
+        android:strokeWidth="11"
         android:strokeLineCap="round"
-        android:pathData="M34,66 L54,56 L74,42" />
+        android:pathData="M54,28 A26,26 0 1,1 29.57,62.89" />
+    <!-- teal arc, 265° to 355° -->
+    <path
+        android:strokeColor="#2EC4B6"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:pathData="M28.10,56.27 A26,26 0 0,1 51.73,28.10" />
 </vector>
