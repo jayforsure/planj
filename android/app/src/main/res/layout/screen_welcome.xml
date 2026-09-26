@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:heroHeadline="Your life,\nforecast honestly"
-        app:heroHeight="420dp"
+        app:heroHeight="260dp"
         app:heroSlot="welcome"
         app:heroSubline="planj learns from what you actually do and tells you the odds for tomorrow — with the one thing that would change them." />
 

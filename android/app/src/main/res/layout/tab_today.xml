@@ -63,6 +63,7 @@
                         android:layout_height="44dp"
                         android:background="@drawable/avatar_bg"
                         android:fontFamily="@font/display"
+                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 40, \'wdth\' 100"
                         android:gravity="center"
                         android:textColor="@color/on_accent"
                         android:textSize="20sp" />
@@ -86,11 +87,15 @@
                     style="@style/Chip.Primary"
                     android:text="Log mood" />
 
-                <Button
+                <ImageView
                     android:id="@+id/chip_private"
-                    style="@style/Chip.Tonal"
+                    style="@style/CircleButton"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
                     android:layout_marginStart="8dp"
-                    android:text="Private" />
+                    android:contentDescription="Private mode"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_private" />
             </LinearLayout>
 
             <LinearLayout
@@ -142,18 +147,19 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/display"
+                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
                         android:includeFontPadding="false"
+                        android:letterSpacing="-0.03"
                         android:textColor="@color/text"
-                        android:textSize="30sp" />
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:letterSpacing="0.08"
-                        android:text="SCREEN"
+                        android:layout_marginTop="4dp"
+                        android:text="Screen"
                         android:textColor="@color/muted"
-                        android:textSize="10sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <View
@@ -174,18 +180,19 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/display"
+                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
                         android:includeFontPadding="false"
+                        android:letterSpacing="-0.03"
                         android:textColor="@color/text"
-                        android:textSize="30sp" />
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:letterSpacing="0.08"
-                        android:text="UNLOCKS"
+                        android:layout_marginTop="4dp"
+                        android:text="Unlocks"
                         android:textColor="@color/muted"
-                        android:textSize="10sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <View
@@ -206,19 +213,21 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/display"
+                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
                         android:includeFontPadding="false"
+                        android:letterSpacing="-0.03"
                         android:textColor="@color/text"
-                        android:textSize="30sp" />
+                        android:textSize="28sp" />
 
                     <TextView
                         android:id="@+id/stat_quiet_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:letterSpacing="0.08"
-                        android:text="DEVICE-FREE"
+                        android:layout_marginTop="4dp"
+                        android:singleLine="true"
+                        android:text="Device-free"
                         android:textColor="@color/muted"
-                        android:textSize="10sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -241,9 +250,9 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:letterSpacing="0.12"
+                        android:fontFamily="sans-serif-medium"
                         android:textColor="@color/muted"
-                        android:textSize="11sp" />
+                        android:textSize="13sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -293,10 +302,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:letterSpacing="0.12"
-                        android:text="TODAY'S APPS"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Today's apps"
                         android:textColor="@color/muted"
-                        android:textSize="11sp" />
+                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/see_all"

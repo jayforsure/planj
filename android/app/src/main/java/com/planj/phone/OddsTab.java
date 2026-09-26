@@ -104,11 +104,11 @@ final class OddsTab {
         r.setOrientation(LinearLayout.HORIZONTAL);
         r.setPadding(0, dp(head ? 2 : 7), 0, dp(head ? 6 : 7));
         int muted = a.getColor(R.color.muted), text = a.getColor(R.color.text);
-        TextView n = cell(name, head ? muted : text, head ? 11 : 14);
-        TextView l = cell(live, muted, head ? 11 : 14);
-        TextView p = cell(replay, muted, head ? 11 : 14);
+        TextView n = cell(name, head ? muted : text, head ? 12 : 14);
+        TextView l = cell(live, muted, head ? 12 : 14);
+        TextView p = cell(replay, muted, head ? 12 : 14);
         if (head) {
-            for (TextView t : new TextView[]{n, l, p}) t.setLetterSpacing(0.1f);
+            for (TextView t : new TextView[]{n, l, p}) t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         }
         r.addView(n, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.5f));
         r.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.6f));
@@ -126,13 +126,17 @@ final class OddsTab {
         return t;
     }
 
+    /** A section heading in planj's voice: the display face with the teal dot. */
     private void header(String text) {
-        TextView h = new TextView(a);
-        h.setText(text);
-        h.setTextColor(a.getColor(R.color.muted));
-        h.setTextSize(11);
-        h.setLetterSpacing(0.12f);
-        h.setPadding(0, dp(18), 0, dp(6));
+        TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
+        h.setText(text.charAt(0) + text.substring(1).toLowerCase(java.util.Locale.ENGLISH));
+        h.setTextAppearance(R.style.Heading);
+        h.setTypeface(a.getResources().getFont(R.font.display));
+        h.setFontVariationSettings("'wght' 700, 'opsz' 40, 'wdth' 100");
+        h.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.dot_accent, 0, 0, 0);
+        h.setCompoundDrawablePadding(dp(10));
+        h.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        h.setPadding(0, dp(26), 0, dp(10));
         list.addView(h);
     }
 
@@ -197,6 +201,8 @@ final class OddsTab {
         pct.setTextColor(a.getColor(R.color.text));
         pct.setTextSize(30);
         pct.setTypeface(a.getResources().getFont(R.font.display));
+        pct.setFontVariationSettings("'wght' 800, 'opsz' 96, 'wdth' 100");
+        pct.setLetterSpacing(-0.03f);
         pct.setPadding(dp(16), 0, 0, 0);
         card.addView(pct);
         return card;

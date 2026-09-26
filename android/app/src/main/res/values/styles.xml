@@ -1,37 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Display: the heavy condensed voice for headlines. Always uppercase. -->
+    <!-- Display: planj's own voice. A characterful grotesk, heavy, tight, sentence case. -->
     <style name="Display" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:fontFamily">@font/display</item>
-        <item name="android:textAllCaps">true</item>
+        <item name="android:fontVariationSettings">\'wght\' 800, \'opsz\' 96, \'wdth\' 100</item>
         <item name="android:textColor">@color/text</item>
-        <item name="android:letterSpacing">0.01</item>
-        <item name="android:lineSpacingMultiplier">0.92</item>
+        <item name="android:letterSpacing">-0.03</item>
+        <item name="android:lineSpacingMultiplier">0.98</item>
         <item name="android:includeFontPadding">false</item>
     </style>
 
     <style name="Display.XL">
-        <item name="android:textSize">44sp</item>
+        <item name="android:textSize">38sp</item>
     </style>
 
     <style name="Display.L">
-        <item name="android:textSize">34sp</item>
+        <item name="android:textSize">31sp</item>
     </style>
 
     <style name="Display.M">
-        <item name="android:textSize">26sp</item>
+        <item name="android:textSize">24sp</item>
     </style>
 
-    <!-- Heading: bold sans for section titles inside a page ("Your account"). -->
+    <!-- Heading: section titles inside a page, marked with the planj dot. -->
     <style name="Heading" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/display</item>
+        <item name="android:fontVariationSettings">\'wght\' 700, \'opsz\' 40, \'wdth\' 100</item>
         <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">22sp</item>
-        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Heading.Dot">
+        <item name="android:drawableStart">@drawable/dot_accent</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:gravity">center_vertical</item>
     </style>
 
     <style name="Body" parent="">
@@ -166,9 +175,9 @@
         <item name="android:textSize">15sp</item>
     </style>
 
-    <style name="Auth.Section" parent="Heading">
-        <item name="android:layout_marginTop">28dp</item>
-        <item name="android:layout_marginBottom">6dp</item>
+    <style name="Auth.Section" parent="Heading.Dot">
+        <item name="android:layout_marginTop">30dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
     </style>
 
     <style name="Auth.Illustration" parent="">
@@ -191,8 +200,8 @@
     <style name="Overline" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:letterSpacing">0.1</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/muted</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">13sp</item>
     </style>
 </resources>

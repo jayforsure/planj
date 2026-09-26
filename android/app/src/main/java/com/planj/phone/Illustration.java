@@ -21,11 +21,12 @@ public final class Illustration extends ImageView {
     private String slot = "";
     private String note = "";
     private boolean found;
-    private boolean labelAtTop;
+    private boolean square;
 
-    /** Hero cards put text over the bottom, so the placeholder label moves up out of the way. */
-    void setLabelAtTop(boolean top) {
-        labelAtTop = top;
+    /** Inside a card that clips its own corners, the slot should not round them again. */
+    void setSquareCorners(boolean s) {
+        square = s;
+        setClipToOutline(!s);
         invalidate();
     }
 
@@ -83,10 +84,10 @@ public final class Illustration extends ImageView {
             return;
         }
         float dp = getResources().getDisplayMetrics().density;
-        float r = 16 * dp;
+        float r = square ? 0 : 16 * dp;
         box.set(frame.getStrokeWidth(), frame.getStrokeWidth(), getWidth() - frame.getStrokeWidth(), getHeight() - frame.getStrokeWidth());
         canvas.drawRoundRect(box, r, r, frame);
-        float cy = labelAtTop ? 34 * dp : getHeight() / 2f;
+        float cy = getHeight() / 2f;
         canvas.drawText(("IMAGE · " + slot).toUpperCase(), getWidth() / 2f, cy - 2 * dp, label);
         if (!note.isEmpty()) {
             label.setTextSize(10 * dp);

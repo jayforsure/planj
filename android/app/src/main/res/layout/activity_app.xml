@@ -64,10 +64,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:letterSpacing="0.12"
-                android:text="LAST 7 DAYS"
+                android:fontFamily="sans-serif-medium"
+                android:text="Last 7 days"
                 android:textColor="@color/muted"
-                android:textSize="11sp" />
+                android:textSize="13sp" />
 
             <com.planj.phone.BarChartView
                 android:id="@+id/chart"
@@ -88,9 +88,9 @@
                 android:id="@+id/sessions_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:letterSpacing="0.12"
+                android:fontFamily="sans-serif-medium"
                 android:textColor="@color/muted"
-                android:textSize="11sp" />
+                android:textSize="13sp" />
 
             <LinearLayout
                 android:id="@+id/sessions"

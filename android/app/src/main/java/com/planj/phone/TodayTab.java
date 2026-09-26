@@ -105,12 +105,12 @@ final class TodayTab {
     void refresh(boolean granted) {
         boolean isToday = shown.equals(LocalDate.now());
         Avatar.show(a, root.findViewById(R.id.me_photo), root.findViewById(R.id.me_initial));
-        ((android.widget.Button) root.findViewById(R.id.chip_private)).setText(PrivateMode.isOn(a) ? "Resume" : "Private");
-        headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)).toUpperCase(Locale.ENGLISH));
+        ((android.widget.ImageView) root.findViewById(R.id.chip_private)).setImageTintList(android.content.res.ColorStateList.valueOf(a.getColor(PrivateMode.isOn(a) ? R.color.accent : R.color.text)));
+        headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)));
         int hour = LocalTime.now().getHour();
         greeting.setText(!isToday ? Fmt.shortDate(shown)
                 : hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
-        appsTitle.setText(isToday ? "TODAY'S APPS" : "APPS THAT DAY");
+        appsTitle.setText(isToday ? "Today's apps" : "Apps that day");
 
         boolean priv = PrivateMode.isOn(a);
         privateBanner.setVisibility(priv ? View.VISIBLE : View.GONE);
@@ -129,13 +129,13 @@ final class TodayTab {
             statUnlocks.setText(String.valueOf(day.unlocks));
             DayUsage.Quiet q = DayUsage.quiet(a, shown);
             statQuiet.setText(q == null ? "—" : Fmt.shortDuration(q.ms()));
-            statQuietLabel.setText(q != null && q.charging ? "DEVICE-FREE · CHARGED" : "DEVICE-FREE");
+            statQuietLabel.setText(q != null && q.charging ? "Device-free ⚡" : "Device-free");
 
             LocalDate first = shown.minusDays(CHART_DAYS - 1);
             String range = first.getMonth() == shown.getMonth()
                     ? first.getDayOfMonth() + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))
                     : first.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)) + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
-            weekRange.setText(range.toUpperCase(Locale.ENGLISH));
+            weekRange.setText(range);
 
             List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
             ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
