@@ -141,9 +141,10 @@ public class DeepTraceService extends AccessibilityService {
             if (user == null) user = findBySuffix(root, "username", 2, "Your story");
             if (user == null) return null;
             user = user.trim();
-            // The caption is the text node that starts with the author's handle; it is what
-            // makes topic classification meaningful, and it stays on this phone.
+            // The caption is what makes topic classification meaningful, and it stays on this
+            // phone. Feed posts start it with the handle; reels expose it as its own description.
             String caption = findCaption(root, user);
+            if (caption == null) caption = findReelCaption(root, user);
             return new String[]{kind, "@" + user + (caption == null ? "" : " — " + caption)};
         }
         if (isMediaApp(pkg)) {
@@ -159,19 +160,24 @@ public class DeepTraceService extends AccessibilityService {
         return null;
     }
 
+    // "Reel by X. Double tap to play or pause." / "Photo 1 of 11 by X, 1 comment" / "Video by X"
     private static final java.util.regex.Pattern MEDIA_BY = java.util.regex.Pattern.compile(
-            "^(Reel|Video|Photo(?: \\d+ of \\d+)?|Carousel|Post) by ([^,]+?)(?:,|$)", java.util.regex.Pattern.CASE_INSENSITIVE);
+            "^(Reel|Video|Photo(?: \\d+ of \\d+)?|Carousel|Post) by (.+?)(?:,|\\. Double tap|\\.$|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final String[] NOT_A_CAPTION = {"Profile picture of", "Reel by", "Video by", "Photo ", "Comment number",
+            "View likes", "Double tap", "Sponsored", "Suggested for you", "Learn more", "Send post", "Add to Saved",
+            "Turn sound", "More actions", "More options", "Like", "Comment", "Share", "Repost", "Follow", "Shop now"};
 
     /** {kind, author} from a media node's description such as "Reel by someone, 12 likes". */
     private static String[] findMediaBy(AccessibilityNodeInfo n) {
         if (n == null) return null;
-        CharSequence d = n.getContentDescription();
+        CharSequence d = n.isVisibleToUser() ? n.getContentDescription() : null;
         if (d != null) {
-            java.util.regex.Matcher m = MEDIA_BY.matcher(d);
+            java.util.regex.Matcher m = MEDIA_BY.matcher(clean(d));
             if (m.find()) {
                 String kind = m.group(1).toLowerCase().startsWith("reel") ? "reel"
                         : m.group(1).toLowerCase().startsWith("video") ? "video" : "post";
-                return new String[]{kind, m.group(2).trim()};
+                return new String[]{kind, clean(m.group(2))};
             }
         }
         for (int i = 0; i < n.getChildCount(); i++) {
@@ -197,6 +203,29 @@ public class DeepTraceService extends AccessibilityService {
         for (int i = 0; i < n.getChildCount(); i++) {
             AccessibilityNodeInfo c = n.getChild(i);
             String found = findCaption(c, author);
+            if (c != null) c.recycle();
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /** A reel's caption: the first substantial description or text that is not a control label. */
+    private static String findReelCaption(AccessibilityNodeInfo n, String author) {
+        if (n == null) return null;
+        boolean visible = n.isVisibleToUser();
+        for (CharSequence cs : new CharSequence[]{visible ? n.getContentDescription() : null,
+                visible && !n.isEditable() && !n.isPassword() ? n.getText() : null}) {
+            if (cs == null || cs.length() < 12) continue;
+            String s = clean(cs);
+            if (s.contains(author) || s.contains(". Button") || s.contains("Double tap") || s.endsWith("liked this reel")) continue;
+            boolean control = false;
+            for (String bad : NOT_A_CAPTION) if (s.startsWith(bad)) control = true;
+            if (control) continue;
+            return s.length() > 100 ? s.substring(0, 100) + "…" : s;
+        }
+        for (int i = 0; i < n.getChildCount(); i++) {
+            AccessibilityNodeInfo c = n.getChild(i);
+            String found = findReelCaption(c, author);
             if (c != null) c.recycle();
             if (found != null) return found;
         }
@@ -237,6 +266,8 @@ public class DeepTraceService extends AccessibilityService {
     private static String text(AccessibilityNodeInfo n) {
         if (n == null) return null;
         if (n.isPassword()) return null;
+        // Pager apps keep other pages in the tree; only what is actually on screen counts.
+        if (!n.isVisibleToUser()) return null;
         // Editable fields are what people type into — skipped, except a browser's address bar
         // while it is merely displaying the loaded page (not focused for typing).
         if (n.isEditable()) {
@@ -245,7 +276,14 @@ public class DeepTraceService extends AccessibilityService {
         }
         CharSequence t = n.getText();
         if (t == null || t.length() == 0) t = n.getContentDescription();
-        return t == null || t.length() == 0 ? null : t.toString();
+        if (t == null) return null;
+        String s = clean(t);
+        return s.isEmpty() ? null : s;
+    }
+
+    /** Instagram pads names with non-breaking spaces, which trim() does not remove. */
+    private static String clean(CharSequence cs) {
+        return cs.toString().replace(' ', ' ').replace('​', ' ').strip();
     }
 
     private static String domain(String url) {
