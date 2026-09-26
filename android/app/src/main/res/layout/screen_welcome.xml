@@ -1,25 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingHorizontal="24dp"
-    android:paddingTop="8dp"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="4dp"
     android:paddingBottom="32dp">
 
-        <com.planj.phone.Illustration
-            style="@style/Auth.Illustration"
-            android:contentDescription="hero, about 3:2"
-            android:tag="welcome" />
+    <com.planj.phone.HeroCard
+        android:id="@+id/hero"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:heroHeadline="Your life,\nforecast honestly"
+        app:heroHeight="420dp"
+        app:heroSlot="welcome"
+        app:heroSubline="planj learns from what you actually do and tells you the odds for tomorrow — with the one thing that would change them." />
 
-        <TextView style="@style/Auth.Title" android:text="Your life, forecast honestly" />
-        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="planj learns from what you actually do and tells you the odds for tomorrow, with the one thing that would change them. Everything is encrypted with a key only your devices hold." />
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <Button android:id="@+id/btn_create" style="@style/Auth.Primary" android:text="Create account" />
-            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
-        </FrameLayout>
-        <Button android:id="@+id/btn_signin" style="@style/Auth.Secondary" android:text="I already have an account" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:gravity="center" android:text="End-to-end encrypted · no server ever sees your data" android:textColor="@color/idle" android:textSize="11sp" />
+    <Button android:id="@+id/btn_create" style="@style/Auth.Primary" android:text="Create account" />
+    <Button android:id="@+id/btn_signin" style="@style/Auth.Secondary" android:text="I already have an account" />
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="End-to-end encrypted · no server ever sees your data" android:textColor="@color/idle" android:textSize="12sp" />
 </LinearLayout>

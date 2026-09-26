@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -10,8 +11,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="24dp">
+        android:paddingTop="16dp"
+        android:paddingBottom="32dp">
 
         <!-- Signed out -->
         <LinearLayout
@@ -20,56 +21,45 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <com.planj.phone.Illustration
-                android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:contentDescription="hero, about 3:2"
-                android:tag="welcome" />
-
-            <TextView
-                style="@style/Auth.Title"
-                android:layout_marginTop="20dp"
-                android:text="One account, all your devices" />
-
-            <TextView
-                style="@style/Auth.Blurb"
-                android:text="Sign in on your phone and PC and they share one encrypted record. Your password locks the key; the relay only ever holds ciphertext." />
-
-            <Button
-                android:id="@+id/btn_create"
-                style="@style/Auth.Primary"
-                android:text="Create account" />
-
-            <Button
-                android:id="@+id/btn_signin"
-                style="@style/Auth.Secondary"
-                android:text="I already have an account" />
-
-            <!-- Older code-paired phones -->
-            <LinearLayout
-                android:id="@+id/legacy"
+            <com.planj.phone.HeroCard
+                android:id="@+id/hero_welcome"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="18dp"
-                android:visibility="gone">
+                app:heroButton="Create account"
+                app:heroHeadline="Your life,\nforecast honestly"
+                app:heroHeight="360dp"
+                app:heroSlot="welcome"
+                app:heroSubline="One account. Every device. A key only you hold." />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:lineSpacingExtra="3dp"
-                    android:text="This phone still syncs with an older key from before accounts existed. Create an account to move to the new sign-in; the phone re-sends its history so nothing is lost."
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
+            <TextView
+                style="@style/Auth.Section"
+                android:text="Already with planj?" />
 
-                <Button
-                    android:id="@+id/btn_legacy_signout"
-                    style="@style/Auth.Link"
-                    android:layout_marginTop="6dp"
-                    android:text="Stop using the older key" />
-            </LinearLayout>
+            <com.planj.phone.ListRow
+                android:id="@+id/row_signin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowIcon="@drawable/ic_mail"
+                app:rowSubtitle="Use the email and password from your other device"
+                app:rowTitle="Sign in" />
+
+            <com.planj.phone.ListRow
+                android:id="@+id/row_how"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowIcon="@drawable/ic_shield"
+                app:rowSubtitle="What is stored, what is not, and who can read it"
+                app:rowTitle="How privacy works" />
+
+            <!-- Older code-paired phones -->
+            <com.planj.phone.ListRow
+                android:id="@+id/row_legacy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:rowIcon="@drawable/ic_key"
+                app:rowSubtitle="This phone still syncs with a key from before accounts. Tap to stop."
+                app:rowTitle="Older key in use" />
         </LinearLayout>
 
         <!-- Signed in: profile -->
@@ -80,242 +70,149 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+            <FrameLayout
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp">
 
                 <TextView
-                    android:id="@+id/avatar"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
+                    android:id="@+id/avatar_initial"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
                     android:background="@drawable/avatar_bg"
-                    android:fontFamily="serif"
+                    android:fontFamily="@font/display"
                     android:gravity="center"
                     android:textColor="@color/on_accent"
-                    android:textSize="24sp" />
+                    android:textSize="52sp" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/avatar_photo"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:contentDescription="Your photo"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/email"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="middle"
-                        android:fontFamily="sans-serif-medium"
-                        android:singleLine="true"
-                        android:textColor="@color/text"
-                        android:textSize="16sp" />
+                <ImageView
+                    android:id="@+id/avatar_camera"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="bottom|end"
+                    android:background="@drawable/btn_circle_accent"
+                    android:contentDescription="Change photo"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_camera"
+                    android:tint="@color/on_accent" />
+            </FrameLayout>
 
-                    <TextView
-                        android:id="@+id/since"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </LinearLayout>
+            <TextView
+                android:id="@+id/display_name"
+                style="@style/Display.XL"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/btn_text"
+                android:gravity="center"
+                android:paddingHorizontal="12dp" />
 
-            <com.planj.phone.Illustration
-                android:layout_width="match_parent"
-                android:layout_height="140dp"
-                android:layout_marginTop="20dp"
-                android:contentDescription="profile banner, about 5:2"
-                android:tag="profile" />
-
-            <!-- Sync -->
-            <LinearLayout
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="Personal record"
+                android:textColor="@color/muted"
+                android:textSize="16sp" />
 
-                <TextView style="@style/Auth.Section" android:text="SYNC" />
+            <TextView
+                android:id="@+id/email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/handle_bg"
+                android:drawablePadding="8dp"
+                android:drawableStart="@drawable/ic_mail"
+                android:drawableTint="@color/accent"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+            <com.planj.phone.HeroCard
+                android:id="@+id/hero_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                app:heroButton="See tomorrow's odds"
+                app:heroHeadline="Your record,\nyour rules"
+                app:heroHeight="220dp"
+                app:heroSlot="profile" />
 
-                    <View
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/dot"
-                        android:backgroundTint="@color/ok" />
+            <TextView
+                style="@style/Auth.Section"
+                android:text="Your account" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="This phone"
-                        android:textColor="@color/text"
-                        android:textSize="14sp" />
+            <com.planj.phone.ListRow
+                android:id="@+id/row_sync"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowIcon="@drawable/ic_sync"
+                app:rowTitle="Sync" />
 
-                    <TextView
-                        android:id="@+id/phone_detail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <View
-                        android:id="@+id/dot_pc"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/dot" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="PC"
-                        android:textColor="@color/text"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/pc_detail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="3dp"
-                    android:text="To add a PC, run planj signin there with the same email and password."
-                    android:textColor="@color/muted"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Devices -->
-            <LinearLayout
+            <com.planj.phone.ListRow
                 android:id="@+id/row_devices"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/card_bg"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp">
+                app:rowIcon="@drawable/ic_devices"
+                app:rowSubtitle="Signed-in phones and PCs"
+                app:rowTitle="Devices" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="Devices"
-                        android:textColor="@color/text"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/devices_detail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Signed-in phones and PCs"
-                        android:textColor="@color/muted"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="›"
-                    android:textColor="@color/muted"
-                    android:textSize="22sp" />
-            </LinearLayout>
-
-            <!-- Security -->
-            <LinearLayout
+            <com.planj.phone.ListRow
+                android:id="@+id/row_export"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp">
+                app:rowIcon="@drawable/ic_export"
+                app:rowSubtitle="Everything this phone has recorded, as a file"
+                app:rowTitle="Export my data" />
 
-                <TextView style="@style/Auth.Section" android:text="SECURITY" />
+            <TextView
+                style="@style/Auth.Section"
+                android:text="Security" />
 
-                <TextView
-                    android:id="@+id/row_password"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/btn_text"
-                    android:gravity="center_vertical"
-                    android:text="Change password"
-                    android:textColor="@color/text"
-                    android:textSize="15sp" />
+            <com.planj.phone.ListRow
+                android:id="@+id/row_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowIcon="@drawable/ic_lock"
+                app:rowSubtitle="Signs your other devices out"
+                app:rowTitle="Change password" />
 
-                <TextView
-                    android:id="@+id/row_recovery"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/btn_text"
-                    android:gravity="center_vertical"
-                    android:text="Recovery code"
-                    android:textColor="@color/text"
-                    android:textSize="15sp" />
+            <com.planj.phone.ListRow
+                android:id="@+id/row_recovery"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowIcon="@drawable/ic_key"
+                app:rowTitle="Recovery code" />
 
-                <TextView
-                    android:id="@+id/recovery_detail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="-6dp"
-                    android:textColor="@color/muted"
-                    android:textSize="12sp" />
+            <com.planj.phone.ListRow
+                android:id="@+id/row_signout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:rowChevron="false"
+                app:rowIcon="@drawable/ic_back"
+                app:rowSubtitle="Data stays on this phone; syncing stops"
+                app:rowTitle="Sign out on this phone" />
 
-                <TextView
-                    android:id="@+id/row_signout"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/btn_text"
-                    android:gravity="center_vertical"
-                    android:text="Sign out on this phone"
-                    android:textColor="@color/text"
-                    android:textSize="15sp" />
-            </LinearLayout>
-
-            <Button
+            <com.planj.phone.ListRow
                 android:id="@+id/row_delete"
-                style="@style/Auth.Link"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:text="Delete account"
-                android:textColor="@color/bad" />
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:rowIcon="@drawable/ic_trash"
+                app:rowTint="@color/bad"
+                app:rowTitle="Delete account" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

@@ -1,18 +1,26 @@
 package com.planj.phone;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.json.JSONObject;
 
-/** The Account tab: a welcome when signed out, a profile with sync, devices and security when in. */
+/** The Account tab: a welcome hero when signed out, a Wise-style profile when signed in. */
 final class AccountTab {
+    static final int REQ_AVATAR = 7;
+
     private final MainActivity a;
     private final View root;
-    private final View signedOut, profile, legacy, dotPc;
-    private final TextView avatar, email, since, phoneDetail, pcDetail, devicesDetail, recoveryDetail;
+    private final View signedOut, profile;
+    private final ListRow rowSync, rowDevices, rowRecovery, rowLegacy;
+    private final TextView displayName, email, avatarInitial;
+    private final ImageView avatarPhoto;
     private String cachedInfoFor;
 
     AccountTab(MainActivity a, ViewGroup container) {
@@ -21,34 +29,64 @@ final class AccountTab {
         container.addView(root);
         signedOut = root.findViewById(R.id.card_signedout);
         profile = root.findViewById(R.id.card_profile);
-        legacy = root.findViewById(R.id.legacy);
-        dotPc = root.findViewById(R.id.dot_pc);
-        avatar = root.findViewById(R.id.avatar);
+        rowSync = root.findViewById(R.id.row_sync);
+        rowDevices = root.findViewById(R.id.row_devices);
+        rowRecovery = root.findViewById(R.id.row_recovery);
+        rowLegacy = root.findViewById(R.id.row_legacy);
+        displayName = root.findViewById(R.id.display_name);
         email = root.findViewById(R.id.email);
-        since = root.findViewById(R.id.since);
-        phoneDetail = root.findViewById(R.id.phone_detail);
-        pcDetail = root.findViewById(R.id.pc_detail);
-        devicesDetail = root.findViewById(R.id.devices_detail);
-        recoveryDetail = root.findViewById(R.id.recovery_detail);
+        avatarInitial = root.findViewById(R.id.avatar_initial);
+        avatarPhoto = root.findViewById(R.id.avatar_photo);
 
-        root.findViewById(R.id.btn_create).setOnClickListener(v -> open("create"));
-        root.findViewById(R.id.btn_signin).setOnClickListener(v -> open("signin"));
-        root.findViewById(R.id.btn_legacy_signout).setOnClickListener(v -> {
+        root.findViewById(R.id.hero_welcome).setOnClickListener(v -> open("create"));
+        root.findViewById(R.id.row_signin).setOnClickListener(v -> open("signin"));
+        root.findViewById(R.id.row_how).setOnClickListener(v -> new AlertDialog.Builder(a)
+                .setTitle("How privacy works")
+                .setMessage("Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type.\n\n"
+                        + "Syncing sends that record to your PC through a relay, encrypted with a key derived on your devices. The relay stores only ciphertext and a hash used to sign you in. Nobody at planj can read your data — which is also why your password cannot be reset without your recovery code.")
+                .setPositiveButton("Got it", null).show());
+        rowLegacy.setOnClickListener(v -> {
             RelaySync.signOut(a);
             a.toast("The older key is gone — create an account to sync again");
             a.refresh();
         });
-        root.findViewById(R.id.row_devices).setOnClickListener(v -> open("devices"));
+
+        View.OnClickListener pick = v -> a.startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*")
+                .addCategory(Intent.CATEGORY_OPENABLE), REQ_AVATAR);
+        root.findViewById(R.id.avatar_camera).setOnClickListener(pick);
+        avatarPhoto.setOnClickListener(pick);
+        avatarInitial.setOnClickListener(pick);
+        displayName.setOnClickListener(v -> askName());
+
+        rowSync.setOnClickListener(v -> a.syncInBackground());
+        rowDevices.setOnClickListener(v -> open("devices"));
+        root.findViewById(R.id.row_export).setOnClickListener(v -> a.startExport());
         root.findViewById(R.id.row_password).setOnClickListener(v -> open("password"));
-        root.findViewById(R.id.row_recovery).setOnClickListener(v -> open("newrecovery"));
+        rowRecovery.setOnClickListener(v -> open("newrecovery"));
         root.findViewById(R.id.row_delete).setOnClickListener(v -> open("delete"));
-        root.findViewById(R.id.row_signout).setOnClickListener(v -> {
-            String token = AccountStore.token(a);
-            AccountStore.signOut(a);
-            new Thread(() -> { try { AccountApi.logout(token); } catch (Exception ignored) {} }).start();
-            a.toast("Signed out — this phone keeps its data, and stops syncing");
-            a.refresh();
-        });
+        root.findViewById(R.id.hero_profile).setOnClickListener(v -> a.showOdds());
+        root.findViewById(R.id.row_signout).setOnClickListener(v -> new AlertDialog.Builder(a)
+                .setTitle("Sign out on this phone?")
+                .setMessage("Recorded data stays here. Syncing stops until you sign in again.")
+                .setPositiveButton("Sign out", (d, w) -> {
+                    String token = AccountStore.token(a);
+                    AccountStore.signOut(a);
+                    new Thread(() -> { try { AccountApi.logout(token); } catch (Exception ignored) {} }).start();
+                    a.refresh();
+                })
+                .setNegativeButton("Cancel", null).show());
+    }
+
+    private void askName() {
+        EditText in = new EditText(a);
+        in.setText(Avatar.name(a));
+        in.setSelectAllOnFocus(true);
+        in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        int pad = Math.round(20 * a.getResources().getDisplayMetrics().density);
+        in.setPadding(pad, pad, pad, pad);
+        new AlertDialog.Builder(a).setTitle("Your name").setView(in)
+                .setPositiveButton("Save", (d, w) -> { Avatar.setName(a, in.getText().toString()); refresh(); })
+                .setNegativeButton("Cancel", null).show();
     }
 
     private void open(String screen) {
@@ -64,28 +102,22 @@ final class AccountTab {
         signedOut.setVisibility(in ? View.GONE : View.VISIBLE);
         profile.setVisibility(in ? View.VISIBLE : View.GONE);
         if (!in) {
-            legacy.setVisibility(RelaySync.pairedCode(a) != null ? View.VISIBLE : View.GONE);
+            rowLegacy.setVisibility(RelaySync.pairedCode(a) != null ? View.VISIBLE : View.GONE);
             cachedInfoFor = null;
             return;
         }
         String e = AccountStore.email(a);
         email.setText(e);
-        avatar.setText(e.isEmpty() ? "?" : e.substring(0, 1).toUpperCase());
-        recoveryDetail.setText(AccountStore.hasRecovery(a) ? "On file · tap to generate a new one" : "None yet · tap to create one");
+        displayName.setText(Avatar.name(a));
+        Avatar.show(a, avatarPhoto, avatarInitial);
+        rowRecovery.setSubtitle(AccountStore.hasRecovery(a) ? "On file · tap for a new one" : "None yet · tap to create one");
 
         long synced = RelaySync.lastSyncMs(a);
-        phoneDetail.setText(synced == 0 ? "not synced yet" : "synced " + Fmt.clock(synced));
         long confirmed = RelaySync.confirmedMs(a);
         String error = RelaySync.lastError(a);
-        if (error != null) {
-            dot(R.color.warn); pcDetail.setText("retrying");
-        } else if (confirmed > 0) {
-            dot(R.color.ok); pcDetail.setText("confirmed " + Fmt.clock(confirmed));
-        } else if (RelaySync.confirmationOverdue(a)) {
-            dot(R.color.warn); pcDetail.setText("not answering — signed in there?");
-        } else {
-            dot(R.color.idle); pcDetail.setText("waiting");
-        }
+        String pc = error != null ? "PC retrying" : confirmed > 0 ? "PC confirmed " + Fmt.clock(confirmed)
+                : RelaySync.confirmationOverdue(a) ? "PC not answering — signed in there?" : "waiting for the PC";
+        rowSync.setSubtitle((synced == 0 ? "Not synced yet" : "Phone synced " + Fmt.clock(synced)) + " · " + pc);
 
         if (!e.equals(cachedInfoFor)) {
             String token = AccountStore.token(a);
@@ -93,24 +125,18 @@ final class AccountTab {
                 try {
                     JSONObject me = AccountApi.me(token);
                     int n = me.getJSONArray("devices").length();
-                    String created = me.optString("created");
                     a.runOnUiThread(() -> {
                         cachedInfoFor = e;
-                        since.setText(created.length() >= 10 ? "Member since " + created.substring(0, 10) : "");
-                        devicesDetail.setText(n == 1 ? "Just this phone" : n + " signed in");
+                        rowDevices.setSubtitle(n == 1 ? "Just this phone" : n + " signed in");
                         AccountStore.setHasRecovery(a, me.optBoolean("has_recovery"));
-                        recoveryDetail.setText(me.optBoolean("has_recovery") ? "On file · tap to generate a new one" : "None yet · tap to create one");
+                        rowRecovery.setSubtitle(me.optBoolean("has_recovery") ? "On file · tap for a new one" : "None yet · tap to create one");
                     });
                 } catch (AccountApi.Refused r) {
-                    if (r.status == 401) a.runOnUiThread(() -> since.setText("Session ended — sign in again"));
+                    if (r.status == 401) a.runOnUiThread(() -> rowDevices.setSubtitle("Session ended — sign in again"));
                 } catch (Exception ignored) {
                     // offline: the cached state stays
                 }
             }).start();
         }
-    }
-
-    private void dot(int color) {
-        dotPc.getBackground().mutate().setTint(a.getColor(color));
     }
 }

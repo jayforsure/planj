@@ -90,6 +90,14 @@ public class MainActivity extends Activity {
         for (int i = 0; i < g.getChildCount(); i++) g.getChildAt(i).setSelected(selected);
     }
 
+    void showAccount() {
+        select(accountTab.view(), navAccount);
+    }
+
+    void showOdds() {
+        select(odds.view(), navOdds);
+    }
+
     void showJournal(LocalDate day) {
         journal.show(day);
         select(journal.view(), navJournal);
@@ -158,7 +166,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQ_EXPORT || resultCode != RESULT_OK || data == null) return;
+        if (resultCode != RESULT_OK || data == null) return;
+        if (requestCode == AccountTab.REQ_AVATAR) {
+            if (!Avatar.save(this, data.getData())) toast("Could not read that image");
+            refresh();
+            return;
+        }
+        if (requestCode != REQ_EXPORT) return;
         Uri uri = data.getData();
         new Thread(() -> {
             try {

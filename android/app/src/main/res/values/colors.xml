@@ -14,4 +14,6 @@
     <color name="ripple">#22FFFFFF</color>
     <color name="accent_dim">#1F5F5A</color>
     <color name="bad">#E5616B</color>
+    <color name="border_strong">#3A434A</color>
+    <color name="scrim">#B30E1113</color>
 </resources>

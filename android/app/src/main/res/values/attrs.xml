@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ListRow">
+        <attr name="rowIcon" format="reference" />
+        <attr name="rowTitle" format="string" />
+        <attr name="rowSubtitle" format="string" />
+        <attr name="rowChevron" format="boolean" />
+        <attr name="rowTint" format="color" />
+    </declare-styleable>
+    <declare-styleable name="HeroCard">
+        <attr name="heroSlot" format="string" />
+        <attr name="heroHeadline" format="string" />
+        <attr name="heroSubline" format="string" />
+        <attr name="heroButton" format="string" />
+        <attr name="heroHeight" format="dimension" />
+    </declare-styleable>
+</resources>

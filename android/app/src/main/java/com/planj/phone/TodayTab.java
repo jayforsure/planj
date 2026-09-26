@@ -56,6 +56,9 @@ final class TodayTab {
             a.saveEntry(moodDay(), mood, e == null ? "" : e.note, e == null ? List.of() : e.tags);
         });
         root.findViewById(R.id.see_all).setOnClickListener(v -> openDay(shown));
+        root.findViewById(R.id.me).setOnClickListener(v -> a.showAccount());
+        root.findViewById(R.id.chip_mood).setOnClickListener(v -> a.showJournal(shown));
+        root.findViewById(R.id.chip_private).setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
         moodNote.setOnClickListener(v -> a.showJournal(moodDay()));
         privateBanner.setOnClickListener(v -> a.setPrivate(false));
 
@@ -101,6 +104,8 @@ final class TodayTab {
 
     void refresh(boolean granted) {
         boolean isToday = shown.equals(LocalDate.now());
+        Avatar.show(a, root.findViewById(R.id.me_photo), root.findViewById(R.id.me_initial));
+        ((android.widget.Button) root.findViewById(R.id.chip_private)).setText(PrivateMode.isOn(a) ? "Resume" : "Private");
         headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)).toUpperCase(Locale.ENGLISH));
         int hour = LocalTime.now().getHour();
         greeting.setText(!isToday ? Fmt.shortDate(shown)

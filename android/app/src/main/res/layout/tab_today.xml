@@ -44,20 +44,67 @@
                 android:textSize="13sp"
                 android:visibility="gone" />
 
+            <!-- Top bar: you, and two quick actions -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/me"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/btn_circle">
+
+                    <TextView
+                        android:id="@+id/me_initial"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/avatar_bg"
+                        android:fontFamily="@font/display"
+                        android:gravity="center"
+                        android:textColor="@color/on_accent"
+                        android:textSize="20sp" />
+
+                    <ImageView
+                        android:id="@+id/me_photo"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:contentDescription="Account"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+                </FrameLayout>
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/chip_mood"
+                    style="@style/Chip.Primary"
+                    android:text="Log mood" />
+
+                <Button
+                    android:id="@+id/chip_private"
+                    style="@style/Chip.Tonal"
+                    android:layout_marginStart="8dp"
+                    android:text="Private" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
                 android:gravity="bottom"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/header_date"
+                    style="@style/Overline"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:letterSpacing="0.12"
-                    android:textColor="@color/muted"
-                    android:textSize="11sp" />
+                    android:layout_weight="1" />
 
                 <TextView
                     android:id="@+id/day_hint"
@@ -70,13 +117,8 @@
 
             <TextView
                 android:id="@+id/greeting"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:fontFamily="serif"
-                android:letterSpacing="-0.01"
-                android:textColor="@color/text"
-                android:textSize="30sp" />
+                style="@style/Display.XL"
+                android:layout_marginTop="6dp" />
 
             <!-- Numbers -->
             <LinearLayout
@@ -99,10 +141,10 @@
                         android:id="@+id/stat_screen"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:letterSpacing="-0.03"
+                        android:fontFamily="@font/display"
+                        android:includeFontPadding="false"
                         android:textColor="@color/text"
-                        android:textSize="26sp" />
+                        android:textSize="30sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -131,10 +173,10 @@
                         android:id="@+id/stat_unlocks"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:letterSpacing="-0.03"
+                        android:fontFamily="@font/display"
+                        android:includeFontPadding="false"
                         android:textColor="@color/text"
-                        android:textSize="26sp" />
+                        android:textSize="30sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -163,10 +205,10 @@
                         android:id="@+id/stat_quiet"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:letterSpacing="-0.03"
+                        android:fontFamily="@font/display"
+                        android:includeFontPadding="false"
                         android:textColor="@color/text"
-                        android:textSize="26sp" />
+                        android:textSize="30sp" />
 
                     <TextView
                         android:id="@+id/stat_quiet_label"
@@ -288,9 +330,9 @@
                     android:id="@+id/mood_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="serif"
+                    android:fontFamily="sans-serif-medium"
                     android:textColor="@color/text"
-                    android:textSize="21sp" />
+                    android:textSize="22sp" />
 
                 <TextView
                     android:id="@+id/mood_state"
@@ -314,7 +356,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:background="@drawable/btn_text"
-                    android:fontFamily="serif"
                     android:lineSpacingExtra="3dp"
                     android:textColor="@color/muted"
                     android:textSize="14sp" />

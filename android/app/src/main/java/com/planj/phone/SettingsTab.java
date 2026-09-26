@@ -3,46 +3,37 @@ package com.planj.phone;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.provider.Settings;
-import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final View dotTracking, dotSync;
-    private final TextView trackingDetail, syncDetail;
-    private final Button grant, reminder, export;
-    private final TextView privateState;
-    private final Button privateToggle;
+    private final ListRow tracking, priv, reminder;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
         root = a.getLayoutInflater().inflate(R.layout.tab_settings, container, false);
         container.addView(root);
-        dotTracking = root.findViewById(R.id.dot_tracking);
-        dotSync = root.findViewById(R.id.dot_sync);
-        trackingDetail = root.findViewById(R.id.tracking_detail);
-        syncDetail = root.findViewById(R.id.sync_detail);
-        grant = root.findViewById(R.id.btn_grant);
-        grant.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
-        reminder = root.findViewById(R.id.btn_reminder);
+        tracking = root.findViewById(R.id.row_tracking);
+        priv = root.findViewById(R.id.row_private);
+        reminder = root.findViewById(R.id.row_reminder);
+
+        tracking.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        priv.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
+        root.findViewById(R.id.row_private_apps).setOnClickListener(v -> a.startActivity(new Intent(a, AppPickerActivity.class)));
         reminder.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())));
-        export = root.findViewById(R.id.btn_export);
-        export.setOnClickListener(v -> a.startExport());
+        root.findViewById(R.id.row_export).setOnClickListener(v -> a.startExport());
+        root.findViewById(R.id.row_privacy).setOnClickListener(v -> new AlertDialog.Builder(a)
+                .setTitle("How privacy works")
+                .setMessage("Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type.\n\n"
+                        + "Private mode pauses everything, from here, the Quick Settings tile, or by pinching in on Today. Money, password, health and dating apps are recorded only as “Private” from the start.\n\n"
+                        + "Syncing to your PC goes through a relay that only ever holds ciphertext; the key is derived on your devices from your password.")
+                .setPositiveButton("Got it", null).show());
 
-        privateState = root.findViewById(R.id.private_state);
-        privateToggle = root.findViewById(R.id.btn_private);
-        privateToggle.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
-        root.findViewById(R.id.btn_private_apps).setOnClickListener(v ->
-                a.startActivity(new Intent(a, AppPickerActivity.class)));
-
-        Button tile = root.findViewById(R.id.btn_tile);
+        ListRow tile = root.findViewById(R.id.row_tile);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             tile.setOnClickListener(v -> a.getSystemService(android.app.StatusBarManager.class).requestAddTileService(
                     new android.content.ComponentName(a, PrivateTileService.class), "planj Private",
@@ -51,6 +42,13 @@ final class SettingsTab {
         } else {
             tile.setOnClickListener(v -> a.toast("Swipe down, tap the pencil, and drag “planj Private” into your tiles"));
         }
+
+        TextView version = root.findViewById(R.id.version);
+        try {
+            version.setText("planj " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName);
+        } catch (Exception e) {
+            version.setText("planj");
+        }
     }
 
     View view() {
@@ -58,36 +56,11 @@ final class SettingsTab {
     }
 
     void refresh(boolean granted) {
-        setDot(dotTracking, granted ? R.color.ok : R.color.warn);
-        trackingDetail.setText(granted ? "On" : "Usage access is off");
-        grant.setVisibility(granted ? View.GONE : View.VISIBLE);
-        export.setEnabled(granted);
-
-        String error = RelaySync.lastError(a);
-        long confirmed = RelaySync.confirmedMs(a);
-        if (RelaySync.pairedCode(a) == null) {
-            setDot(dotSync, R.color.idle);
-            syncDetail.setText("Not signed in");
-        } else if (error != null) {
-            setDot(dotSync, R.color.warn);
-            syncDetail.setText("Retrying · " + error);
-        } else if (confirmed > 0) {
-            setDot(dotSync, R.color.ok);
-            syncDetail.setText("PC confirmed " + Fmt.clock(confirmed));
-        } else {
-            setDot(dotSync, R.color.idle);
-            syncDetail.setText("Waiting for PC");
-        }
-        reminder.setVisibility(MoodReminder.enabled(a) ? View.GONE : View.VISIBLE);
-
-        boolean priv = PrivateMode.isOn(a);
-        privateState.setText(priv ? "Private mode is on — since " + Fmt.clock(PrivateMode.since(a)) : "Recording normally");
-        privateToggle.setText(priv ? "Resume recording" : "Turn on private mode");
-
+        tracking.setSubtitle(granted ? "On · which app is open, and for how long" : "Off · tap to allow usage access");
+        tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
+        boolean p = PrivateMode.isOn(a);
+        priv.setSubtitle(p ? "On since " + Fmt.clock(PrivateMode.since(a)) + " · tap to resume recording" : "Off · tap to pause all recording");
+        priv.setTint(a.getColor(p ? R.color.accent : R.color.text));
+        reminder.setSubtitle(MoodReminder.enabled(a) ? "On · a one-tap check-in around 21:30" : "Off · tap to allow notifications");
     }
-
-    private void setDot(View dot, int colorRes) {
-        dot.getBackground().mutate().setTint(a.getColor(colorRes));
-    }
-
 }

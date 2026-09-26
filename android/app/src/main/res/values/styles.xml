@@ -1,88 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Auth.Title" parent="">
+    <!-- Display: the heavy condensed voice for headlines. Always uppercase. -->
+    <style name="Display" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:fontFamily">serif</item>
+        <item name="android:fontFamily">@font/display</item>
+        <item name="android:textAllCaps">true</item>
         <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">28sp</item>
-        <item name="android:lineSpacingExtra">2dp</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:lineSpacingMultiplier">0.92</item>
+        <item name="android:includeFontPadding">false</item>
     </style>
 
-    <style name="Auth.Blurb" parent="">
+    <style name="Display.XL">
+        <item name="android:textSize">44sp</item>
+    </style>
+
+    <style name="Display.L">
+        <item name="android:textSize">34sp</item>
+    </style>
+
+    <style name="Display.M">
+        <item name="android:textSize">26sp</item>
+    </style>
+
+    <!-- Heading: bold sans for section titles inside a page ("Your account"). -->
+    <style name="Heading" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">8dp</item>
-        <item name="android:lineSpacingExtra">3dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <style name="Body" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:lineSpacingExtra">4dp</item>
         <item name="android:textColor">@color/muted</item>
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Auth.Title" parent="Display.L">
+        <item name="android:layout_marginTop">8dp</item>
+    </style>
+
+    <style name="Auth.Blurb" parent="Body">
+        <item name="android:layout_marginTop">10dp</item>
     </style>
 
     <style name="Auth.Label" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginTop">18dp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">13sp</item>
+        <item name="android:textSize">14sp</item>
     </style>
 
     <style name="Auth.Field" parent="">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">52dp</item>
-        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_marginTop">8dp</item>
         <item name="android:background">@drawable/field_bg</item>
         <item name="android:fontFamily">sans-serif</item>
-        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingHorizontal">18dp</item>
         <item name="android:singleLine">true</item>
         <item name="android:textColor">@color/text</item>
         <item name="android:textColorHint">@color/idle</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">16sp</item>
         <item name="android:importantForAutofill">no</item>
     </style>
 
     <style name="Auth.Hint" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:layout_marginTop">6dp</item>
         <item name="android:paddingHorizontal">4dp</item>
         <item name="android:textColor">@color/bad</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:visibility">gone</item>
     </style>
 
     <style name="Auth.Error" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:layout_marginTop">16dp</item>
         <item name="android:background">@drawable/field_bg_error</item>
-        <item name="android:paddingHorizontal">14dp</item>
-        <item name="android:paddingVertical">10dp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">12dp</item>
         <item name="android:textColor">@color/bad</item>
-        <item name="android:textSize">13sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:visibility">gone</item>
     </style>
 
-    <style name="Auth.Primary" parent="android:Widget.Material.Button.Borderless">
+    <!-- Pills -->
+    <style name="Pill" parent="android:Widget.Material.Button.Borderless">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">52dp</item>
-        <item name="android:layout_marginTop">20dp</item>
-        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:layout_height">56dp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textColor">@color/on_accent</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:paddingHorizontal">22dp</item>
     </style>
 
-    <style name="Auth.Secondary" parent="android:Widget.Material.Button.Borderless">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">50dp</item>
-        <item name="android:layout_marginTop">10dp</item>
+    <style name="Pill.Primary">
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:textColor">@color/on_accent</item>
+    </style>
+
+    <style name="Pill.Tonal">
+        <item name="android:background">@drawable/btn_tonal</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+    <style name="Pill.Secondary">
         <item name="android:background">@drawable/btn_secondary</item>
+        <item name="android:textColor">@color/text</item>
+    </style>
+
+    <!-- A small pill for top bars and chip rows. -->
+    <style name="Chip" parent="android:Widget.Material.Button.Borderless">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">44dp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textColor">@color/text</item>
         <item name="android:textSize">15sp</item>
+        <item name="android:paddingHorizontal">20dp</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+
+    <style name="Chip.Primary">
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:textColor">@color/on_accent</item>
+    </style>
+
+    <style name="Chip.Tonal">
+        <item name="android:background">@drawable/btn_tonal</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+    <style name="Chip.Secondary">
+        <item name="android:background">@drawable/btn_secondary</item>
+        <item name="android:textColor">@color/text</item>
+    </style>
+
+    <style name="Auth.Primary" parent="Pill.Primary">
+        <item name="android:layout_marginTop">24dp</item>
+    </style>
+
+    <style name="Auth.Secondary" parent="Pill.Secondary">
+        <item name="android:layout_marginTop">12dp</item>
     </style>
 
     <style name="Auth.Link" parent="android:Widget.Material.Button.Borderless">
@@ -94,20 +163,36 @@
         <item name="android:paddingHorizontal">8dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textColor">@color/accent</item>
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">15sp</item>
     </style>
 
-    <style name="Auth.Section" parent="">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:letterSpacing">0.12</item>
-        <item name="android:textColor">@color/muted</item>
-        <item name="android:textSize">11sp</item>
+    <style name="Auth.Section" parent="Heading">
+        <item name="android:layout_marginTop">28dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
     </style>
 
     <style name="Auth.Illustration" parent="">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">180dp</item>
-        <item name="android:layout_marginBottom">20dp</item>
+        <item name="android:layout_height">200dp</item>
+        <item name="android:layout_marginBottom">24dp</item>
+    </style>
+
+    <!-- Round icon button (back, camera, arrow). -->
+    <style name="CircleButton" parent="">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@drawable/btn_circle</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:tint">@color/text</item>
+    </style>
+
+    <!-- Overline: small spaced caps for labels above numbers. -->
+    <style name="Overline" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textColor">@color/muted</item>
+        <item name="android:textSize">11sp</item>
     </style>
 </resources>

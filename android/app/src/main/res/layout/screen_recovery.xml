@@ -9,6 +9,7 @@
 
         <com.planj.phone.Illustration
             style="@style/Auth.Illustration"
+            android:layout_height="160dp"
             android:contentDescription="small, about 5:2"
             android:tag="recovery" />
 

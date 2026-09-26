@@ -21,18 +21,45 @@ public final class Illustration extends ImageView {
     private String slot = "";
     private String note = "";
     private boolean found;
+    private boolean labelAtTop;
+
+    /** Hero cards put text over the bottom, so the placeholder label moves up out of the way. */
+    void setLabelAtTop(boolean top) {
+        labelAtTop = top;
+        invalidate();
+    }
 
     public Illustration(Context ctx, AttributeSet attrs) {
+        this(ctx, attrs, null, null);
+    }
+
+    public Illustration(Context ctx, String slot, String note) {
+        this(ctx, null, slot, note);
+    }
+
+    private Illustration(Context ctx, AttributeSet attrs, String slotArg, String noteArg) {
         super(ctx, attrs);
-        int[] wanted = {android.R.attr.tag, android.R.attr.contentDescription};
-        TypedArray a = ctx.obtainStyledAttributes(attrs, wanted);
-        CharSequence tag = a.getText(0);
-        CharSequence desc = a.getText(1);
-        a.recycle();
-        slot = tag == null ? "" : tag.toString();
-        note = desc == null ? "" : desc.toString();
+        if (attrs != null) {
+            int[] wanted = {android.R.attr.tag, android.R.attr.contentDescription};
+            TypedArray a = ctx.obtainStyledAttributes(attrs, wanted);
+            CharSequence tag = a.getText(0);
+            CharSequence desc = a.getText(1);
+            a.recycle();
+            slot = tag == null ? "" : tag.toString();
+            note = desc == null ? "" : desc.toString();
+        } else {
+            slot = slotArg == null ? "" : slotArg;
+            note = noteArg == null ? "" : noteArg;
+        }
         setScaleType(ScaleType.CENTER_CROP);
         setAdjustViewBounds(true);
+        setClipToOutline(true);
+        setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(android.view.View v, android.graphics.Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 24 * getResources().getDisplayMetrics().density);
+            }
+        });
 
         float dp = getResources().getDisplayMetrics().density;
         frame.setStyle(Paint.Style.STROKE);
@@ -59,7 +86,7 @@ public final class Illustration extends ImageView {
         float r = 16 * dp;
         box.set(frame.getStrokeWidth(), frame.getStrokeWidth(), getWidth() - frame.getStrokeWidth(), getHeight() - frame.getStrokeWidth());
         canvas.drawRoundRect(box, r, r, frame);
-        float cy = getHeight() / 2f;
+        float cy = labelAtTop ? 34 * dp : getHeight() / 2f;
         canvas.drawText(("IMAGE · " + slot).toUpperCase(), getWidth() / 2f, cy - 2 * dp, label);
         if (!note.isEmpty()) {
             label.setTextSize(10 * dp);

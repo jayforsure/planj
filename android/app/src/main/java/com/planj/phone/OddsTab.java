@@ -162,7 +162,7 @@ final class OddsTab {
         q.setText(fc.outcome.question);
         q.setTextColor(a.getColor(R.color.text));
         q.setTextSize(16);
-        q.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        q.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         left.addView(q);
         TextView ev = new TextView(a);
         String evidence = "usually " + Math.round(fc.base * 100) + "% of " + fc.n + " days";
@@ -196,7 +196,7 @@ final class OddsTab {
         pct.setText(percent + "%");
         pct.setTextColor(a.getColor(R.color.text));
         pct.setTextSize(30);
-        pct.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        pct.setTypeface(a.getResources().getFont(R.font.display));
         pct.setPadding(dp(16), 0, 0, 0);
         card.addView(pct);
         return card;

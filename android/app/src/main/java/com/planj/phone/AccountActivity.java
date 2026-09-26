@@ -47,7 +47,7 @@ public class AccountActivity extends Activity {
     private static final int RESEND_COOLDOWN_S = 60;
 
     private FrameLayout stage;
-    private Button back;
+    private View back;
     private TextView step;
     private final Deque<String> stack = new ArrayDeque<>();
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -97,6 +97,7 @@ public class AccountActivity extends Activity {
         View v = LayoutInflater.from(this).inflate(layout, stage, false);
         stage.removeAllViews();
         stage.addView(v);
+        v.startAnimation(android.view.animation.AnimationUtils.loadAnimation(this, R.anim.fade_up));
         back.setVisibility(stack.size() > 1 && !"recovery".equals(name) ? View.VISIBLE : View.INVISIBLE);
         step.setText("");
         switch (name) {
