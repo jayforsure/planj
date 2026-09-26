@@ -3,7 +3,7 @@ import sys
 from datetime import date, datetime, timedelta
 from urllib.error import URLError
 
-from planj import config, features, outcomes
+from planj import account, config, features, outcomes
 from planj.db import connect, now_utc_iso
 from planj.sources import calendar, phone, tracker, weather
 from planj.summary import summarize
@@ -167,6 +167,24 @@ def cmd_odds(args, conn) -> int:
     return 0
 
 
+def cmd_signin(args, conn) -> int:
+    import getpass
+
+    email = args.email or input("Email: ")
+    password = getpass.getpass("Password (never stored, never sent): ")
+    try:
+        code = account.pairing_code(email, password)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    root = config.WIN_HOME / "AppData" / "Local" / "planj" if config.WIN_HOME else config.DB_PATH.parent
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "pairing.txt").write_text(code + "\n", encoding="utf-8")
+    print(f"Signed in as {account.normalise_email(email)}. This PC now shares the mailbox of every device "
+          f"signed in with the same email and password; the tracker picks it up within five minutes.")
+    return 0
+
+
 def _mood(value: str) -> int:
     n = int(value)
     if not 1 <= n <= 5:
@@ -202,6 +220,10 @@ def main(argv=None) -> int:
     cp.add_argument("--min-days", type=int, default=7)
     cp.add_argument("--top", type=int, default=15)
     cp.set_defaults(func=cmd_correlate)
+
+    si = sub.add_parser("signin", help="sign this PC in with your email and password (replaces the pairing code)")
+    si.add_argument("--email")
+    si.set_defaults(func=cmd_signin)
 
     op = sub.add_parser("odds", help="tomorrow's forecasts, recorded now and scored after")
     op.add_argument("--days", type=int, default=45)

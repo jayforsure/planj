@@ -197,17 +197,30 @@
             android:textSize="15sp" />
 
         <Button
-            android:id="@+id/btn_pair"
+            android:id="@+id/btn_signin"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:layout_marginTop="10dp"
-            android:background="@drawable/btn_secondary"
+            android:background="@drawable/btn_primary"
             android:fontFamily="sans-serif-medium"
-            android:text="Pair with PC"
+            android:text="Sign in"
             android:textAllCaps="false"
-            android:textColor="@color/text"
+            android:textColor="@color/on_accent"
             android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/btn_pair"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/btn_text"
+            android:fontFamily="sans-serif-medium"
+            android:text="Advanced: enter a pairing code instead"
+            android:textAllCaps="false"
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btn_export"
@@ -227,7 +240,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
             android:lineSpacingExtra="4dp"
-            android:text="Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type. Sync is end-to-end encrypted with your pairing code — the relay server cannot read it."
+            android:text="Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type. Signing in with the same email and password on another device joins it to yours; the key is derived on the device, so no server ever sees your password or your data."
             android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>

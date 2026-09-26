@@ -49,6 +49,14 @@ final class RelaySync {
         return prefs(ctx).getString("code", null);
     }
 
+    static String signedInEmail(Context ctx) {
+        return prefs(ctx).getString("email", null);
+    }
+
+    static void setSignedInEmail(Context ctx, String email) {
+        prefs(ctx).edit().putString("email", email).apply();
+    }
+
     static long lastSyncMs(Context ctx) {
         return prefs(ctx).getLong("last_sync_ms", 0);
     }
@@ -80,7 +88,7 @@ final class RelaySync {
                 }
             }
             prefs(ctx).edit().putString("code", crypto.code).putLong("paired_ms", System.currentTimeMillis())
-                    .remove("confirmed_ms").remove("last_error").apply();
+                    .remove("confirmed_ms").remove("last_error").remove("email").apply();
         }
     }
 
