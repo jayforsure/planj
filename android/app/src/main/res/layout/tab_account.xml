@@ -29,7 +29,7 @@
             android:textColor="@color/muted"
             android:textSize="13sp" />
 
-        <!-- Signed-out card -->
+        <!-- Signed-out: auth module -->
         <LinearLayout
             android:id="@+id/card_signin"
             android:layout_width="match_parent"
@@ -39,65 +39,305 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
+            <!-- Mode switch -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="serif"
-                android:text="One account, all your devices"
-                android:textColor="@color/text"
-                android:textSize="20sp" />
+                android:layout_height="40dp"
+                android:background="@drawable/segment_bg"
+                android:orientation="horizontal"
+                android:padding="3dp">
+
+                <TextView
+                    android:id="@+id/seg_signin"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/segment_item"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:text="Sign in"
+                    android:textColor="@color/nav_tint"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/seg_create"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/segment_item"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:text="Create account"
+                    android:textColor="@color/nav_tint"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <TextView
+                android:id="@+id/auth_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="20dp"
+                android:fontFamily="serif"
+                android:text="Welcome back"
+                android:textColor="@color/text"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/auth_blurb"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:lineSpacingExtra="3dp"
-                android:text="Sign in with the same email and password on your phone and PC and they share one encrypted record. Your password never leaves the device — it derives your key here — so it cannot be reset. Choose one you will keep."
+                android:text="Use the same email and password as on your other devices."
                 android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <!-- Error banner -->
+            <TextView
+                android:id="@+id/auth_error"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/field_bg_error"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp"
+                android:textColor="@color/bad"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <!-- Email -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Email"
+                android:textColor="@color/text"
                 android:textSize="13sp" />
 
             <EditText
                 android:id="@+id/email"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_height="52dp"
+                android:layout_marginTop="6dp"
                 android:background="@drawable/field_bg"
-                android:hint="Email"
-                android:importantForAutofill="no"
+                android:hint="you@example.com"
+                android:imeOptions="actionNext"
+                android:importantForAutofill="yes"
+                android:autofillHints="emailAddress"
                 android:inputType="textEmailAddress"
                 android:paddingHorizontal="16dp"
-                android:paddingVertical="14dp"
+                android:singleLine="true"
                 android:textColor="@color/text"
-                android:textColorHint="@color/muted"
+                android:textColorHint="@color/idle"
                 android:textSize="15sp" />
 
-            <EditText
-                android:id="@+id/password"
+            <TextView
+                android:id="@+id/email_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/field_bg"
-                android:hint="Password"
-                android:importantForAutofill="no"
-                android:inputType="textPassword"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="14dp"
-                android:textColor="@color/text"
-                android:textColorHint="@color/muted"
-                android:textSize="15sp" />
+                android:layout_marginTop="5dp"
+                android:paddingHorizontal="4dp"
+                android:textColor="@color/bad"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
-            <Button
-                android:id="@+id/btn_signin"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
+            <!-- Password -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:background="@drawable/btn_primary"
                 android:fontFamily="sans-serif-medium"
-                android:text="Sign in"
-                android:textAllCaps="false"
-                android:textColor="@color/on_accent"
-                android:textSize="15sp" />
+                android:text="Password"
+                android:textColor="@color/text"
+                android:textSize="13sp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="6dp">
+
+                <EditText
+                    android:id="@+id/password"
+                    android:fontFamily="sans-serif"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/field_bg"
+                    android:hint="••••••••"
+                    android:imeOptions="actionDone"
+                    android:importantForAutofill="yes"
+                    android:autofillHints="password"
+                    android:inputType="textPassword"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="52dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/idle"
+                    android:textSize="15sp" />
+
+                <ImageButton
+                    android:id="@+id/btn_eye"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/btn_text"
+                    android:contentDescription="Show password"
+                    android:src="@drawable/ic_eye"
+                    android:tint="@color/muted" />
+            </FrameLayout>
+
+            <!-- Strength meter (create only) -->
+            <LinearLayout
+                android:id="@+id/strength_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp"
+                android:visibility="gone">
+
+                <View
+                    android:id="@+id/str1"
+                    android:layout_width="0dp"
+                    android:layout_height="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/strength_bar" />
+
+                <View
+                    android:id="@+id/str2"
+                    android:layout_width="0dp"
+                    android:layout_height="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/strength_bar" />
+
+                <View
+                    android:id="@+id/str3"
+                    android:layout_width="0dp"
+                    android:layout_height="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/strength_bar" />
+
+                <View
+                    android:id="@+id/str4"
+                    android:layout_width="0dp"
+                    android:layout_height="4dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/strength_bar" />
+
+                <TextView
+                    android:id="@+id/strength_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="52dp"
+                    android:textColor="@color/muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/password_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:paddingHorizontal="4dp"
+                android:textColor="@color/bad"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Confirm (create only) -->
+            <LinearLayout
+                android:id="@+id/confirm_block"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Confirm password"
+                    android:textColor="@color/text"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/confirm"
+                    android:fontFamily="sans-serif"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/field_bg"
+                    android:hint="Type it again"
+                    android:imeOptions="actionDone"
+                    android:importantForAutofill="no"
+                    android:inputType="textPassword"
+                    android:paddingHorizontal="16dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/idle"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/confirm_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:paddingHorizontal="4dp"
+                    android:textColor="@color/bad"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Your password never leaves this phone: it derives the key that encrypts your data. There is no reset — choose one you will keep."
+                    android:textColor="@color/warn"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Submit -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="20dp">
+
+                <Button
+                    android:id="@+id/btn_signin"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/btn_primary"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Sign in"
+                    android:textAllCaps="false"
+                    android:textColor="@color/on_accent"
+                    android:textSize="15sp" />
+
+                <ProgressBar
+                    android:id="@+id/auth_progress"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="@color/on_accent"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:text="End-to-end encrypted · no server ever sees your password"
+                android:textColor="@color/idle"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <!-- Signed-in card -->

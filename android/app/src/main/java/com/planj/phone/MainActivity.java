@@ -50,6 +50,18 @@ public class MainActivity extends Activity {
         navSettings.setOnClickListener(v -> select(settings.view(), navSettings));
         select(today.view(), navToday);
 
+        // The tab bar makes way for the keyboard, so a form gets the whole screen while typing.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            View nav = findViewById(R.id.nav);
+            View rule = findViewById(R.id.nav_rule);
+            getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+                boolean typing = insets.isVisible(android.view.WindowInsets.Type.ime());
+                nav.setVisibility(typing ? View.GONE : View.VISIBLE);
+                rule.setVisibility(typing ? View.GONE : View.VISIBLE);
+                return v.onApplyWindowInsets(insets);
+            });
+        }
+
         MoodReminder.ensureChannel(this);
         List<String> wanted = new java.util.ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
