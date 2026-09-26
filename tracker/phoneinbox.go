@@ -25,21 +25,7 @@ func relayURL(root string) string {
 
 func pairingPath(root string) string { return filepath.Join(root, "pairing.txt") }
 
-// loadOrCreatePairing returns this PC's pairing, creating a fresh code the first time.
-func loadOrCreatePairing(root string) (Pairing, error) {
-	if p, ok, err := loadPairing(root); ok || err != nil {
-		return p, err
-	}
-	if err := os.MkdirAll(root, 0o700); err != nil {
-		return Pairing{}, err
-	}
-	code := NewCode()
-	if err := os.WriteFile(pairingPath(root), []byte(code+"\n"), 0o600); err != nil {
-		return Pairing{}, err
-	}
-	return Derive(code)
-}
-
+// loadPairing reads the key file that `planj signin` writes. Missing means not signed in.
 func loadPairing(root string) (Pairing, bool, error) {
 	b, err := os.ReadFile(pairingPath(root))
 	if errors.Is(err, os.ErrNotExist) {

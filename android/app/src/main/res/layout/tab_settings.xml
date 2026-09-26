@@ -197,32 +197,6 @@
             android:textSize="15sp" />
 
         <Button
-            android:id="@+id/btn_signin"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/btn_primary"
-            android:fontFamily="sans-serif-medium"
-            android:text="Sign in"
-            android:textAllCaps="false"
-            android:textColor="@color/on_accent"
-            android:textSize="15sp" />
-
-        <Button
-            android:id="@+id/btn_pair"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/btn_text"
-            android:fontFamily="sans-serif-medium"
-            android:text="Advanced: enter a pairing code instead"
-            android:textAllCaps="false"
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
-
-        <Button
             android:id="@+id/btn_export"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="match_parent"

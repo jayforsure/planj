@@ -43,15 +43,15 @@ func main() {
 	case "":
 		switch {
 		case trackerRunning():
-			// Opening it again once it is already tracking is how people get their phone pairing code.
-			showPairing(root)
+			// Opening it again once it is already tracking explains how to join a phone.
+			showAccount(root)
 		case !isInstalledCopy(root):
 			installWithMessage(root)
 		default:
 			run(root) // started at sign-in
 		}
-	case "pair":
-		showPairing(root)
+	case "account", "pair":
+		showAccount(root)
 	case "install":
 		installWithMessage(root)
 	case "uninstall":
@@ -61,7 +61,7 @@ func main() {
 		}
 		messageBox("planj tracker is stopped and will no longer start with Windows.\nYour recorded data was kept in:\n" + filepath.Join(root, "activity"))
 	default:
-		messageBox("Unknown command: " + os.Args[1] + "\nUse: install | pair | uninstall")
+		messageBox("Unknown command: " + os.Args[1] + "\nUse: install | account | uninstall")
 		os.Exit(2)
 	}
 }
@@ -90,7 +90,7 @@ func installWithMessage(root string) {
 		messageBox("Install failed: " + err.Error())
 		os.Exit(1)
 	}
-	messageBox("planj tracker is installed and running.\nIt will start automatically when you sign in to Windows.\n\nIt records only which app is in front and whether you are active — never window titles, websites or what you type.\n\nTo sync your phone, open this file again to see your pairing code.\n\nData folder:\n" + filepath.Join(root, "activity"))
+	messageBox("planj tracker is installed and running.\nIt will start automatically when you sign in to Windows.\n\nIt records only which app is in front and whether you are active — never window titles, websites or what you type.\n\nTo sync your phone, run  planj signin  here and sign in on the phone with the same email and password.\n\nData folder:\n" + filepath.Join(root, "activity"))
 }
 
 func run(root string) {

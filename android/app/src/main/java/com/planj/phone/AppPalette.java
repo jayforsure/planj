@@ -39,7 +39,7 @@ final class AppPalette {
         BRAND.put("snapchat", 0xFFFFFC00);
         BRAND.put("facebook", 0xFF1877F2);
         BRAND.put("messenger", 0xFF0084FF);
-        BRAND.put("planj", 0xFFD97757);
+        BRAND.put("planj", 0xFF2EC4B6);
     }
 
     private AppPalette() {}

@@ -57,6 +57,14 @@ final class RelaySync {
         prefs(ctx).edit().putString("email", email).apply();
     }
 
+    /** Forgets the key and the queue; recorded data stays on the phone. */
+    static void signOut(Context ctx) {
+        synchronized (LOCK) {
+            prefs(ctx).edit().clear().apply();
+            outbox(ctx).delete();
+        }
+    }
+
     static long lastSyncMs(Context ctx) {
         return prefs(ctx).getLong("last_sync_ms", 0);
     }

@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="serif"
+            android:text="Account"
+            android:textColor="@color/text"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/account_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
+        <!-- Signed-out card -->
+        <LinearLayout
+            android:id="@+id/card_signin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="One account, all your devices"
+                android:textColor="@color/text"
+                android:textSize="20sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="3dp"
+                android:text="Sign in with the same email and password on your phone and PC and they share one encrypted record. Your password never leaves the device — it derives your key here — so it cannot be reset. Choose one you will keep."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/field_bg"
+                android:hint="Email"
+                android:importantForAutofill="no"
+                android:inputType="textEmailAddress"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp"
+                android:textColor="@color/text"
+                android:textColorHint="@color/muted"
+                android:textSize="15sp" />
+
+            <EditText
+                android:id="@+id/password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/field_bg"
+                android:hint="Password"
+                android:importantForAutofill="no"
+                android:inputType="textPassword"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp"
+                android:textColor="@color/text"
+                android:textColorHint="@color/muted"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btn_signin"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/btn_primary"
+                android:fontFamily="sans-serif-medium"
+                android:text="Sign in"
+                android:textAllCaps="false"
+                android:textColor="@color/on_accent"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <!-- Signed-in card -->
+        <LinearLayout
+            android:id="@+id/card_devices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.12"
+                android:text="DEVICES"
+                android:textColor="@color/muted"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/dot"
+                    android:backgroundTint="@color/ok" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="This phone"
+                    android:textColor="@color/text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/phone_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/dot_pc"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/dot" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="PC"
+                    android:textColor="@color/text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/pc_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:lineSpacingExtra="3dp"
+                android:text="To add a device, sign in there with the same email and password. On a PC: run planj signin."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_signout"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/btn_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:text="Sign out on this phone"
+                android:textAllCaps="false"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

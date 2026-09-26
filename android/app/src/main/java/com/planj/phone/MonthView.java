@@ -18,7 +18,7 @@ public class MonthView extends View {
         void onDayTap(LocalDate day);
     }
 
-    static final int[] MOOD_COLORS = {0xFFE06C6C, 0xFFE8955A, 0xFFE3B341, 0xFFA5C96B, 0xFF7BC67E};
+    static final int[] MOOD_COLORS = {0xFFE5616B, 0xFFE0955E, 0xFFD9C25A, 0xFF7FCBA4, 0xFF2EC4B6};
 
     private YearMonth month = YearMonth.now();
     private Map<LocalDate, MoodStore.Entry> entries = Map.of();

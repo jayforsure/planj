@@ -7,18 +7,15 @@ import (
 	"time"
 )
 
-func TestPairingIsCreatedOnceThenReused(t *testing.T) {
+func TestLoadPairingReadsWhatSigninWrites(t *testing.T) {
 	root := t.TempDir()
 	if _, ok, _ := loadPairing(root); ok {
-		t.Fatal("no pairing expected yet")
+		t.Fatal("no sign-in expected yet")
 	}
-	a, err := loadOrCreatePairing(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := loadOrCreatePairing(root)
-	if err != nil || a.Code != b.Code || a.Mailbox != b.Mailbox {
-		t.Fatalf("pairing changed: %q vs %q (%v)", a.Code, b.Code, err)
+	os.WriteFile(pairingPath(root), []byte("R1NF8-F6W0Y-92M6D-P32S1\n"), 0o600)
+	p, ok, err := loadPairing(root)
+	if err != nil || !ok || p.Code != "R1NF8-F6W0Y-92M6D-P32S1" {
+		t.Fatalf("got %q ok=%v err=%v", p.Code, ok, err)
 	}
 }
 

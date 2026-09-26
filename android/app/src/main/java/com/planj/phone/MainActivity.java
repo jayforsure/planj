@@ -24,7 +24,8 @@ public class MainActivity extends Activity {
     private OddsTab odds;
     private JournalTab journal;
     private SettingsTab settings;
-    private View navToday, navOdds, navJournal, navSettings;
+    private AccountTab accountTab;
+    private View navToday, navOdds, navJournal, navAccount, navSettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,12 +35,15 @@ public class MainActivity extends Activity {
         today = new TodayTab(this, tabs);
         odds = new OddsTab(this, tabs);
         journal = new JournalTab(this, tabs);
+        accountTab = new AccountTab(this, tabs);
         settings = new SettingsTab(this, tabs);
 
         navToday = findViewById(R.id.nav_today);
         navOdds = findViewById(R.id.nav_odds);
         navJournal = findViewById(R.id.nav_journal);
+        navAccount = findViewById(R.id.nav_account);
         navSettings = findViewById(R.id.nav_settings);
+        navAccount.setOnClickListener(v -> select(accountTab.view(), navAccount));
         navToday.setOnClickListener(v -> select(today.view(), navToday));
         navOdds.setOnClickListener(v -> select(odds.view(), navOdds));
         navJournal.setOnClickListener(v -> select(journal.view(), navJournal));
@@ -57,8 +61,8 @@ public class MainActivity extends Activity {
     }
 
     private void select(View tab, View navItem) {
-        for (View v : new View[]{today.view(), odds.view(), journal.view(), settings.view()}) v.setVisibility(View.GONE);
-        for (View v : new View[]{navToday, navOdds, navJournal, navSettings}) setNavSelected(v, false);
+        for (View v : new View[]{today.view(), odds.view(), journal.view(), accountTab.view(), settings.view()}) v.setVisibility(View.GONE);
+        for (View v : new View[]{navToday, navOdds, navJournal, navAccount, navSettings}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
     }
@@ -102,6 +106,7 @@ public class MainActivity extends Activity {
         today.refresh(granted);
         odds.refresh();
         journal.refresh();
+        accountTab.refresh();
         settings.refresh(granted);
     }
 

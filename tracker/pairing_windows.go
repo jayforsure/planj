@@ -21,14 +21,16 @@ const (
 
 var lastConfirm time.Time
 
-func showPairing(root string) {
-	p, err := loadOrCreatePairing(root)
-	if err != nil {
-		messageBox("Could not set up phone pairing: " + err.Error())
-		return
+func showAccount(root string) {
+	_, ok, err := loadPairing(root)
+	switch {
+	case err != nil:
+		messageBox("The sign-in on this PC is damaged: " + err.Error() + "\n\nRun  planj signin  to sign in again.")
+	case ok:
+		messageBox("planj tracker is running and signed in.\n\nSign in on your phone with the same email and password (Account tab) and it will show \"PC confirmed\" once data arrives here.")
+	default:
+		messageBox("planj tracker is running.\n\nTo join your phone, sign in on this PC first:\n\n        planj signin\n\nthen sign in on the phone (Account tab) with the same email and password. Your password never leaves your devices.")
 	}
-	messageBox("Pair your phone\n\nIn the planj phone app, tap \"Pair with PC\" and enter:\n\n        " + p.Code +
-		"\n\nThe phone will show \"PC confirmed\" once data arrives here.\n\nKeep this code private: it is the key that encrypts your synced data.")
 }
 
 // pullLoop collects phone uploads from the relay. It re-reads the pairing each round,
