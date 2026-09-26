@@ -117,33 +117,7 @@ final class TodayTab {
         ((GestureScrollView) root).setPrivateLook(priv, false);
 
         if (granted) {
-            List<DayUsage> week = new ArrayList<>();
-            Map<String, Long> weekTotals = new HashMap<>();
-            for (int i = CHART_DAYS - 1; i >= 0; i--) {
-                DayUsage u = DayUsage.load(a, shown.minusDays(i));
-                week.add(u);
-                for (Map.Entry<String, Long> e : u.appMs.entrySet()) weekTotals.merge(e.getKey(), e.getValue(), Long::sum);
-            }
-            DayUsage day = week.get(week.size() - 1);
-            statScreen.setText(Fmt.shortDuration(day.screenMs));
-            statUnlocks.setText(String.valueOf(day.unlocks));
-            DayUsage.Quiet q = DayUsage.quiet(a, shown);
-            statQuiet.setText(q == null ? "—" : Fmt.shortDuration(q.ms()));
-            statQuietLabel.setText(q != null && q.charging ? "Device-free ⚡" : "Device-free");
-
-            LocalDate first = shown.minusDays(CHART_DAYS - 1);
-            String range = first.getMonth() == shown.getMonth()
-                    ? first.getDayOfMonth() + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))
-                    : first.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)) + " – " + shown.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
-            weekRange.setText(range);
-
-            List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
-            ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
-            List<String> order = new ArrayList<>();
-            for (int i = 0; i < Math.min(LEGEND_APPS, ranked.size()); i++) order.add(ranked.get(i).getKey());
-            chart.setData(week, order, this::openDay);
-            fillLegend(order);
-            AppRows.fill(a, topApps, day, 4);
+            loadUsageAsync();
         } else {
             statScreen.setText("—");
             statUnlocks.setText("—");
@@ -162,6 +136,44 @@ final class TodayTab {
             moodNote.setText(entry.note.isEmpty() ? "Add a note in Journal ›" : "“" + entry.note + "”");
             picker.select(entry.mood);
         }
+    }
+
+    private int loadGeneration;
+
+    /** The week of usage is parsed off the main thread; a stale result is dropped if the day changed. */
+    private void loadUsageAsync() {
+        final int gen = ++loadGeneration;
+        final LocalDate target = shown;
+        new Thread(() -> {
+            List<DayUsage> week = new ArrayList<>();
+            Map<String, Long> weekTotals = new HashMap<>();
+            for (int i = CHART_DAYS - 1; i >= 0; i--) {
+                DayUsage u = DayUsage.load(a, target.minusDays(i));
+                week.add(u);
+                for (Map.Entry<String, Long> e : u.appMs.entrySet()) weekTotals.merge(e.getKey(), e.getValue(), Long::sum);
+            }
+            DayUsage.Quiet q = DayUsage.quiet(a, target);
+            List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
+            ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
+            List<String> order = new ArrayList<>();
+            for (int i = 0; i < Math.min(LEGEND_APPS, ranked.size()); i++) order.add(ranked.get(i).getKey());
+            a.runOnUiThread(() -> {
+                if (gen != loadGeneration) return;
+                DayUsage day = week.get(week.size() - 1);
+                statScreen.setText(Fmt.shortDuration(day.screenMs));
+                statUnlocks.setText(String.valueOf(day.unlocks));
+                statQuiet.setText(q == null ? "—" : Fmt.shortDuration(q.ms()));
+                statQuietLabel.setText(q != null && q.charging ? "Device-free ⚡" : "Device-free");
+                LocalDate first = target.minusDays(CHART_DAYS - 1);
+                String range = first.getMonth() == target.getMonth()
+                        ? first.getDayOfMonth() + " – " + target.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))
+                        : first.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)) + " – " + target.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
+                weekRange.setText(range);
+                chart.setData(week, order, this::openDay);
+                fillLegend(order);
+                AppRows.fill(a, topApps, day, 4);
+            });
+        }).start();
     }
 
     private void fillLegend(List<String> order) {

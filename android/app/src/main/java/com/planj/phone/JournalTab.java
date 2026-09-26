@@ -112,8 +112,15 @@ final class JournalTab {
         if (!note.hasFocus()) note.setText(e == null ? "" : e.note);
         for (int i = 0; i < chips.length; i++) chips[i].setSelected(e != null && e.tags.contains(MoodStore.TAGS[i]));
 
-        DayUsage usage = DayUsage.load(a, selected);
-        entryUsage.setText(usage.screenMs == 0 ? "" : Fmt.duration(usage.screenMs) + " on screen · " + usage.unlocks + " unlocks"
-                + Fmt.quietSuffix(DayUsage.quiet(a, selected)) + "  ›");
+        final LocalDate forUsage = selected;
+        new Thread(() -> {
+            DayUsage usage = DayUsage.load(a, forUsage);
+            DayUsage.Quiet q = DayUsage.quiet(a, forUsage);
+            a.runOnUiThread(() -> {
+                if (!forUsage.equals(selected)) return;
+                entryUsage.setText(usage.screenMs == 0 ? "" : Fmt.duration(usage.screenMs) + " on screen · " + usage.unlocks + " unlocks"
+                        + Fmt.quietSuffix(q) + "  ›");
+            });
+        }).start();
     }
 }

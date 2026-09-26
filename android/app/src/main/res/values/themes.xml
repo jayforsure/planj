@@ -9,6 +9,9 @@
         <item name="android:textColorSecondary">@color/muted</item>
         <item name="android:textColorHint">@color/muted</item>
         <item name="android:windowAnimationStyle">@style/PageTransitions</item>
+        <item name="android:windowSplashScreenBackground">@color/bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/bg</item>
     </style>
 
     <style name="PageTransitions" parent="@android:style/Animation.Activity">

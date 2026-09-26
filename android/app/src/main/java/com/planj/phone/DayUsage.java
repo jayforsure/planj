@@ -43,9 +43,27 @@ final class DayUsage {
         this.day = day;
     }
 
+    private static final java.util.Map<String, DayUsage> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Parsed days are cached by file identity, so a week's chart only re-reads what changed. */
     static DayUsage load(Context ctx, LocalDate day) {
-        DayUsage u = new DayUsage(day);
         File file = new File(UsageCollector.eventsDir(ctx), day + ".jsonl");
+        boolean today = day.equals(LocalDate.now());
+        String key = day + "|" + file.length() + "|" + file.lastModified();
+        if (!today) {
+            DayUsage hit = CACHE.get(key);
+            if (hit != null) return hit;
+        }
+        DayUsage u = parse(ctx, day, file);
+        if (!today) {
+            if (CACHE.size() > 60) CACHE.clear();
+            CACHE.put(key, u);
+        }
+        return u;
+    }
+
+    private static DayUsage parse(Context ctx, LocalDate day, File file) {
+        DayUsage u = new DayUsage(day);
         long onSince = -1, appSince = -1;
         String app = null;
         boolean today = day.equals(LocalDate.now());

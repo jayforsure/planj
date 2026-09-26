@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if (savedInstanceState == null) launchSequence();
         ViewGroup tabs = findViewById(R.id.tabs);
         today = new TodayTab(this, tabs);
         odds = new OddsTab(this, tabs);
@@ -70,6 +71,39 @@ public class MainActivity extends Activity {
         }
         if (!Agenda.allowed(this)) wanted.add(Manifest.permission.READ_CALENDAR);
         if (!wanted.isEmpty()) requestPermissions(wanted.toArray(new String[0]), 0);
+    }
+
+    /**
+     * The entry: the splash icon grows and lifts away while the page rises up beneath it,
+     * so opening the app feels like one continuous motion instead of a cut.
+     */
+    private void launchSequence() {
+        View content = findViewById(R.id.tabs);
+        View nav = findViewById(R.id.nav);
+        float dp = getResources().getDisplayMetrics().density;
+        content.setAlpha(0f);
+        content.setTranslationY(48 * dp);
+        nav.setAlpha(0f);
+        Runnable rise = () -> {
+            content.animate().alpha(1f).translationY(0f).setDuration(520).setStartDelay(60)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+            nav.animate().alpha(1f).setDuration(400).setStartDelay(220).start();
+        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            getSplashScreen().setOnExitAnimationListener(splash -> {
+                View icon = splash.getIconView();
+                if (icon != null) {
+                    icon.animate().scaleX(1.25f).scaleY(1.25f).alpha(0f).setDuration(380)
+                            .setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f)).start();
+                }
+                splash.animate().alpha(0f).translationY(-80 * dp).setDuration(420)
+                        .setInterpolator(new android.view.animation.AccelerateInterpolator(1.2f))
+                        .withEndAction(splash::remove).start();
+                rise.run();
+            });
+        } else {
+            content.post(rise);
+        }
     }
 
     private void select(View tab, View navItem) {
@@ -124,10 +158,13 @@ public class MainActivity extends Activity {
     void refresh() {
         boolean granted = hasUsageAccess();
         today.refresh(granted);
-        odds.refresh();
-        journal.refresh();
-        accountTab.refresh();
-        settings.refresh(granted);
+        // The hidden tabs can wait for the first frame; the visible one cannot.
+        findViewById(R.id.tabs).post(() -> {
+            odds.refresh();
+            journal.refresh();
+            accountTab.refresh();
+            settings.refresh(granted);
+        });
     }
 
     void syncInBackground() {
