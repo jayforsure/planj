@@ -25,8 +25,10 @@ public class DeepTraceService extends AccessibilityService {
         return false;
     }
 
+    private static final long UNRECOGNISED_CLOSE_MS = 4000;
+
     private String curApp, curKind, curText;
-    private long curSince;
+    private long curSince, lastRecognised;
 
 
     @Override
@@ -90,7 +92,13 @@ public class DeepTraceService extends AccessibilityService {
         if (root == null) return;
         String[] item = extract(pkg, root);
         root.recycle();
-        if (item == null) return;
+        if (item == null) {
+            // Nothing recognisable for a while (a screen we cannot read): the previous item is
+            // over. Otherwise its dwell would silently absorb the unread screen.
+            if (curApp != null && System.currentTimeMillis() - lastRecognised > UNRECOGNISED_CLOSE_MS) close();
+            return;
+        }
+        lastRecognised = System.currentTimeMillis();
         if (!item[1].equals(curText) || !pkg.equals(curApp)) {
             close();
             curApp = pkg;
