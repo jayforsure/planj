@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from datetime import date, datetime, timedelta
 from urllib.error import URLError
@@ -167,21 +168,161 @@ def cmd_odds(args, conn) -> int:
     return 0
 
 
-def cmd_signin(args, conn) -> int:
-    import getpass
-
-    email = args.email or input("Email: ")
-    password = getpass.getpass("Password (never stored, never sent): ")
-    try:
-        code = account.pairing_code(email, password)
-    except ValueError as exc:
-        print(exc, file=sys.stderr)
-        return 1
+def _planj_root():
     root = config.WIN_HOME / "AppData" / "Local" / "planj" if config.WIN_HOME else config.DB_PATH.parent
     root.mkdir(parents=True, exist_ok=True)
-    (root / "pairing.txt").write_text(code + "\n", encoding="utf-8")
-    print(f"Signed in as {account.normalise_email(email)}. This PC now shares the mailbox of every device "
-          f"signed in with the same email and password; the tracker picks it up within five minutes.")
+    return root
+
+
+def _session_path():
+    return _planj_root() / "account.json"
+
+
+def _load_session():
+    import base64
+    try:
+        d = json.loads(_session_path().read_text(encoding="utf-8"))
+        return account.Session(d["email"], d["token"], True), base64.b64decode(d["account_key"])
+    except (OSError, KeyError, ValueError):
+        return None, None
+
+
+def _save_session(s, account_key: bytes) -> None:
+    import base64
+    _session_path().write_text(json.dumps({"email": s.email, "token": s.token,
+                                           "account_key": base64.b64encode(account_key).decode("ascii")}) + "\n",
+                               encoding="utf-8")
+    (_planj_root() / "pairing.txt").write_text(account.pairing_code(account_key) + "\n", encoding="utf-8")
+
+
+def _device_name() -> str:
+    import platform
+    return (platform.node() or "PC")[:40]
+
+
+def _prompt_password(label: str) -> str:
+    import getpass
+    return getpass.getpass(label)
+
+
+def _finish_signin(s, account_key: bytes) -> int:
+    _save_session(s, account_key)
+    print(f"Signed in as {s.email}. This PC shares one encrypted record with every device on this account; "
+          f"the tracker picks it up within five minutes.")
+    return 0
+
+
+def cmd_signup(args, conn) -> int:
+    email = args.email or input("Email: ")
+    password = _prompt_password("Choose a password (never stored, never sent): ")
+    if len(password) < 8:
+        print("Use at least 8 characters.", file=sys.stderr)
+        return 1
+    if _prompt_password("Type it again: ") != password:
+        print("The passwords do not match.", file=sys.stderr)
+        return 1
+    try:
+        account.register(email, password)
+        print(f"A 6-digit code was sent to {account.normalise_email(email)}.")
+        s = account.verify(email, input("Code: "), _device_name())
+        if s.has_keybox:
+            key = account.open_keybox(s, password)
+        else:
+            key, recovery = account.new_account_key(), account.new_recovery_code()
+            account.create_keybox(s, password, key, recovery)
+            print("\nYour recovery code — write it down somewhere safe. It is the only way to keep your data\n"
+                  "if you forget your password, and it is never shown again:\n\n        " + recovery + "\n")
+    except account.AccountError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return _finish_signin(s, key)
+
+
+def cmd_signin(args, conn) -> int:
+    email = args.email or input("Email: ")
+    password = _prompt_password("Password (never stored, never sent): ")
+    try:
+        try:
+            s = account.login(email, password, _device_name())
+        except account.AccountError as exc:
+            if exc.status != 403:
+                raise
+            account.resend(email)
+            print(f"Your email is not verified yet; a new code was sent to {account.normalise_email(email)}.")
+            s = account.verify(email, input("Code: "), _device_name())
+        key = account.open_keybox(s, password)
+        if key is None:
+            key, recovery = account.new_account_key(), account.new_recovery_code()
+            account.create_keybox(s, password, key, recovery)
+            print("\nThis account had no data key yet, so this PC made one. Your recovery code, shown once:\n\n"
+                  "        " + recovery + "\n")
+    except (account.AccountError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return _finish_signin(s, key)
+
+
+def cmd_forgot(args, conn) -> int:
+    email = args.email or input("Email: ")
+    try:
+        account.forgot(email)
+        print(f"If {account.normalise_email(email)} has an account, a reset code is on its way.")
+        code = input("Code: ")
+        password = _prompt_password("New password: ")
+        if len(password) < 8 or _prompt_password("Type it again: ") != password:
+            print("Passwords must match and have at least 8 characters.", file=sys.stderr)
+            return 1
+        s = account.reset(email, code, password, _device_name())
+        key = None
+        if s.has_keybox:
+            print("\nYour data key is locked with the old password. Enter your recovery code to keep your\n"
+                  "existing synced data, or press Enter to start a fresh key (other devices must sign in again).")
+            recovery = input("Recovery code: ").strip()
+            if recovery:
+                key = account.open_keybox_with_recovery(s, recovery)
+        if key is None:
+            key, recovery = account.new_account_key(), account.new_recovery_code()
+            print("\nNew recovery code, shown once:\n\n        " + recovery + "\n")
+        else:
+            recovery = account.new_recovery_code()
+            print("\nData key recovered. New recovery code, shown once:\n\n        " + recovery + "\n")
+        account.create_keybox(s, password, key, recovery)
+    except (account.AccountError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return _finish_signin(s, key)
+
+
+def cmd_account(args, conn) -> int:
+    s, key = _load_session()
+    if s is None:
+        print("Not signed in. Run: planj signin  (or planj signup)")
+        return 0
+    try:
+        info = account.me(s)
+    except account.AccountError as exc:
+        print(f"{s.email} — session problem: {exc}. Run: planj signin")
+        return 1
+    print(f"{info['email']} · account since {info['created'][:10]}")
+    print("Devices:")
+    for d in info["devices"]:
+        print(f"  {'*' if d['this'] else ' '} {d['name']:<20} last seen {d['last_seen'][:16].replace('T', ' ')}")
+    print("Recovery code on file: " + ("yes" if info.get("has_recovery") else "no"))
+    return 0
+
+
+def cmd_signout(args, conn) -> int:
+    s, _ = _load_session()
+    if s is None:
+        print("Not signed in.")
+        return 0
+    try:
+        account.logout(s)
+    except account.AccountError:
+        pass  # the token is dropped locally either way
+    _session_path().unlink(missing_ok=True)
+    (_planj_root() / "pairing.txt").unlink(missing_ok=True)
+    print("Signed out. Recorded data stays on this PC; the tracker stops syncing.")
     return 0
 
 
@@ -221,9 +362,23 @@ def main(argv=None) -> int:
     cp.add_argument("--top", type=int, default=15)
     cp.set_defaults(func=cmd_correlate)
 
-    si = sub.add_parser("signin", help="sign this PC in with your email and password (replaces the pairing code)")
+    su = sub.add_parser("signup", help="create your planj account on this PC")
+    su.add_argument("--email")
+    su.set_defaults(func=cmd_signup)
+
+    si = sub.add_parser("signin", help="sign this PC in with your email and password")
     si.add_argument("--email")
     si.set_defaults(func=cmd_signin)
+
+    fp2 = sub.add_parser("forgot", help="reset your password with a code sent by email")
+    fp2.add_argument("--email")
+    fp2.set_defaults(func=cmd_forgot)
+
+    ap = sub.add_parser("account", help="who this PC is signed in as, and which devices share the account")
+    ap.set_defaults(func=cmd_account)
+
+    so = sub.add_parser("signout", help="sign this PC out")
+    so.set_defaults(func=cmd_signout)
 
     op = sub.add_parser("odds", help="tomorrow's forecasts, recorded now and scored after")
     op.add_argument("--days", type=int, default=45)

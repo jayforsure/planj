@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <com.planj.phone.Illustration
+            style="@style/Auth.Illustration"
+            android:contentDescription="small, about 5:2"
+            android:tag="recovery" />
+
+        <TextView style="@style/Auth.Title" android:text="Your recovery code" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="If you ever forget your password, this code is the only way to keep your data. Write it down somewhere safe. It is shown once and never again." />
+        <TextView
+            android:id="@+id/code"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/card_bg"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:letterSpacing="0.1"
+            android:paddingVertical="22dp"
+            android:textColor="@color/text"
+            android:textSize="20sp" />
+        <Button android:id="@+id/btn_copy" style="@style/Auth.Link" android:layout_gravity="center_horizontal" android:layout_marginTop="6dp" android:text="Copy to clipboard" />
+        <CheckBox
+            android:id="@+id/saved"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:buttonTint="@color/accent"
+            android:text="I have written it down"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Done" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+        </FrameLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp" android:text="planj cannot recover this code for you. Without it, a forgotten password means starting your record over." android:textColor="@color/warn" android:textSize="12sp" />
+</LinearLayout>

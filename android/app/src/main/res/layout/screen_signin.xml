@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <com.planj.phone.Illustration
+            style="@style/Auth.Illustration"
+            android:contentDescription="small, about 5:2"
+            android:tag="signin" />
+
+        <TextView style="@style/Auth.Title" android:text="Welcome back" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="Sign in with the email and password you use on your other devices." />
+        <TextView android:id="@+id/error" style="@style/Auth.Error" />
+        <TextView style="@style/Auth.Label" android:text="Email" />
+        <EditText
+            android:id="@+id/email"
+                style="@style/Auth.Field"
+            android:layout_marginTop="6dp"
+            android:hint="you@example.com"
+            android:imeOptions="actionNext"
+            android:inputType="textEmailAddress" />
+        <TextView android:id="@+id/email_hint" style="@style/Auth.Hint" />
+        <TextView style="@style/Auth.Label" android:text="Password" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp">
+
+            <EditText
+                android:id="@+id/password"
+                style="@style/Auth.Field"
+                android:layout_marginTop="0dp"
+                android:hint="••••••••"
+                android:imeOptions="actionDone"
+                android:inputType="textPassword" android:paddingEnd="52dp" />
+
+            <ImageButton
+                android:id="@+id/password_eye"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/btn_text"
+                android:contentDescription="Show password"
+                android:src="@drawable/ic_eye"
+                android:tint="@color/muted" />
+        </FrameLayout>
+        <TextView android:id="@+id/password_hint" style="@style/Auth.Hint" />
+        <Button android:id="@+id/btn_forgot" style="@style/Auth.Link" android:layout_gravity="end" android:layout_marginTop="4dp" android:text="Forgot password?" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Sign in" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+        </FrameLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical|center_horizontal"
+            android:orientation="horizontal">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="New to planj?" android:textColor="@color/muted" android:textSize="14sp" />
+            <Button android:id="@+id/btn_create" style="@style/Auth.Link" android:text="Create account" />
+        </LinearLayout>
+</LinearLayout>

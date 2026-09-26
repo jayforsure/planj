@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <com.planj.phone.Illustration
+            style="@style/Auth.Illustration"
+            android:contentDescription="small, about 5:2"
+            android:tag="verify" />
+
+        <TextView style="@style/Auth.Title" android:text="Check your email" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="We sent a 6-digit code to you@example.com. It works for 15 minutes." />
+        <TextView android:id="@+id/error" style="@style/Auth.Error" />
+        <EditText
+            android:id="@+id/code"
+            style="@style/Auth.Field"
+            android:layout_height="64dp"
+            android:layout_marginTop="20dp"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:hint="000000"
+            android:imeOptions="actionDone"
+            android:inputType="number"
+            android:letterSpacing="0.4"
+            android:maxLength="6"
+            android:textSize="24sp" />
+        <TextView android:id="@+id/code_hint" style="@style/Auth.Hint" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Verify" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+        </FrameLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical|center_horizontal"
+            android:orientation="horizontal">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Didn't get it?" android:textColor="@color/muted" android:textSize="14sp" />
+            <Button android:id="@+id/btn_resend" style="@style/Auth.Link" android:text="Resend code" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:gravity="center" android:text="Check your spam folder too." android:textColor="@color/idle" android:textSize="11sp" />
+</LinearLayout>

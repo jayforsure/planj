@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <com.planj.phone.Illustration
+            style="@style/Auth.Illustration"
+            android:contentDescription="small, about 5:2"
+            android:tag="recovery" />
+
+        <TextView style="@style/Auth.Title" android:text="Keep your data?" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="Your data key was locked with the old password. Enter your recovery code to carry your record over, or start fresh with a new key." />
+        <TextView android:id="@+id/error" style="@style/Auth.Error" />
+        <TextView style="@style/Auth.Label" android:text="Recovery code" />
+        <EditText
+            android:id="@+id/recovery"
+                style="@style/Auth.Field"
+            android:layout_marginTop="6dp"
+            android:hint="XXXXX-XXXXX-XXXXX-XXXXX"
+            android:imeOptions="actionDone"
+            android:inputType="textCapCharacters|textVisiblePassword" />
+        <TextView android:id="@+id/recovery_hint" style="@style/Auth.Hint" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Recover my data" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+        </FrameLayout>
+        <Button android:id="@+id/btn_fresh" style="@style/Auth.Secondary" android:text="Start fresh instead" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp" android:text="Starting fresh keeps the data already on this phone, but other devices will need to sign in again and their old uploads cannot be read." android:textColor="@color/warn" android:textSize="12sp" />
+</LinearLayout>

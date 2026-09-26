@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <com.planj.phone.Illustration
+            style="@style/Auth.Illustration"
+            android:contentDescription="small, about 5:2"
+            android:tag="create" />
+
+        <TextView style="@style/Auth.Title" android:text="Create your account" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="One email and password for every device. Your password never leaves this phone: it locks the key that encrypts your data." />
+        <TextView android:id="@+id/error" style="@style/Auth.Error" />
+        <TextView style="@style/Auth.Label" android:text="Email" />
+        <EditText
+            android:id="@+id/email"
+                style="@style/Auth.Field"
+            android:layout_marginTop="6dp"
+            android:hint="you@example.com"
+            android:imeOptions="actionNext"
+            android:inputType="textEmailAddress" />
+        <TextView android:id="@+id/email_hint" style="@style/Auth.Hint" />
+        <TextView style="@style/Auth.Label" android:text="Password" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp">
+
+            <EditText
+                android:id="@+id/password"
+                style="@style/Auth.Field"
+                android:layout_marginTop="0dp"
+                android:hint="At least 8 characters"
+                android:imeOptions="actionNext"
+                android:inputType="textPassword" android:paddingEnd="52dp" />
+
+            <ImageButton
+                android:id="@+id/password_eye"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/btn_text"
+                android:contentDescription="Show password"
+                android:src="@drawable/ic_eye"
+                android:tint="@color/muted" />
+        </FrameLayout>
+        <TextView android:id="@+id/password_hint" style="@style/Auth.Hint" />
+        <LinearLayout
+            android:id="@+id/strength_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp">
+            <View android:id="@+id/str1" android:layout_width="0dp" android:layout_height="4dp" android:layout_marginEnd="4dp" android:layout_weight="1" android:background="@drawable/strength_bar" />
+            <View android:id="@+id/str2" android:layout_width="0dp" android:layout_height="4dp" android:layout_marginEnd="4dp" android:layout_weight="1" android:background="@drawable/strength_bar" />
+            <View android:id="@+id/str3" android:layout_width="0dp" android:layout_height="4dp" android:layout_marginEnd="4dp" android:layout_weight="1" android:background="@drawable/strength_bar" />
+            <View android:id="@+id/str4" android:layout_width="0dp" android:layout_height="4dp" android:layout_marginEnd="10dp" android:layout_weight="1" android:background="@drawable/strength_bar" />
+            <TextView android:id="@+id/strength_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minWidth="52dp" android:textColor="@color/muted" android:textSize="12sp" />
+        </LinearLayout>
+        <TextView style="@style/Auth.Label" android:text="Confirm password" />
+        <EditText
+            android:id="@+id/confirm"
+                style="@style/Auth.Field"
+            android:layout_marginTop="6dp"
+            android:hint="Type it again"
+            android:imeOptions="actionDone"
+            android:inputType="textPassword" />
+        <TextView android:id="@+id/confirm_hint" style="@style/Auth.Hint" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Continue" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+        </FrameLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical|center_horizontal"
+            android:orientation="horizontal">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Already have an account?" android:textColor="@color/muted" android:textSize="14sp" />
+            <Button android:id="@+id/btn_signin" style="@style/Auth.Link" android:text="Sign in" />
+        </LinearLayout>
+</LinearLayout>

@@ -39,6 +39,7 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".AccountActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".DayDetailActivity" android:exported="false" />
         <activity android:name=".AppDetailActivity" android:exported="false" />
         <activity android:name=".AppPickerActivity" android:exported="false" />

@@ -39,8 +39,9 @@ var (
 )
 
 type server struct {
-	dir string
-	mu  sync.Mutex // serialises writes so the per-mailbox cap holds
+	dir  string
+	mu   sync.Mutex // serialises writes so the per-mailbox cap holds
+	mail mailer
 }
 
 type item struct {
@@ -54,6 +55,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/mailbox/{box}", s.put)
 	mux.HandleFunc("GET /v1/mailbox/{box}", s.list)
 	mux.HandleFunc("DELETE /v1/mailbox/{box}", s.ack)
+	s.accountRoutes(mux)
 	return mux
 }
 
@@ -253,7 +255,7 @@ func main() {
 		port = "8080"
 	}
 
-	s := &server{dir: dir}
+	s := &server{dir: dir, mail: mailerFromEnv()}
 	go func() {
 		for now := range time.Tick(cleanupEvery) {
 			s.cleanup(now)

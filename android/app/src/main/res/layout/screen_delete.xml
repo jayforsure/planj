@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+        <TextView style="@style/Auth.Title" android:text="Delete account" />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="This removes your account and its key from the relay. Data already on this phone and your PC stays where it is. This cannot be undone." />
+        <TextView android:id="@+id/error" style="@style/Auth.Error" />
+        <TextView style="@style/Auth.Label" android:text="Confirm with your password" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp">
+
+            <EditText
+                android:id="@+id/password"
+                style="@style/Auth.Field"
+                android:layout_marginTop="0dp"
+                android:hint="••••••••"
+                android:imeOptions="actionDone"
+                android:inputType="textPassword" android:paddingEnd="52dp" />
+
+            <ImageButton
+                android:id="@+id/password_eye"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/btn_text"
+                android:contentDescription="Show password"
+                android:src="@drawable/ic_eye"
+                android:tint="@color/muted" />
+        </FrameLayout>
+        <TextView android:id="@+id/password_hint" style="@style/Auth.Hint" />
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:backgroundTint="@color/bad" android:text="Delete my account" android:textColor="@color/text" />
+            <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/text" android:visibility="gone" />
+        </FrameLayout>
+</LinearLayout>
