@@ -37,7 +37,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:rowIcon="@drawable/ic_lock"
-            app:rowSubtitle="Money, password, health and dating apps are private from the start"
             app:rowTitle="Private apps" />
 
         <com.planj.phone.ListRow
@@ -45,7 +44,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:rowIcon="@drawable/ic_star"
-            app:rowSubtitle="Toggle private mode from the notification shade"
             app:rowTitle="Quick Settings tile" />
 
         <TextView style="@style/Auth.Section" android:text="Journal" />
@@ -64,7 +62,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:rowIcon="@drawable/ic_export"
-            app:rowSubtitle="Everything this phone has recorded, as a file"
             app:rowTitle="Export a copy" />
 
         <com.planj.phone.ListRow
@@ -72,31 +69,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:rowIcon="@drawable/ic_shield"
-            app:rowSubtitle="What is stored, what is not, who can read it"
             app:rowTitle="How privacy works" />
-
-        <ImageView
-            android:layout_width="96dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="36dp"
-            android:contentDescription="planj"
-            android:src="@drawable/wordmark_planj" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="center"
-            android:text="Know your odds."
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/version"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="32dp"
             android:gravity="center"
             android:textColor="@color/idle"
             android:textSize="12sp" />

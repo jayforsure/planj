@@ -8,41 +8,14 @@
     android:paddingTop="4dp"
     android:paddingBottom="32dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="112dp"
-            android:layout_height="46dp"
-            android:contentDescription="planj"
-            android:scaleType="fitStart"
-            android:src="@drawable/wordmark_planj" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Know your odds."
-            android:textColor="@color/muted"
-            android:textSize="14sp" />
-    </LinearLayout>
-
     <com.planj.phone.HeroCard
         android:id="@+id/hero"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:heroHeadline="Your life,\nforecast honestly"
         app:heroHeight="260dp"
-        app:heroSlot="welcome"
-        app:heroSubline="planj learns from what you actually do and tells you the odds for tomorrow — with the one thing that would change them." />
+        app:heroSlot="welcome" />
 
     <Button android:id="@+id/btn_create" style="@style/Auth.Primary" android:text="Create account" />
     <Button android:id="@+id/btn_signin" style="@style/Auth.Secondary" android:text="I already have an account" />
-
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:gravity="center" android:text="End-to-end encrypted · no server ever sees your data" android:textColor="@color/idle" android:textSize="12sp" />
 </LinearLayout>

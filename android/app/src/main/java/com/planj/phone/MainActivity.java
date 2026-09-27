@@ -50,6 +50,8 @@ public class MainActivity extends Activity {
         navJournal.setOnClickListener(v -> select(journal.view(), navJournal));
         navSettings.setOnClickListener(v -> select(settings.view(), navSettings));
         select(today.view(), navToday);
+        findViewById(R.id.bar_private).setOnClickListener(v -> setPrivate(!PrivateMode.isOn(this)));
+        findViewById(R.id.bar_me).setOnClickListener(v -> showAccount());
 
         // The tab bar makes way for the keyboard, so a form gets the whole screen while typing.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -58,6 +60,7 @@ public class MainActivity extends Activity {
             getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
                 boolean typing = insets.isVisible(android.view.WindowInsets.Type.ime());
                 nav.setVisibility(typing ? View.GONE : View.VISIBLE);
+                findViewById(R.id.appbar).setVisibility(typing ? View.GONE : View.VISIBLE);
                 rule.setVisibility(typing ? View.GONE : View.VISIBLE);
                 return v.onApplyWindowInsets(insets);
             });
@@ -80,7 +83,9 @@ public class MainActivity extends Activity {
     private void launchSequence() {
         View content = findViewById(R.id.tabs);
         View nav = findViewById(R.id.nav);
+        View bar = findViewById(R.id.appbar);
         float dp = getResources().getDisplayMetrics().density;
+        bar.setAlpha(0f);
         content.setAlpha(0f);
         content.setTranslationY(48 * dp);
         nav.setAlpha(0f);
@@ -88,6 +93,7 @@ public class MainActivity extends Activity {
             content.animate().alpha(1f).translationY(0f).setDuration(520).setStartDelay(60)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
             nav.animate().alpha(1f).setDuration(400).setStartDelay(220).start();
+            bar.animate().alpha(1f).setDuration(400).setStartDelay(160).start();
         };
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             getSplashScreen().setOnExitAnimationListener(splash -> {
@@ -157,6 +163,9 @@ public class MainActivity extends Activity {
 
     void refresh() {
         boolean granted = hasUsageAccess();
+        Avatar.show(this, findViewById(R.id.bar_me_photo), findViewById(R.id.bar_me_initial));
+        ((android.widget.ImageView) findViewById(R.id.bar_private)).setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(PrivateMode.isOn(this) ? R.color.accent : R.color.text)));
         today.refresh(granted);
         // The hidden tabs can wait for the first frame; the visible one cannot.
         findViewById(R.id.tabs).post(() -> {

@@ -21,30 +21,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="112dp"
-                    android:layout_height="46dp"
-                    android:contentDescription="planj"
-                    android:scaleType="fitStart"
-                    android:src="@drawable/wordmark_planj" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="Know your odds."
-                    android:textColor="@color/muted"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
             <com.planj.phone.HeroCard
                 android:id="@+id/hero_welcome"
                 android:layout_width="match_parent"
@@ -52,8 +28,7 @@
                 app:heroButton="Create account"
                 app:heroHeadline="Your life,\nforecast honestly"
                 app:heroHeight="230dp"
-                app:heroSlot="welcome"
-                app:heroSubline="One account. Every device. A key only you hold." />
+                app:heroSlot="welcome" />
 
             <TextView
                 style="@style/Auth.Section"
@@ -64,7 +39,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_mail"
-                app:rowSubtitle="Use the email and password from your other device"
                 app:rowTitle="Sign in" />
 
             <com.planj.phone.ListRow
@@ -72,7 +46,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_shield"
-                app:rowSubtitle="What is stored, what is not, and who can read it"
                 app:rowTitle="How privacy works" />
 
             <!-- Older code-paired phones -->
@@ -141,15 +114,6 @@
                 android:paddingVertical="2dp" />
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center"
-                android:text="Personal record"
-                android:textColor="@color/muted"
-                android:textSize="16sp" />
-
-            <TextView
                 android:id="@+id/email"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -164,8 +128,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
                 app:heroButton="See tomorrow's odds"
-                app:heroHeadline="Your record,\nyour rules"
-                app:heroHeight="150dp"
+                                app:heroHeight="150dp"
                 app:heroSlot="profile" />
 
             <TextView
@@ -184,7 +147,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_devices"
-                app:rowSubtitle="Signed-in phones and PCs"
                 app:rowTitle="Devices" />
 
             <com.planj.phone.ListRow
@@ -192,7 +154,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_export"
-                app:rowSubtitle="Everything this phone has recorded, as a file"
                 app:rowTitle="Export my data" />
 
             <TextView
@@ -204,7 +165,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_lock"
-                app:rowSubtitle="Signs your other devices out"
                 app:rowTitle="Change password" />
 
             <com.planj.phone.ListRow
@@ -220,7 +180,6 @@
                 android:layout_height="wrap_content"
                 app:rowChevron="false"
                 app:rowIcon="@drawable/ic_back"
-                app:rowSubtitle="Data stays on this phone; syncing stops"
                 app:rowTitle="Sign out on this phone" />
 
             <com.planj.phone.ListRow

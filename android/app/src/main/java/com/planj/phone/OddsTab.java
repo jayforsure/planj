@@ -60,11 +60,10 @@ final class OddsTab {
         list.removeAllViews();
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         if (r.forecasts.isEmpty()) {
-            summary.setText("Forecasts need " + OddsEngine.MIN_HISTORY + " days of history — " + r.hist.size() + " so far. Keep the phone tracking.");
+            summary.setText(r.hist.size() + " of " + OddsEngine.MIN_HISTORY + " days recorded");
             return;
         }
-        summary.setText("Tomorrow, " + tomorrow.format(DateTimeFormatter.ofPattern("EEEE d MMM", Locale.ENGLISH))
-                + " · from your last " + r.hist.size() + " days · recorded now, scored in the morning.");
+        summary.setText("Tomorrow · " + tomorrow.format(DateTimeFormatter.ofPattern("EEEE d MMM", Locale.ENGLISH)));
 
         if (!r.tomorrow.isEmpty()) {
             header("TOMORROW'S PLANS");
@@ -73,7 +72,7 @@ final class OddsTab {
             }
         } else if (!Agenda.allowed(a)) {
             header("TOMORROW'S PLANS");
-            line("Allow calendar access in Settings and tomorrow's plans appear here.", a.getColor(R.color.muted), 13);
+            line("Calendar access is off", a.getColor(R.color.muted), 13);
         }
 
         header("FORECASTS");
@@ -94,9 +93,7 @@ final class OddsTab {
             table.addView(row(fc.outcome.resolved, live, replay, false));
         }
         list.addView(table);
-        line(anyLive ? "Live: forecasts made here, scored the next morning. Replay: the same rules run on your earlier days, beside what guessing your average scores."
-                : "Tonight's forecasts are the first live ones. Replay: the same rules run on your earlier days, beside what guessing your average would score.",
-                a.getColor(R.color.idle), 12);
+
     }
 
     private View row(String name, String live, String replay, boolean head) {

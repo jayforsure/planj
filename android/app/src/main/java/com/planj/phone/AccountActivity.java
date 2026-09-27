@@ -180,7 +180,7 @@ public class AccountActivity extends Activity {
     private void bindVerify(View v) {
         Form f = new Form(v);
         EditText code = f.edit(R.id.code);
-        ((TextView) v.findViewById(R.id.blurb)).setText("We sent a 6-digit code to " + AccountCrypto.normaliseEmail(email) + ". It works for 15 minutes.");
+        ((TextView) v.findViewById(R.id.blurb)).setText("Code sent to " + AccountCrypto.normaliseEmail(email));
         f.validate = () -> f.ok(code.getText().length() == 6);
         f.watch(code);
         f.submitOnDone(code);
@@ -265,7 +265,7 @@ public class AccountActivity extends Activity {
     private void bindReset(View v) {
         Form f = new Form(v);
         EditText code = f.edit(R.id.code), pw = f.edit(R.id.password), cf = f.edit(R.id.confirm);
-        ((TextView) v.findViewById(R.id.blurb)).setText("Enter the code we sent to " + AccountCrypto.normaliseEmail(email) + " and choose a new password.");
+        ((TextView) v.findViewById(R.id.blurb)).setText("Code sent to " + AccountCrypto.normaliseEmail(email));
         f.eye(R.id.password_eye, pw);
         f.validate = () -> {
             f.strength(pw.getText().toString());

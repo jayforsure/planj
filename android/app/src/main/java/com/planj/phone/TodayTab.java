@@ -56,9 +56,6 @@ final class TodayTab {
             a.saveEntry(moodDay(), mood, e == null ? "" : e.note, e == null ? List.of() : e.tags);
         });
         root.findViewById(R.id.see_all).setOnClickListener(v -> openDay(shown));
-        root.findViewById(R.id.me).setOnClickListener(v -> a.showAccount());
-        root.findViewById(R.id.chip_mood).setOnClickListener(v -> a.showJournal(shown));
-        root.findViewById(R.id.chip_private).setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
         moodNote.setOnClickListener(v -> a.showJournal(moodDay()));
         privateBanner.setOnClickListener(v -> a.setPrivate(false));
 
@@ -104,8 +101,6 @@ final class TodayTab {
 
     void refresh(boolean granted) {
         boolean isToday = shown.equals(LocalDate.now());
-        Avatar.show(a, root.findViewById(R.id.me_photo), root.findViewById(R.id.me_initial));
-        ((android.widget.ImageView) root.findViewById(R.id.chip_private)).setImageTintList(android.content.res.ColorStateList.valueOf(a.getColor(PrivateMode.isOn(a) ? R.color.accent : R.color.text)));
         headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)));
         int hour = LocalTime.now().getHour();
         greeting.setText(!isToday ? Fmt.shortDate(shown)
@@ -117,6 +112,11 @@ final class TodayTab {
         ((GestureScrollView) root).setPrivateLook(priv, false);
 
         if (granted) {
+            if (statScreen.getText().length() == 0) {  // first load: a dash, never a blank card
+                statScreen.setText("—");
+                statUnlocks.setText("—");
+                statQuiet.setText("—");
+            }
             loadUsageAsync();
         } else {
             statScreen.setText("—");

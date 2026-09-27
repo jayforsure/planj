@@ -56,11 +56,11 @@ final class SettingsTab {
     }
 
     void refresh(boolean granted) {
-        tracking.setSubtitle(granted ? "On · which app is open, and for how long" : "Off · tap to allow usage access");
+        tracking.setSubtitle(granted ? "On" : "Off");
         tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
         boolean p = PrivateMode.isOn(a);
-        priv.setSubtitle(p ? "On since " + Fmt.clock(PrivateMode.since(a)) + " · tap to resume recording" : "Off · tap to pause all recording");
+        priv.setSubtitle(p ? "On since " + Fmt.clock(PrivateMode.since(a)) : "Off");
         priv.setTint(a.getColor(p ? R.color.accent : R.color.text));
-        reminder.setSubtitle(MoodReminder.enabled(a) ? "On · a one-tap check-in around 21:30" : "Off · tap to allow notifications");
+        reminder.setSubtitle(MoodReminder.enabled(a) ? "21:30" : "Off");
     }
 }

@@ -39,69 +39,15 @@
                 android:gravity="center"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="12dp"
-                android:text="Private — nothing is being recorded. Pinch out to resume."
+                android:text="Private · not recording"
                 android:textColor="@color/text"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
-            <!-- Top bar: you, and two quick actions -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <FrameLayout
-                    android:id="@+id/me"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:background="@drawable/btn_circle">
-
-                    <TextView
-                        android:id="@+id/me_initial"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:background="@drawable/avatar_bg"
-                        android:fontFamily="@font/display"
-                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 40, \'wdth\' 100"
-                        android:gravity="center"
-                        android:textColor="@color/on_accent"
-                        android:textSize="20sp" />
-
-                    <ImageView
-                        android:id="@+id/me_photo"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:contentDescription="Account"
-                        android:scaleType="centerCrop"
-                        android:visibility="gone" />
-                </FrameLayout>
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <Button
-                    android:id="@+id/chip_mood"
-                    style="@style/Chip.Primary"
-                    android:text="Log mood" />
-
-                <ImageView
-                    android:id="@+id/chip_private"
-                    style="@style/CircleButton"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="8dp"
-                    android:contentDescription="Private mode"
-                    android:padding="11dp"
-                    android:src="@drawable/ic_private" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
+                android:layout_marginTop="4dp"
                 android:gravity="bottom"
                 android:orientation="horizontal">
 
@@ -111,13 +57,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1" />
 
-                <TextView
-                    android:id="@+id/day_hint"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="‹ swipe ›"
-                    android:textColor="@color/idle"
-                    android:textSize="11sp" />
+
             </LinearLayout>
 
             <TextView
@@ -253,13 +193,6 @@
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/muted"
                         android:textSize="13sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="tap a day"
-                        android:textColor="@color/idle"
-                        android:textSize="11sp" />
                 </LinearLayout>
 
                 <com.planj.phone.StackedBarChartView

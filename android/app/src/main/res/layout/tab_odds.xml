@@ -32,14 +32,5 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:orientation="vertical" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:lineSpacingExtra="4dp"
-            android:text="Every forecast is written down before the day and scored after it. A pattern is only used when replaying your own history shows it beats guessing your average — so early on, most numbers are your average, and that is the honest answer."
-            android:textColor="@color/muted"
-            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

@@ -14,7 +14,7 @@
             android:tag="forgot" />
 
         <TextView style="@style/Auth.Title" android:text="Forgot your password?" />
-        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="Enter your email and we will send a code to set a new one." />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:visibility="gone" />
         <TextView android:id="@+id/error" style="@style/Auth.Error" />
         <TextView style="@style/Auth.Label" android:text="Email" />
         <EditText
@@ -31,5 +31,5 @@
             <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Send reset code" />
             <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
         </FrameLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp" android:text="Your password also locks your data key. After resetting, you will need your recovery code to keep your existing synced data." android:textColor="@color/warn" android:textSize="12sp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:lineSpacingExtra="3dp" android:text="You'll need your recovery code to keep synced data." android:textColor="@color/warn" android:textSize="12sp" />
 </LinearLayout>

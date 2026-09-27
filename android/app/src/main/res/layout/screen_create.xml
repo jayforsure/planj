@@ -14,7 +14,7 @@
             android:tag="create" />
 
         <TextView style="@style/Auth.Title" android:text="Create your account" />
-        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="One email and password for every device. Your password never leaves this phone: it locks the key that encrypts your data." />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:visibility="gone" />
         <TextView android:id="@+id/error" style="@style/Auth.Error" />
         <TextView style="@style/Auth.Label" android:text="Email" />
         <EditText

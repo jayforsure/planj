@@ -8,7 +8,7 @@
     android:paddingBottom="32dp">
 
         <TextView style="@style/Auth.Title" android:text="Devices" />
-        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:text="Every device signed in to this account. Removing one signs it out; its own recorded data stays on it." />
+        <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" android:visibility="gone" />
         <TextView android:id="@+id/error" style="@style/Auth.Error" />
         <LinearLayout
             android:id="@+id/list"
