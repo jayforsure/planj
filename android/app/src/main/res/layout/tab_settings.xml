@@ -75,11 +75,28 @@
             app:rowSubtitle="What is stored, what is not, who can read it"
             app:rowTitle="How privacy works" />
 
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="36dp"
+            android:contentDescription="planj"
+            android:src="@drawable/wordmark_planj" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="Know your odds."
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
         <TextView
             android:id="@+id/version"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="4dp"
             android:gravity="center"
             android:textColor="@color/idle"
             android:textSize="12sp" />

@@ -8,6 +8,30 @@
     android:paddingTop="4dp"
     android:paddingBottom="32dp">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="112dp"
+            android:layout_height="46dp"
+            android:contentDescription="planj"
+            android:scaleType="fitStart"
+            android:src="@drawable/wordmark_planj" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Know your odds."
+            android:textColor="@color/muted"
+            android:textSize="14sp" />
+    </LinearLayout>
+
     <com.planj.phone.HeroCard
         android:id="@+id/hero"
         android:layout_width="match_parent"
