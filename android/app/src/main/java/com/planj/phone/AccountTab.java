@@ -64,7 +64,6 @@ final class AccountTab {
         root.findViewById(R.id.row_password).setOnClickListener(v -> open("password"));
         rowRecovery.setOnClickListener(v -> open("newrecovery"));
         root.findViewById(R.id.row_delete).setOnClickListener(v -> open("delete"));
-        root.findViewById(R.id.hero_profile).setOnClickListener(v -> a.showOdds());
         root.findViewById(R.id.row_signout).setOnClickListener(v -> new AlertDialog.Builder(a)
                 .setTitle("Sign out on this phone?")
                 .setMessage("Recorded data stays here. Syncing stops until you sign in again.")

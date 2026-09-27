@@ -5,32 +5,20 @@
     android:fillViewport="true"
     android:scrollbars="none">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="24dp">
+    <LinearLayout style="@style/Page">
 
         <TextView
-            style="@style/Display.XL"
+            style="@style/PageTitle"
             android:text="Odds" />
 
         <TextView
             android:id="@+id/odds_summary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:lineSpacingExtra="3dp"
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
+            style="@style/PageSubtitle" />
 
         <LinearLayout
             android:id="@+id/odds_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:orientation="vertical" />
     </LinearLayout>
 </ScrollView>

@@ -10,8 +10,8 @@ android {
         applicationId = "com.planj.phone"
         minSdk = 28
         targetSdk = 36
-        versionCode = 27
-        versionName = "0.18.0"
+        versionCode = 28
+        versionName = "0.19.0"
     }
 
     compileOptions {

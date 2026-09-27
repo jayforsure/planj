@@ -58,6 +58,7 @@ final class OddsTab {
 
     private void render(Result r) {
         list.removeAllViews();
+        first = true;
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         if (r.forecasts.isEmpty()) {
             summary.setText(r.hist.size() + " of " + OddsEngine.MIN_HISTORY + " days recorded");
@@ -124,6 +125,8 @@ final class OddsTab {
     }
 
     /** A section heading in planj's voice: the display face with the teal dot. */
+    private boolean first = true;
+
     private void header(String text) {
         TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
         h.setText(text.charAt(0) + text.substring(1).toLowerCase(java.util.Locale.ENGLISH));
@@ -133,7 +136,8 @@ final class OddsTab {
         h.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.dot_accent, 0, 0, 0);
         h.setCompoundDrawablePadding(dp(10));
         h.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        h.setPadding(0, dp(26), 0, dp(10));
+        h.setPadding(0, dp(first ? 28 : 32), 0, dp(12));
+        first = false;
         list.addView(h);
     }
 

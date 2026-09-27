@@ -6,17 +6,11 @@
     android:fillViewport="true"
     android:scrollbars="none">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="32dp">
+    <LinearLayout style="@style/Page">
 
-        <TextView style="@style/Display.XL" android:text="Settings" />
+        <TextView style="@style/PageTitle" android:text="Settings" />
 
-        <TextView style="@style/Auth.Section" android:text="Recording" />
+        <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Recording" />
 
         <com.planj.phone.ListRow
             android:id="@+id/row_tracking"

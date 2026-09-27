@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Page template shared by every tab: title, one-line subtitle, then sections whose
+     dotted heading sits outside the card and whose content sits inside it. -->
 <com.planj.phone.GestureScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/scroll"
     android:layout_width="match_parent"
@@ -8,25 +10,11 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:clipChildren="false">
-
-        <View
-            android:layout_width="320dp"
-            android:layout_height="320dp"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="-140dp"
-            android:layout_marginEnd="-120dp"
-            android:background="@drawable/glow" />
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:id="@+id/content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="24dp">
+            style="@style/Page">
 
             <TextView
                 android:id="@+id/private_banner"
@@ -34,7 +22,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/btn_secondary"
-                android:drawablePadding="10dp"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
                 android:paddingHorizontal="16dp"
@@ -44,32 +31,19 @@
                 android:textSize="13sp"
                 android:visibility="gone" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="bottom"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/header_date"
-                    style="@style/Overline"
-                    android:layout_width="0dp"
-                    android:layout_weight="1" />
-
-
-            </LinearLayout>
-
             <TextView
                 android:id="@+id/greeting"
-                style="@style/Display.XL"
-                android:layout_marginTop="6dp" />
+                style="@style/PageTitle" />
+
+            <TextView
+                android:id="@+id/header_date"
+                style="@style/PageSubtitle" />
 
             <!-- Numbers -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
+                android:layout_marginTop="24dp"
                 android:background="@drawable/card_bg"
                 android:baselineAligned="false"
                 android:orientation="horizontal"
@@ -84,22 +58,11 @@
 
                     <TextView
                         android:id="@+id/stat_screen"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/display"
-                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
-                        android:includeFontPadding="false"
-                        android:letterSpacing="-0.03"
-                        android:textColor="@color/text"
-                        android:textSize="28sp" />
+                        style="@style/StatNumber" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Screen"
-                        android:textColor="@color/muted"
-                        android:textSize="12sp" />
+                        style="@style/StatLabel"
+                        android:text="Screen" />
                 </LinearLayout>
 
                 <View
@@ -117,22 +80,11 @@
 
                     <TextView
                         android:id="@+id/stat_unlocks"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/display"
-                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
-                        android:includeFontPadding="false"
-                        android:letterSpacing="-0.03"
-                        android:textColor="@color/text"
-                        android:textSize="28sp" />
+                        style="@style/StatNumber" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Unlocks"
-                        android:textColor="@color/muted"
-                        android:textSize="12sp" />
+                        style="@style/StatLabel"
+                        android:text="Unlocks" />
                 </LinearLayout>
 
                 <View
@@ -150,56 +102,34 @@
 
                     <TextView
                         android:id="@+id/stat_quiet"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/display"
-                        android:fontVariationSettings="\'wght\' 700, \'opsz\' 96, \'wdth\' 100"
-                        android:includeFontPadding="false"
-                        android:letterSpacing="-0.03"
-                        android:textColor="@color/text"
-                        android:textSize="28sp" />
+                        style="@style/StatNumber" />
 
                     <TextView
                         android:id="@+id/stat_quiet_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:singleLine="true"
-                        android:text="Device-free"
-                        android:textColor="@color/muted"
-                        android:textSize="12sp" />
+                        style="@style/StatLabel"
+                        android:text="Device-free" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Week -->
+            <!-- This week -->
+            <LinearLayout style="@style/SectionRow">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="This week" />
+
+                <TextView
+                    android:id="@+id/week_range"
+                    style="@style/SectionAside" />
+            </LinearLayout>
+
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/week_range"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
+                style="@style/Card">
 
                 <com.planj.phone.StackedBarChartView
                     android:id="@+id/chart"
                     android:layout_width="match_parent"
-                    android:layout_height="164dp"
-                    android:layout_marginTop="8dp" />
+                    android:layout_height="164dp" />
 
                 <HorizontalScrollView
                     android:layout_width="match_parent"
@@ -215,80 +145,53 @@
                 </HorizontalScrollView>
             </LinearLayout>
 
-            <!-- Top apps -->
+            <!-- Apps -->
+            <LinearLayout style="@style/SectionRow">
+
+                <TextView
+                    android:id="@+id/apps_title"
+                    style="@style/SectionTitle"
+                    android:text="Today's apps" />
+
+                <TextView
+                    android:id="@+id/see_all"
+                    style="@style/SectionLink"
+                    android:text="See all" />
+            </LinearLayout>
+
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/apps_title"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="Today's apps"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/see_all"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/btn_text"
-                        android:paddingHorizontal="6dp"
-                        android:text="See all"
-                        android:textColor="@color/accent"
-                        android:textSize="12sp" />
-                </LinearLayout>
+                style="@style/Card"
+                android:paddingVertical="10dp">
 
                 <LinearLayout
                     android:id="@+id/top_apps"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
                     android:orientation="vertical" />
             </LinearLayout>
 
             <!-- Mood -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/card_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
+            <LinearLayout style="@style/SectionRow">
 
                 <TextView
                     android:id="@+id/mood_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/text"
-                    android:textSize="22sp" />
+                    style="@style/SectionTitle" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/Card">
 
                 <TextView
                     android:id="@+id/mood_state"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
                     android:textColor="@color/muted"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
 
                 <LinearLayout
                     android:id="@+id/mood_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="16dp"
                     android:baselineAligned="false"
                     android:orientation="horizontal" />
 
