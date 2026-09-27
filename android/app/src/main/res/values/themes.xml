@@ -10,7 +10,8 @@
         <item name="android:textColorHint">@color/muted</item>
         <item name="android:windowAnimationStyle">@style/PageTransitions</item>
         <item name="android:windowSplashScreenBackground">@color/bg</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_pj_animated</item>
+        <item name="android:windowSplashScreenAnimationDuration">900</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/bg</item>
     </style>
 

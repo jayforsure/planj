@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch: letters lean in, the swash signs itself, the dot drops onto the j and bounces. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/splash_pj">
+    <target android:name="letters" android:animation="@animator/pj_letters_in" />
+    <target android:name="lean" android:animation="@animator/pj_lean_in" />
+    <target android:name="tail" android:animation="@animator/pj_swash_draw" />
+    <target android:name="dotGroup" android:animation="@animator/pj_dot_drop" />
+    <target android:name="dot" android:animation="@animator/pj_dot_show" />
+</animated-vector>

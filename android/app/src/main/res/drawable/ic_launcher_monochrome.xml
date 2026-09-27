@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- planj mark: pj drawn from Shrikhand outlines (SIL OFL), the j's dot replaced by the teal planj dot, a teal swash beneath. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="54" android:translateY="54" android:scaleX="0.05574" android:scaleY="0.05574">
+        <group android:name="lean" android:translateX="-511" android:translateY="197.5">
+            <path android:name="letters" android:pathData="M688 -343Q688 -296 675 -244Q645 -120 563.0 -55.5Q481 9 373 9Q304 9 253 -20L221 87Q217 98 217 108Q217 119 222.0 126.5Q227 134 235 141Q243 149 245.5 154.0Q248 159 246 166Q242 179 227.0 184.5Q212 190 181 190H-48Q-74 190 -85.5 181.5Q-97 173 -92 160Q-90 152 -85.0 147.0Q-80 142 -71 138Q-56 128 -47.0 117.5Q-38 107 -31 84L115 -395Q118 -404 118 -410Q118 -421 113.0 -427.5Q108 -434 98 -441Q88 -449 84.0 -455.0Q80 -461 83 -471Q89 -494 146.0 -511.5Q203 -529 265 -529Q309 -529 337.5 -507.0Q366 -485 370 -446Q438 -533 523 -533Q600 -533 644.0 -482.0Q688 -431 688 -343ZM431 -359Q431 -380 424.5 -386.5Q418 -393 406 -393Q397 -393 383.0 -384.5Q369 -376 355 -356L276 -94Q288 -82 305 -82Q332 -82 356.5 -112.5Q381 -143 407 -236Q431 -325 431 -359ZM750 -409Q750 -420 745.5 -426.0Q741 -432 731 -441Q721 -449 717.0 -455.0Q713 -461 716 -471Q722 -494 779.0 -511.5Q836 -529 898 -529Q956 -529 983.0 -507.0Q1010 -485 1010 -447Q1010 -424 1003 -403L880 11Q850 110 786.0 150.0Q722 190 614 190Q571 190 539.5 179.0Q508 168 514 149Q516 142 523.0 136.0Q530 130 544 123Q570 109 587.5 92.5Q605 76 615 44L748 -395Q750 -400 750 -409Z" android:fillColor="#FFFFFFFF" android:fillAlpha="1" />
+        </group>
+    </group>
+</vector>
