@@ -19,7 +19,7 @@ public final class ListRow extends LinearLayout {
         float dp = getResources().getDisplayMetrics().density;
         setOrientation(HORIZONTAL);
         setGravity(Gravity.CENTER_VERTICAL);
-        setMinimumHeight((int) (68 * dp));
+        setMinimumHeight((int) (72 * dp));
         setPadding(0, (int) (8 * dp), 0, (int) (8 * dp));
         setBackgroundResource(R.drawable.btn_text);
         setClickable(true);
@@ -34,13 +34,13 @@ public final class ListRow extends LinearLayout {
         a.recycle();
 
         icon = new ImageView(ctx);
-        int size = (int) (32 * dp), pad = (int) (4 * dp);
+        int size = (int) (52 * dp), pad = (int) (14 * dp);
         LayoutParams ip = new LayoutParams(size, size);
-        ip.setMarginEnd((int) (18 * dp));
+        ip.setMarginEnd((int) (16 * dp));
         icon.setLayoutParams(ip);
-        icon.setBackgroundResource(R.drawable.icon_tile);
+        icon.setBackgroundResource(R.drawable.icon_circle); // an outlined circle, transparent inside
         icon.setPadding(pad, pad, pad, pad);
-        icon.setImageTintList(android.content.res.ColorStateList.valueOf(tint == ctx.getColor(R.color.text) ? ctx.getColor(R.color.accent) : tint));
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(tint));
         if (iconRes != 0) icon.setImageResource(iconRes);
         addView(icon);
 
@@ -86,8 +86,7 @@ public final class ListRow extends LinearLayout {
     }
 
     public void setTint(int color) {
-        boolean plain = color == getContext().getColor(R.color.text);
-        icon.setImageTintList(android.content.res.ColorStateList.valueOf(plain ? getContext().getColor(R.color.accent) : color));
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(color));
         title.setTextColor(color);
     }
 }
