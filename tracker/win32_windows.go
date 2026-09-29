@@ -17,6 +17,7 @@ var (
 	procGetLastInputInfo = user32.NewProc("GetLastInputInfo")
 	procEnumChildWindows = user32.NewProc("EnumChildWindows")
 	procMessageBoxW      = user32.NewProc("MessageBoxW")
+	procGetWindowTextW   = user32.NewProc("GetWindowTextW")
 	procGetTickCount     = kernel32.NewProc("GetTickCount")
 )
 
@@ -54,6 +55,18 @@ var (
 		return 1
 	})
 )
+
+// foregroundTitle returns the front window's title. It is only ever passed to Classify and
+// never stored, logged or synced.
+func foregroundTitle() string {
+	hwnd := windows.GetForegroundWindow()
+	if hwnd == 0 {
+		return ""
+	}
+	buf := make([]uint16, 512)
+	n, _, _ := procGetWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	return windows.UTF16ToString(buf[:n])
+}
 
 func foregroundApp() string {
 	hwnd := windows.GetForegroundWindow()

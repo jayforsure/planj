@@ -10,7 +10,7 @@ KL = ZoneInfo("Asia/Kuala_Lumpur")
 
 
 def _spans(conn, *spans):
-    conn.executemany("INSERT INTO activity_span VALUES (?, ?, ?, ?)", spans)
+    conn.executemany("INSERT INTO activity_span (start_utc, end_utc, app, idle) VALUES (?, ?, ?, ?)", spans)
 
 
 def test_read_spans_skips_old_files_and_partial_lines(tmp_path):
@@ -19,7 +19,7 @@ def test_read_spans_skips_old_files_and_partial_lines(tmp_path):
     (tmp_path / "2026-09-01.jsonl").write_text(line + "\n", encoding="utf-8")
     (tmp_path / "notes.jsonl").write_text("ignored\n", encoding="utf-8")
     rows = tracker.read_spans(tmp_path, since=date(2026, 9, 20))
-    assert rows == [("2026-09-21T01:00:00.000000+00:00", "2026-09-21T01:01:00.000000+00:00", "Code.exe", 0)]
+    assert rows == [("2026-09-21T01:00:00.000000+00:00", "2026-09-21T01:01:00.000000+00:00", "Code.exe", 0, "")]
 
 
 def test_active_time_and_top_apps_exclude_idle():

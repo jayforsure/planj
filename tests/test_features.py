@@ -13,7 +13,7 @@ def kl(hour, minute=0, day=DAY):
 
 
 def add_pc(conn, start, end, app="Code.exe", idle=0):
-    conn.execute("INSERT OR REPLACE INTO activity_span VALUES (?, ?, ?, ?)",
+    conn.execute("INSERT OR REPLACE INTO activity_span (start_utc, end_utc, app, idle) VALUES (?, ?, ?, ?)",
                  (to_utc_iso(start), to_utc_iso(end), app, idle))
 
 
@@ -106,3 +106,25 @@ def test_correlations_need_enough_days_then_rank_by_strength():
     assert ranked[0] == ("quiet_h", 1.0, 8)
     assert ("pc_active_h", -1.0, 8) in ranked
     assert all(name != "events_today" for name, _, _ in ranked)  # constant, so dropped
+
+
+def test_tracker_categories_split_one_browser_into_focus_and_watching(tmp_path):
+    import json
+    from planj.sources import tracker
+    folder = tmp_path / "activity"
+    folder.mkdir()
+    lines = [
+        {"start": "2026-09-21T01:00:00.000Z", "end": "2026-09-21T02:00:00.000Z", "app": "msedge.exe", "cat": "focus", "idle": False},
+        {"start": "2026-09-21T02:00:00.000Z", "end": "2026-09-21T03:30:00.000Z", "app": "msedge.exe", "cat": "entertainment", "idle": False},
+        {"start": "2026-09-21T03:30:00.000Z", "end": "2026-09-21T04:00:00.000Z", "app": "msedge.exe", "cat": "social", "idle": True},
+        {"start": "2026-09-21T04:00:00.000Z", "end": "2026-09-21T04:30:00.000Z", "app": "Code.exe", "idle": False},
+    ]
+    (folder / "2026-09-21.jsonl").write_text("\n".join(json.dumps(l) for l in lines) + "\n", encoding="utf-8")
+    conn = connect(":memory:")
+    assert tracker.sync(conn, folder, DAY) == 4
+    out = features.compute(conn, DAY, KL)
+    assert out["pc_focus_time_h"] == 1.0
+    assert out["pc_entertainment_time_h"] == 1.5
+    assert out["pc_social_time_h"] == 0.0          # idle social time is not present time
+    assert out["pc_chat_time_h"] == 0.0
+    assert out["pc_active_h"] == 3.0               # an old-style span without a category still counts as active

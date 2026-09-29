@@ -75,6 +75,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     columns = {r[1] for r in conn.execute("PRAGMA table_info(phone_event)")}
     if "detail" not in columns:
         conn.execute("ALTER TABLE phone_event ADD COLUMN detail TEXT")
+    # The tracker's own sorting of each window: focus | entertainment | social | chat | other.
+    # Empty for spans recorded before it existed.
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(activity_span)")}
+    if "cat" not in columns:
+        conn.execute("ALTER TABLE activity_span ADD COLUMN cat TEXT NOT NULL DEFAULT ''")
 
 
 def connect(path: Path | str) -> sqlite3.Connection:

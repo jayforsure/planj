@@ -139,6 +139,13 @@ def compute(conn: sqlite3.Connection, day: date, tz: ZoneInfo) -> dict[str, floa
         out["pc_late_night_h"] = _overlap_hours(pc_intervals, night_start, night_end)
         for category, hours in _by_category(pc, PC_CATEGORIES, tz).items():
             out[f"pc_{category}_h"] = hours
+    # Sorted by the tracker from the window itself, so GitLab and YouTube in one browser differ.
+    per_cat: dict[str, float] = defaultdict(float)
+    for s, e, cat in timeline.pc_active_by_cat(conn, day_start, day_end):
+        per_cat[cat] += (e - s).total_seconds()
+    for cat in ("focus", "entertainment", "social", "chat"):
+        if per_cat:
+            out[f"pc_{cat}_time_h"] = _hours(per_cat.get(cat, 0.0))
 
     screen = timeline.phone_screen(conn, day_start, day_end)
     apps = timeline.phone_apps(conn, day_start, day_end)

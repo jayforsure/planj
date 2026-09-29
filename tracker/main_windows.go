@@ -90,7 +90,7 @@ func installWithMessage(root string) {
 		messageBox("Install failed: " + err.Error())
 		os.Exit(1)
 	}
-	messageBox("planj tracker is installed and running.\nIt will start automatically when you sign in to Windows.\n\nIt records only which app is in front and whether you are active — never window titles, websites or what you type.\n\nTo sync your phone, run  planj signin  here and sign in on the phone with the same email and password.\n\nData folder:\n" + filepath.Join(root, "activity"))
+	messageBox("planj tracker is installed and running.\nIt will start automatically when you sign in to Windows.\n\nIt records which app is in front, whether you are active, and a category (focus, entertainment, social, chat) — never window titles, websites or what you type.\n\nTo sync your phone, run  planj signin  here and sign in on the phone with the same email and password.\n\nData folder:\n" + filepath.Join(root, "activity"))
 }
 
 func run(root string) {
@@ -119,9 +119,19 @@ func run(root string) {
 
 	rec := &Recorder{IdleAfter: 3 * time.Minute, MaxSpan: time.Minute, MaxGap: 30 * time.Second}
 	w := Writer{Dir: dir, Loc: time.Local}
+	rulesPath := filepath.Join(root, "categories.txt")
+	var rules []Rule
+	var rulesRead time.Time
 	observe := func(now time.Time) {
+		if now.Sub(rulesRead) > time.Minute { // edits to categories.txt apply within a minute
+			rules, rulesRead = LoadRules(rulesPath), now
+		}
+		app, title := foregroundApp(), foregroundTitle()
+		cat := Classify(app, title, rules)
+		o := Observation{App: app, Cat: cat, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
+		title = "" // the title has done its job; it goes no further
 		// Round(0) drops the monotonic reading, which can pause during sleep and hide the gap.
-		if err := w.Write(rec.Observe(now.Round(0), foregroundApp(), idleDuration())); err != nil {
+		if err := w.Write(rec.ObserveFull(now.Round(0), o)); err != nil {
 			log.Printf("write: %v", err)
 		}
 	}

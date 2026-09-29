@@ -28,6 +28,22 @@ def pc_active(conn: sqlite3.Connection, start: datetime, end: datetime) -> list[
     return out
 
 
+def pc_active_by_cat(conn: sqlite3.Connection, start: datetime, end: datetime) -> list[tuple[datetime, datetime, str]]:
+    """Present PC time with the tracker's category, clipped to the window. Present means not
+    idle, where watching and reading are allowed longer without input than typing work."""
+    rows = conn.execute(
+        "SELECT start_utc, end_utc, cat FROM activity_span "
+        "WHERE idle = 0 AND cat != '' AND start_utc < ? AND end_utc > ? ORDER BY start_utc",
+        (to_utc_iso(end), to_utc_iso(start)),
+    ).fetchall()
+    out = []
+    for r in rows:
+        span = _clip(datetime.fromisoformat(r["start_utc"]), datetime.fromisoformat(r["end_utc"]), start, end)
+        if span:
+            out.append((*span, r["cat"]))
+    return out
+
+
 def _phone_events(conn: sqlite3.Connection, start: datetime, end: datetime):
     # A day either side, so sessions that cross midnight have both ends.
     rows = conn.execute(
