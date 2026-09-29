@@ -191,6 +191,7 @@ final class Places {
     /** One place as the Places screen shows it. */
     static final class Place {
         final String id, label, kind; // label and kind are null for a noticed place
+        final String address;         // what the map search called it, if known
         final double lat, lon;
         final long seenMs;
         final int samples;           // quarter-hour samples spent there
@@ -199,6 +200,7 @@ final class Places {
             id = o.optString("id");
             label = o.has("label") ? o.optString("label") : null;
             kind = o.has("kind") ? o.optString("kind") : null;
+            address = o.has("address") ? o.optString("address") : null;
             lat = o.optDouble("lat");
             lon = o.optDouble("lon");
             seenMs = o.optLong("seen", 0);
@@ -229,7 +231,7 @@ final class Places {
      * Marks a place. If a noticed place is already there it is taken over, so its history
      * keeps counting; otherwise a new place is made. Kind is home, school, work or other.
      */
-    static synchronized String mark(Context ctx, String label, String kind, double lat, double lon) throws IOException, JSONException {
+    static synchronized String mark(Context ctx, String label, String kind, double lat, double lon, String address) throws IOException, JSONException {
         JSONArray places = read(ctx);
         if ("home".equals(kind)) { // one home at a time
             for (int i = 0; i < places.length(); i++) {
@@ -254,8 +256,24 @@ final class Places {
             places.put(target);
         }
         target.put("lat", lat).put("lon", lon).put("label", label.trim()).put("kind", kind);
+        if (address != null && !address.isEmpty()) target.put("address", address);
         write(ctx, places);
         return target.getString("id");
+    }
+
+    /** Edits a place: its name, kind and where it is. Its id and history stay. */
+    static synchronized void update(Context ctx, String id, String label, String kind, double lat, double lon, String address)
+            throws IOException, JSONException {
+        JSONArray places = read(ctx);
+        for (int i = 0; i < places.length(); i++) {
+            JSONObject o = places.getJSONObject(i);
+            if ("home".equals(kind) && "home".equals(o.optString("kind")) && !id.equals(o.optString("id"))) o.remove("kind");
+            if (id.equals(o.optString("id"))) {
+                o.put("label", label.trim()).put("kind", kind).put("lat", lat).put("lon", lon);
+                if (address != null && !address.isEmpty()) o.put("address", address);
+            }
+        }
+        write(ctx, places);
     }
 
     /** Gives a noticed or marked place a name and kind, keeping where it is. */

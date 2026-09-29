@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The map pin: a teal drop with the planj dot in it. Its tip is the exact spot. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="40dp" android:height="52dp" android:viewportWidth="40" android:viewportHeight="52">
+    <path android:fillColor="#40000000" android:pathData="M20,49 m-7,0 a7,2.5 0 1,0 14,0 a7,2.5 0 1,0 -14,0" />
+    <path android:fillColor="#2EC4B6" android:strokeColor="#0E1113" android:strokeWidth="2" android:pathData="M20,2C10.6,2 3,9.4 3,18.6c0,12.5 17,29.4 17,29.4s17,-16.9 17,-29.4C37,9.4 29.4,2 20,2z" />
+    <path android:fillColor="#EDEFF2" android:pathData="M20,18.5 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+</vector>

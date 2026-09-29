@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="leaflet/leaflet.css">
+<style>
+  html, body, #map { margin: 0; height: 100%; background: #0e1113; }
+  /* Standard OpenStreetMap tiles, toned down to sit in the app's dark theme. */
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.95) saturate(0.2); }
+  .leaflet-control-attribution { background: rgba(14,17,19,0.72) !important; color: #9aa3ab !important; font: 10px sans-serif; }
+  .leaflet-control-attribution a { color: #9aa3ab !important; }
+  .lbl { background: #15191c; color: #edeff2; border: 0; border-radius: 10px; padding: 4px 8px;
+         font: 600 12px sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+  .lbl:before { display: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="leaflet/leaflet.js"></script>
+<script>
+  var map = L.map('map', { zoomControl: false, attributionControl: true }).setView([3.139, 101.6869], 12);
+  map.attributionControl.setPrefix(false);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  map.on('moveend', function () {
+    var c = map.getCenter();
+    if (window.Planj) Planj.moved(c.lat, c.lng, map.getZoom());
+  });
+  map.on('movestart', function () { if (window.Planj) Planj.moving(); });
+  function go(lat, lon, zoom) { map.setView([lat, lon], zoom || 17); }
+  var marks = L.layerGroup().addTo(map);
+  function pins(list) {
+    marks.clearLayers();
+    var bounds = [];
+    list.forEach(function (p) {
+      var m = L.circleMarker([p.lat, p.lon], { radius: 7, color: '#0e1113', weight: 2, fillColor: '#2ec4b6', fillOpacity: 1 });
+      m.bindTooltip(p.name, { permanent: true, direction: 'top', className: 'lbl', offset: [0, -8] });
+      marks.addLayer(m);
+      bounds.push([p.lat, p.lon]);
+    });
+    if (bounds.length === 1) map.setView(bounds[0], 15);
+    else if (bounds.length > 1) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
+  }
+  function still() { map.dragging.disable(); map.touchZoom.disable(); map.doubleClickZoom.disable(); map.scrollWheelZoom.disable(); }
+</script>
+</body>
+</html>
