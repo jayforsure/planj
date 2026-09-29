@@ -138,8 +138,8 @@ public class PlacePickerActivity extends Activity {
                     })
                     .setNegativeButton("Cancel", null).show());
             if (editing.marked()) {
+                label.setText("other".equals(editing.kind) ? editing.label : (editing.where != null ? editing.where : ""));
                 selectKind(editing.kind != null ? editing.kind : "other");
-                if ("other".equals(editing.kind)) label.setText(editing.label);
                 save.setText("Save changes");
             }
         }
@@ -246,7 +246,7 @@ public class PlacePickerActivity extends Activity {
         new Thread(() -> {
             List<PlaceSearch.Result> found;
             try {
-                found = PlaceSearch.search(q, la, lo);
+                found = PlaceSearch.search(this, q, la, lo);
             } catch (Exception e) {
                 found = null;
             }
@@ -377,8 +377,11 @@ public class PlacePickerActivity extends Activity {
             View c = chips.getChildAt(i);
             c.setSelected(k.equals(c.getTag()));
         }
-        label.setVisibility("other".equals(k) ? View.VISIBLE : View.GONE);
-        if ("other".equals(k) && label.getText().length() == 0 && placeName != null && !placeName.equals("Dropped pin")) {
+        // Every label gets a name field: for Other it is the label itself ("Gym"); for Home,
+        // School and Work it is the place's own name ("EAN"), shown under the label.
+        label.setVisibility(View.VISIBLE);
+        label.setHint("other".equals(k) ? "Name, e.g. Gym" : "Place name (optional), e.g. EAN");
+        if (label.getText().length() == 0 && placeName != null && !placeName.equals("Dropped pin")) {
             label.setText(placeName);
         }
         updateSave();
@@ -391,13 +394,14 @@ public class PlacePickerActivity extends Activity {
     }
 
     private void save() {
-        String title = "other".equals(kind) ? label.getText().toString().trim()
-                : KIND_LABELS[java.util.Arrays.asList(KINDS).indexOf(kind)];
+        String typed = label.getText().toString().trim();
+        String title = "other".equals(kind) ? typed : KIND_LABELS[java.util.Arrays.asList(KINDS).indexOf(kind)];
+        String where = "other".equals(kind) ? placeName : (typed.isEmpty() ? placeName : typed);
         try {
             if (editing != null) {
-                Places.update(this, editing.id, title, kind, lat, lon, placeAddress);
+                Places.update(this, editing.id, title, kind, lat, lon, placeAddress, where);
             } else {
-                Places.mark(this, title, kind, lat, lon, placeAddress);
+                Places.mark(this, title, kind, lat, lon, placeAddress, where);
             }
             toast(title + " saved");
             setResult(RESULT_OK);

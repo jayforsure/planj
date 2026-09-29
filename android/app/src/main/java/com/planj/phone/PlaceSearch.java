@@ -40,11 +40,69 @@ final class PlaceSearch {
 
     private PlaceSearch() {}
 
-    /** Up to six places matching the text, nearest to (biasLat, biasLon) first. */
-    static List<Result> search(String query, double biasLat, double biasLon) throws IOException {
-        String url = BASE + "/api/?limit=6&q=" + URLEncoder.encode(query, "UTF-8")
-                + String.format(Locale.ROOT, "&lat=%.4f&lon=%.4f", biasLat, biasLon);
+    static final double REGION = 2.3; // degrees either side, roughly 250 km: "near me", not the world
+
+    /**
+     * Up to eight places matching the text within about 250 km. Two sources, merged:
+     * OpenStreetMap (Photon) and the phone's own geocoder, which on most Android phones is
+     * backed by Google's data and knows many more local businesses.
+     */
+    static List<Result> search(android.content.Context ctx, String query, double lat, double lon) throws IOException {
+        List<Result> out = new ArrayList<>();
+        IOException failure = null;
+        try {
+            out.addAll(photon(query, lat, lon));
+        } catch (IOException e) {
+            failure = e;
+        }
+        for (Result g : geocoder(ctx, query, lat, lon)) {
+            boolean dup = false;
+            for (Result r : out) {
+                float[] d = new float[1];
+                android.location.Location.distanceBetween(r.lat, r.lon, g.lat, g.lon, d);
+                if (d[0] < 60) dup = true;
+            }
+            if (!dup) out.add(g);
+        }
+        if (out.isEmpty() && failure != null) throw failure;
+        out.sort((a, b) -> Double.compare(dist(a, lat, lon), dist(b, lat, lon)));
+        return out.size() > 8 ? new ArrayList<>(out.subList(0, 8)) : out;
+    }
+
+    private static double dist(Result r, double lat, double lon) {
+        float[] d = new float[1];
+        android.location.Location.distanceBetween(r.lat, r.lon, lat, lon, d);
+        return d[0];
+    }
+
+    private static List<Result> photon(String query, double lat, double lon) throws IOException {
+        String url = BASE + "/api/?limit=8&q=" + URLEncoder.encode(query, "UTF-8")
+                + String.format(Locale.ROOT, "&lat=%.4f&lon=%.4f&bbox=%.4f,%.4f,%.4f,%.4f",
+                lat, lon, lon - REGION, lat - REGION, lon + REGION, lat + REGION);
         return parse(get(url));
+    }
+
+    @SuppressWarnings("deprecation") // the listener form needs API 33; callers are on a worker thread
+    private static List<Result> geocoder(android.content.Context ctx, String query, double lat, double lon) {
+        List<Result> out = new ArrayList<>();
+        if (!android.location.Geocoder.isPresent()) return out;
+        try {
+            List<android.location.Address> found = new android.location.Geocoder(ctx, Locale.getDefault())
+                    .getFromLocationName(query, 6, lat - REGION, lon - REGION, lat + REGION, lon + REGION);
+            if (found == null) return out;
+            for (android.location.Address a : found) {
+                if (!a.hasLatitude() || !a.hasLongitude()) continue;
+                String line = a.getMaxAddressLineIndex() >= 0 ? a.getAddressLine(0) : "";
+                String name = a.getFeatureName();
+                // A bare house number is not a name; use the start of the address instead.
+                if (name == null || name.matches("[0-9A-Za-z/-]{1,6}")) name = line.contains(",") ? line.substring(0, line.indexOf(',')) : line;
+                if (line.startsWith(name + ", ")) line = line.substring(name.length() + 2);
+                out.add(new Result(name, line, a.getLatitude(), a.getLongitude()));
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            // no network or no geocoder backend: OpenStreetMap results stand alone
+        }
+        return out;
     }
 
     /** What is at this spot: a building or shop name if there is one, else the street. */

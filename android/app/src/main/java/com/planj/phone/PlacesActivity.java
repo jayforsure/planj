@@ -110,7 +110,7 @@ public class PlacesActivity extends Activity {
         for (Places.Place p : all) {
             ListRow row = new ListRow(this, null);
             row.setTitle(p.title());
-            row.setSubtitle(p.marked() && p.address != null && !p.address.isEmpty() ? p.address : detail(p));
+            row.setSubtitle(p.marked() ? markedDetail(p) : detail(p));
             row.setIcon(icon(p));
             row.setOnClickListener(v -> placeTapped(p));
             if (p.marked()) {
@@ -126,6 +126,14 @@ public class PlacesActivity extends Activity {
         ((ListRow) findViewById(R.id.row_pause)).setTitle(Places.enabled(this) ? "Pause places" : "Resume places");
         ((android.widget.TextView) findViewById(R.id.summary)).setText(!Places.enabled(this) ? "Paused"
                 : nMarked + " marked · " + nNoticed + " noticed");
+    }
+
+    /** Work: "Menara EAN · Jalan Tun Razak, Kuala Lumpur" — the place's own name, then where it is. */
+    private static String markedDetail(Places.Place p) {
+        List<String> parts = new ArrayList<>();
+        if (p.where != null && !p.where.isEmpty() && !p.where.equalsIgnoreCase(p.label)) parts.add(p.where);
+        if (p.address != null && !p.address.isEmpty()) parts.add(p.address);
+        return parts.isEmpty() ? detail(p) : String.join(" · ", parts);
     }
 
     private static int icon(Places.Place p) {
