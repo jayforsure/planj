@@ -40,6 +40,7 @@ final class DayUsage {
     final List<Session> sessions = new ArrayList<>();
     final List<long[]> screenOn = new ArrayList<>();   // [startMs, endMs]
     final List<String[]> net = new ArrayList<>();       // [tMs, "wifi:<fingerprint>" | "mobile" | "none"]
+    final List<String[]> place = new ArrayList<>();     // [tMs, "p3"]
 
     private DayUsage(LocalDate day) {
         this.day = day;
@@ -102,6 +103,9 @@ final class DayUsage {
                         break;
                     case "net":
                         u.net.add(new String[]{Long.toString(t), o.optString("app")});
+                        break;
+                    case "place":
+                        u.place.add(new String[]{Long.toString(t), o.optString("app")});
                         break;
                     case "app_fg": {
                         String pkg = o.optString("app");

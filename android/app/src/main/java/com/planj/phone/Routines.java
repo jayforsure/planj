@@ -17,7 +17,8 @@ import java.util.Locale;
 final class Routines {
     enum Kind {
         FREE(9 * 60, 22 * 60 + 30, "Phone down"),
-        AWAY(6 * 60, 23 * 60, "Out");
+        AWAY(6 * 60, 23 * 60, "Out"),
+        AT(6 * 60, 23 * 60, "Place");       // at one particular place; the routine carries which
 
         final int from, to; // the part of the day this kind is looked for in, minutes
         final String defaultName;
@@ -32,22 +33,40 @@ final class Routines {
     static final int SLOT = 15;         // minutes
     static final int MIN_LEN = 45;      // a routine block lasts at least this long
     static final int MAX_ROUTINES = 4;
+    static final int MIN_EVIDENCE = 5;  // days looked at behind any routine: 3 of 4 Fridays is chance, not habit
 
     /** One day's blocks, in minutes since local midnight. A null list means "not measurable". */
     interface DayBlocks {
         LocalDate date();
 
         List<int[]> blocks(Kind kind);
+
+        /** Time at one place (not home). Null when places are off or unknown that day. */
+        default List<int[]> placeBlocks(String place) {
+            return null;
+        }
+
+        /** The places seen that day, other than home. */
+        default java.util.Set<String> places() {
+            return java.util.Collections.emptySet();
+        }
     }
 
     static final class Routine {
         final Kind kind;
+        final String place;      // for AT: which place, e.g. "p3"; null otherwise
         final int mask;          // bit 0 = Monday ... bit 6 = Sunday
         final int start, end;    // minutes since midnight
         final double freq;       // how often it showed up when it was looked for
+        int evidence;            // how many days it was looked for on
 
         Routine(Kind kind, int mask, int start, int end, double freq) {
+            this(kind, null, mask, start, end, freq);
+        }
+
+        Routine(Kind kind, String place, int mask, int start, int end, double freq) {
             this.kind = kind;
+            this.place = place;
             this.mask = mask;
             this.start = start;
             this.end = end;
@@ -56,18 +75,24 @@ final class Routines {
 
         /** Stable across refits, so the forecast ledger can settle it later. */
         String id() {
-            return "rt_" + kind.name().toLowerCase(Locale.ROOT) + "_" + mask + "_" + start + "_" + end;
+            String k = kind == Kind.AT ? "at-" + place : kind.name().toLowerCase(Locale.ROOT);
+            return "rt_" + k + "_" + mask + "_" + start + "_" + end;
         }
 
         static Routine parse(String id) {
             String[] p = id.split("_");
             if (p.length != 5 || !p[0].equals("rt")) return null;
             try {
-                return new Routine(Kind.valueOf(p[1].toUpperCase(Locale.ROOT)), Integer.parseInt(p[2]),
-                        Integer.parseInt(p[3]), Integer.parseInt(p[4]), 0);
+                int mask = Integer.parseInt(p[2]), start = Integer.parseInt(p[3]), end = Integer.parseInt(p[4]);
+                if (p[1].startsWith("at-")) return new Routine(Kind.AT, p[1].substring(3), mask, start, end, 0);
+                return new Routine(Kind.valueOf(p[1].toUpperCase(Locale.ROOT)), mask, start, end, 0);
             } catch (IllegalArgumentException e) {
                 return null;
             }
+        }
+
+        List<int[]> blocksOf(DayBlocks day) {
+            return kind == Kind.AT ? day.placeBlocks(place) : day.blocks(kind);
         }
 
         boolean appliesTo(LocalDate d) {
@@ -77,7 +102,7 @@ final class Routines {
         /** Did the block happen that day: covering at least half the routine's window. */
         Boolean happened(DayBlocks day) {
             if (!appliesTo(day.date())) return null;
-            List<int[]> blocks = day.blocks(kind);
+            List<int[]> blocks = blocksOf(day);
             if (blocks == null) return null;
             int covered = 0;
             for (int[] b : blocks) covered += Math.max(0, Math.min(b[1], end) - Math.max(b[0], start));
@@ -111,31 +136,45 @@ final class Routines {
     /** Finds the routines in the given days. Needs about three weeks for per-weekday ones. */
     static List<Routine> find(List<? extends DayBlocks> days) {
         List<Routine> all = new ArrayList<>();
-        for (Kind kind : Kind.values()) {
+        java.util.Set<String> places = new java.util.TreeSet<>();
+        for (DayBlocks d : days) places.addAll(d.places());
+        List<String> sources = new ArrayList<>();
+        sources.add("FREE");
+        sources.add("AWAY");
+        for (String p : places) sources.add("AT:" + p);
+        List<Routine> atRoutines = new ArrayList<>();
+        for (String src : sources) {
+            Kind kind = src.startsWith("AT:") ? Kind.AT : Kind.valueOf(src);
+            String place = kind == Kind.AT ? src.substring(3) : null;
             List<Routine> grouped = new ArrayList<>();
-            grouped.addAll(runs(days, kind, 0b0011111, 5, 0.6));  // weekdays
-            grouped.addAll(runs(days, kind, 0b1100000, 3, 0.66)); // weekends
+            grouped.addAll(runs(days, kind, place, 0b0011111, 5, 0.6));  // weekdays
+            grouped.addAll(runs(days, kind, place, 0b1100000, 4, 0.66)); // weekends
             List<Routine> single = new ArrayList<>();
             for (int d = 0; d < 7; d++) {
-                for (Routine r : runs(days, kind, 1 << d, 3, 0.66)) {
+                for (Routine r : runs(days, kind, place, 1 << d, 3, 0.66)) {
                     if (!coveredBy(r, grouped)) single.add(r);
                 }
             }
-            all.addAll(grouped);
-            all.addAll(mergeWeekdays(single));
+            List<Routine> found = new ArrayList<>(grouped);
+            found.addAll(mergeWeekdays(single));
+            found.removeIf(r -> r.evidence < MIN_EVIDENCE);
+            if (kind == Kind.AT) atRoutines.addAll(found);
+            all.addAll(found);
         }
+        // "At the gym" says more than "out": drop an out-routine that a place-routine explains.
+        all.removeIf(r -> r.kind == Kind.AWAY && atRoutines.stream().anyMatch(a -> (a.mask & r.mask) != 0 && overlapsMostly(a, r)));
         all.sort((a, b) -> Double.compare(b.freq * (b.end - b.start), a.freq * (a.end - a.start)));
         return new ArrayList<>(all.subList(0, Math.min(MAX_ROUTINES, all.size())));
     }
 
     /** Stretches of the day that a block covered on at least `threshold` of the matching days. */
-    private static List<Routine> runs(List<? extends DayBlocks> days, Kind kind, int mask, int minDays, double threshold) {
+    private static List<Routine> runs(List<? extends DayBlocks> days, Kind kind, String place, int mask, int minDays, double threshold) {
         int slots = (kind.to - kind.from) / SLOT;
         int[] hits = new int[slots];
         int n = 0;
         for (DayBlocks d : days) {
             if ((mask & (1 << (d.date().getDayOfWeek().getValue() - 1))) == 0) continue;
-            List<int[]> blocks = d.blocks(kind);
+            List<int[]> blocks = kind == Kind.AT ? d.placeBlocks(place) : d.blocks(kind);
             if (blocks == null) continue;
             n++;
             for (int s = 0; s < slots; s++) {
@@ -160,7 +199,9 @@ final class Routines {
             double sum = 0;
             while (e < slots && (double) hits[e] / n >= threshold) sum += (double) hits[e++] / n;
             if ((e - s) * SLOT >= MIN_LEN) {
-                out.add(new Routine(kind, mask, kind.from + s * SLOT, kind.from + e * SLOT, sum / (e - s)));
+                Routine r = new Routine(kind, place, mask, kind.from + s * SLOT, kind.from + e * SLOT, sum / (e - s));
+                r.evidence = n;
+                out.add(r);
             }
             s = e;
         }
@@ -183,23 +224,26 @@ final class Routines {
         List<Routine> out = new ArrayList<>();
         while (!left.isEmpty()) {
             Routine base = left.remove(0);
-            int mask = base.mask, count = 1;
+            int mask = base.mask, count = 1, evidence = base.evidence;
             long start = base.start, end = base.end;
             double freq = base.freq;
             for (int i = left.size() - 1; i >= 0; i--) {
                 Routine r = left.get(i);
-                if (overlapsMostly(base, r)) {
+                if (java.util.Objects.equals(base.place, r.place) && overlapsMostly(base, r)) {
                     mask |= r.mask;
                     start += r.start;
                     end += r.end;
                     freq += r.freq;
+                    evidence += r.evidence;
                     count++;
                     left.remove(i);
                 }
             }
             int s = (int) Math.round((double) start / count / SLOT) * SLOT;
             int e = (int) Math.round((double) end / count / SLOT) * SLOT;
-            out.add(new Routine(base.kind, mask, s, e, freq / count));
+            Routine merged = new Routine(base.kind, base.place, mask, s, e, freq / count);
+            merged.evidence = evidence;
+            out.add(merged);
         }
         return out;
     }

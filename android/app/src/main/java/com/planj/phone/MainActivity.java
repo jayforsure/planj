@@ -116,7 +116,73 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
         super.onRequestPermissionsResult(code, perms, results);
+        if (code == REQ_PLACES && Places.hasForeground(this)) {
+            if (!Places.hasBackground(this)) askBackgroundLocation();
+            else finishPlaces();
+        }
         refresh(); // tomorrow's plans appear as soon as the calendar is allowed
+    }
+
+    private static final int REQ_PLACES = 42;
+    private static final int REQ_PLACES_BG = 43;
+
+    /** Settings > Places: explain, then ask; or offer pause and forget when already on. */
+    void placesTapped() {
+        if (Places.enabled(this) && Places.hasForeground(this) && Places.hasBackground(this)) {
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("Places")
+                    .setMessage(Places.count(this) + " places known. Their centres stay on this phone; only a place number is recorded.")
+                    .setPositiveButton("Pause", (d, w) -> { Places.setEnabled(this, false); refresh(); })
+                    .setNeutralButton("Forget all places", (d, w) -> new android.app.AlertDialog.Builder(this)
+                            .setMessage("Delete every place? Routines tied to them start over.")
+                            .setPositiveButton("Forget", (d2, w2) -> { Places.forget(this); refresh(); })
+                            .setNegativeButton("Cancel", null).show())
+                    .setNegativeButton("Close", null)
+                    .show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Turn on places?")
+                .setMessage("Every 15 minutes planj notes which of your places you are at, like home, campus or the gym. "
+                        + "The centre of each place stays on this phone and is never synced. Only \u201cplace 3 from 19:04\u201d is recorded.\n\n"
+                        + "It needs location set to \u201cAllow all the time\u201d.")
+                .setPositiveButton("Turn on", (d, w) -> {
+                    Places.setEnabled(this, true);
+                    if (!Places.hasForeground(this)) {
+                        requestPermissions(Places.permissionsToAsk().toArray(new String[0]), REQ_PLACES);
+                    } else if (!Places.hasBackground(this)) {
+                        askBackgroundLocation();
+                    } else {
+                        finishPlaces();
+                    }
+                    refresh();
+                })
+                .setNegativeButton("Not now", null)
+                .show();
+    }
+
+    private void askBackgroundLocation() {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("One more step")
+                .setMessage("On the next screen choose \u201cAllow all the time\u201d, so places are noted while planj is closed.")
+                .setPositiveButton("Continue", (d, w) -> requestPermissions(
+                        new String[]{android.Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_PLACES_BG))
+                .setNegativeButton("Later", null)
+                .show();
+    }
+
+    /** Honor and others stop background work aggressively; ask to be left running. */
+    private void finishPlaces() {
+        android.os.PowerManager pm = getSystemService(android.os.PowerManager.class);
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(Uri.parse("package:" + getPackageName())));
+            } catch (Exception ignored) {
+                // some phones hide this screen; places still work, just less often
+            }
+        }
+        new Thread(() -> SnapshotJob.collectAndSync(this)).start();
     }
 
     private static void setNavSelected(View item, boolean selected) {

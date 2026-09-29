@@ -167,6 +167,14 @@ final class UsageCollector {
         }
 
         if (lines.isEmpty()) return 0;
+        appendLines(ctx, lines);
+        p.edit().putBoolean("charging", charging).putString("alarm", alarm).putBoolean("dnd", dnd).putString("net", net).apply();
+        return lines.size();
+    }
+
+    /** Appends state lines to today's events file and queues them for the PC. */
+    static synchronized void appendLines(Context ctx, List<String> lines) throws IOException {
+        long now = System.currentTimeMillis();
         File dir = eventsDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
         String day = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate().toString();
@@ -177,8 +185,6 @@ final class UsageCollector {
             out.write(bytes);
         }
         RelaySync.append(ctx, bytes);
-        p.edit().putBoolean("charging", charging).putString("alarm", alarm).putBoolean("dnd", dnd).putString("net", net).apply();
-        return lines.size();
     }
 
     static String networkNow(Context ctx) {

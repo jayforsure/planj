@@ -39,6 +39,12 @@ public class SnapshotJob extends JobService {
     /** Collect then upload; used by the job and whenever the app is opened. */
     static void collectAndSync(Context ctx) {
         try {
+            String place = Places.sample(ctx);
+            if (place != null) UsageCollector.appendLines(ctx, java.util.List.of(place));
+        } catch (Exception e) {
+            Log.w("planj", "place sample failed", e);
+        }
+        try {
             UsageCollector.collect(ctx);
         } catch (Exception e) {
             Log.w("planj", "collect failed", e);

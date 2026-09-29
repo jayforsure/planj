@@ -10,12 +10,13 @@ final class RoutineNames {
 
     /** Names follow the routine's kind and days, so a small shift in its window keeps the name. */
     private static String key(Routines.Routine r) {
-        return r.kind.name() + "_" + r.mask + "_" + (r.start / 60);
+        return r.kind.name() + (r.place == null ? "" : "-" + r.place) + "_" + r.mask + "_" + (r.start / 60);
     }
 
     static String name(Context ctx, Routines.Routine r) {
         String n = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(r), null);
-        return n == null || n.isEmpty() ? r.kind.defaultName : n;
+        if (n != null && !n.isEmpty()) return n;
+        return r.kind == Routines.Kind.AT ? Places.label(r.place) : r.kind.defaultName;
     }
 
     static void set(Context ctx, Routines.Routine r, String name) {

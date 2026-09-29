@@ -227,7 +227,8 @@ final class OddsTab {
     private void askName(Routines.Routine rt) {
         android.widget.EditText in = new android.widget.EditText(a);
         String current = RoutineNames.name(a, rt);
-        in.setText(current.equals(rt.kind.defaultName) ? "" : current);
+        boolean unnamed = current.equals(rt.kind.defaultName) || current.equals(Places.label(rt.place));
+        in.setText(unnamed ? "" : current);
         in.setHint("Gym, class, work…");
         in.setSingleLine(true);
         int pad = dp(20);

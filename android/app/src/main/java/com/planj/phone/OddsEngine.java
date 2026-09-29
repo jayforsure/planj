@@ -40,6 +40,7 @@ final class OddsEngine {
         boolean charged;
         List<int[]> free;           // phone untouched, within the day
         List<int[]> away;           // off the home Wi-Fi; null until network samples exist
+        Map<String, List<int[]>> at; // time at each place other than home; null when places are off
 
         Day(LocalDate date) {
             this.date = date;
@@ -53,6 +54,16 @@ final class OddsEngine {
         @Override
         public List<int[]> blocks(Routines.Kind kind) {
             return kind == Routines.Kind.FREE ? free : away;
+        }
+
+        @Override
+        public List<int[]> placeBlocks(String place) {
+            return at == null ? null : at.getOrDefault(place, Collections.emptyList());
+        }
+
+        @Override
+        public java.util.Set<String> places() {
+            return at == null ? Collections.emptySet() : at.keySet();
         }
     }
 
@@ -154,15 +165,20 @@ final class OddsEngine {
         ZoneId zone = ZoneId.systemDefault();
         List<DayUsage> usages = new ArrayList<>();
         for (int i = HISTORY_DAYS; i >= 0; i--) usages.add(DayUsage.load(ctx, today.minusDays(i)));
-        String home = homeNetwork(usages, zone);
+        String home = homeOf(usages, zone, true);
+        String homePlace = homeOf(usages, zone, false);
         String carried = null; // the network state at the start of each day
+        String carriedPlace = null;
         for (DayUsage u : usages) {
             LocalDate date = u.day;
             List<int[]> away = awayBlocks(u, carried, home, zone);
             if (!u.net.isEmpty()) carried = u.net.get(u.net.size() - 1)[1];
+            Map<String, List<int[]>> at = placeBlocks(u, carriedPlace, homePlace, zone);
+            if (!u.place.isEmpty()) carriedPlace = u.place.get(u.place.size() - 1)[1];
             if (u.screenMs == 0 && u.appMs.isEmpty()) continue;
             Day d = new Day(date);
             d.away = away;
+            d.at = at;
             List<int[]> used = new ArrayList<>();
             for (long[] on : u.screenOn) used.add(new int[]{minuteOfDay(on[0], date, zone), minuteOfDay(on[1], date, zone)});
             d.free = Routines.gaps(used, Routines.Kind.FREE);
@@ -195,18 +211,18 @@ final class OddsEngine {
         return (int) Math.max(0, Math.min(24 * 60, (ms - start) / 60000));
     }
 
-    /** Home is the Wi-Fi the phone is on at 3am most often. */
-    private static String homeNetwork(List<DayUsage> usages, ZoneId zone) {
+    /** Home is where the phone is at 3am most often: a Wi-Fi network, or a place. */
+    private static String homeOf(List<DayUsage> usages, ZoneId zone, boolean network) {
         Map<String, Integer> votes = new java.util.HashMap<>();
         String state = null;
         for (DayUsage u : usages) {
             long three = u.day.atTime(3, 0).atZone(zone).toInstant().toEpochMilli();
             String at3 = state;
-            for (String[] ev : u.net) {
+            for (String[] ev : network ? u.net : u.place) {
                 if (Long.parseLong(ev[0]) <= three) at3 = ev[1];
                 state = ev[1];
             }
-            if (at3 != null && at3.startsWith("wifi:")) votes.merge(at3, 1, Integer::sum);
+            if (at3 != null && (!network || at3.startsWith("wifi:"))) votes.merge(at3, 1, Integer::sum);
         }
         String best = null;
         for (Map.Entry<String, Integer> e : votes.entrySet()) if (best == null || e.getValue() > votes.get(best)) best = e.getKey();
@@ -231,6 +247,28 @@ final class OddsEngine {
         return Routines.clean(out, Routines.Kind.AWAY);
     }
 
+    /** Time at each place other than home. A place holds until the next place sample. */
+    private static Map<String, List<int[]>> placeBlocks(DayUsage u, String carried, String home, ZoneId zone) {
+        if (carried == null && u.place.isEmpty()) return null;
+        Map<String, List<int[]>> raw = new java.util.HashMap<>();
+        String state = carried;
+        int since = 0;
+        for (String[] ev : u.place) {
+            int m = minuteOfDay(Long.parseLong(ev[0]), u.day, zone);
+            if (state != null && !state.equals(home)) raw.computeIfAbsent(state, k -> new ArrayList<>()).add(new int[]{since, m});
+            state = ev[1];
+            since = m;
+        }
+        int end = u.day.equals(LocalDate.now()) ? minuteOfDay(System.currentTimeMillis(), u.day, zone) : 24 * 60;
+        if (state != null && !state.equals(home)) raw.computeIfAbsent(state, k -> new ArrayList<>()).add(new int[]{since, end});
+        Map<String, List<int[]>> out = new java.util.HashMap<>();
+        for (Map.Entry<String, List<int[]>> e : raw.entrySet()) {
+            List<int[]> blocks = Routines.clean(e.getValue(), Routines.Kind.AT);
+            if (!blocks.isEmpty()) out.put(e.getKey(), blocks);
+        }
+        return out;
+    }
+
     // ----- routines as outcomes -----
 
     /** The routines seen up to and including `evening`, as outcomes that label themselves. */
@@ -243,8 +281,9 @@ final class OddsEngine {
     }
 
     static Outcome routineOutcome(Routines.Routine r) {
-        return new Outcome(r.id(), r.kind.defaultName + " · " + r.days() + " " + r.window(),
-                r.kind.defaultName.toLowerCase(java.util.Locale.ROOT) + " " + r.window(), (t, b) -> r.happened(t));
+        String name = r.kind == Routines.Kind.AT ? Places.label(r.place) : r.kind.defaultName;
+        return new Outcome(r.id(), name + " · " + r.days() + " " + r.window(),
+                name.toLowerCase(java.util.Locale.ROOT) + " " + r.window(), (t, b) -> r.happened(t));
     }
 
     private static boolean isSocial(String pkg) {

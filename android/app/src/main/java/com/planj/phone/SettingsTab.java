@@ -10,7 +10,7 @@ import android.widget.TextView;
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final ListRow tracking, priv, reminder;
+    private final ListRow tracking, priv, reminder, places;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -19,6 +19,8 @@ final class SettingsTab {
         tracking = root.findViewById(R.id.row_tracking);
         priv = root.findViewById(R.id.row_private);
         reminder = root.findViewById(R.id.row_reminder);
+        places = root.findViewById(R.id.row_places);
+        places.setOnClickListener(v -> a.placesTapped());
 
         tracking.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
         priv.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
@@ -30,6 +32,7 @@ final class SettingsTab {
                 .setTitle("How privacy works")
                 .setMessage("Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type.\n\n"
                         + "Private mode pauses everything, from here, the Quick Settings tile, or by pinching in on Today. Money, password, health and dating apps are recorded only as “Private” from the start.\n\n"
+                        + "Places, if you turn them on, are kept as numbers: each place's centre stays on this phone and is never synced.\n\n"
                         + "Syncing to your PC goes through a relay that only ever holds ciphertext; the key is derived on your devices from your password.")
                 .setPositiveButton("Got it", null).show());
 
@@ -62,5 +65,13 @@ final class SettingsTab {
         priv.setSubtitle(p ? "On since " + Fmt.clock(PrivateMode.since(a)) : "Off");
         priv.setTint(a.getColor(p ? R.color.accent : R.color.text));
         reminder.setSubtitle(MoodReminder.enabled(a) ? "21:30" : "Off");
+        if (!Places.enabled(a)) {
+            places.setSubtitle("Off");
+        } else if (!Places.hasForeground(a) || !Places.hasBackground(a)) {
+            places.setSubtitle("Needs \u201cAllow all the time\u201d");
+        } else {
+            int n = Places.count(a);
+            places.setSubtitle(n == 0 ? "On" : "On · " + n + (n == 1 ? " place" : " places"));
+        }
     }
 }

@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Tomorrow's plans come from the calendar the user already keeps. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- Places are opt-in: only a place number is ever recorded or synced. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Lets the app resolve the names and icons of the apps it reports on. -->
     <queries>

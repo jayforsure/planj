@@ -20,6 +20,13 @@
             app:rowTitle="Screen tracking" />
 
         <com.planj.phone.ListRow
+            android:id="@+id/row_places"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_place"
+            app:rowTitle="Places" />
+
+        <com.planj.phone.ListRow
             android:id="@+id/row_private"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
