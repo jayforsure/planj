@@ -38,6 +38,8 @@ final class DayUsage {
     int unlocks;
     final Map<String, Long> appMs = new HashMap<>();
     final List<Session> sessions = new ArrayList<>();
+    final List<long[]> screenOn = new ArrayList<>();   // [startMs, endMs]
+    final List<String[]> net = new ArrayList<>();       // [tMs, "wifi:<fingerprint>" | "mobile" | "none"]
 
     private DayUsage(LocalDate day) {
         this.day = day;
@@ -87,6 +89,7 @@ final class DayUsage {
                     case "screen_off":
                     case "shutdown":
                         if (onSince >= 0) {
+                            u.screenOn.add(new long[]{onSince, t});
                             u.screenMs += t - onSince;
                             u.lateNightMs += Math.max(0, Math.min(t, nightEnd) - Math.max(onSince, nightStart));
                         }
@@ -96,6 +99,9 @@ final class DayUsage {
                         break;
                     case "unlock":
                         u.unlocks++;
+                        break;
+                    case "net":
+                        u.net.add(new String[]{Long.toString(t), o.optString("app")});
                         break;
                     case "app_fg": {
                         String pkg = o.optString("app");
@@ -120,7 +126,10 @@ final class DayUsage {
         }
         long now = System.currentTimeMillis();
         if (today) {
-            if (onSince >= 0) u.screenMs += now - onSince;
+            if (onSince >= 0) {
+                u.screenMs += now - onSince;
+                u.screenOn.add(new long[]{onSince, now});
+            }
             if (app != null) u.addSession(app, appSince, now);
         }
         return u;

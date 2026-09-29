@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class SnapshotJob extends JobService {
     private static final int JOB_ID = 1;
     private static final int CHARGE_JOB_ID = 2;
+    private static final int SAMPLE_JOB_ID = 3;
 
     static void schedule(Context ctx) {
         JobScheduler scheduler = ctx.getSystemService(JobScheduler.class);
@@ -26,6 +27,11 @@ public class SnapshotJob extends JobService {
         scheduler.schedule(new JobInfo.Builder(CHARGE_JOB_ID, new ComponentName(ctx, SnapshotJob.class))
                 .setPeriodic(TimeUnit.MINUTES.toMillis(15))
                 .setRequiresCharging(true)
+                .setPersisted(true)
+                .build());
+        // Every 15 minutes with no conditions: catches leaving and arriving home for routines.
+        scheduler.schedule(new JobInfo.Builder(SAMPLE_JOB_ID, new ComponentName(ctx, SnapshotJob.class))
+                .setPeriodic(TimeUnit.MINUTES.toMillis(15))
                 .setPersisted(true)
                 .build());
     }

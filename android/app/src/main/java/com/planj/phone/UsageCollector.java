@@ -159,6 +159,13 @@ final class UsageCollector {
             lines.add(stateLine(now, dnd ? "dnd_on" : "dnd_off", null));
         }
 
+        // Which network: home Wi-Fi vs elsewhere tells "out" without any location permission.
+        // A Wi-Fi network is known only by a short hash of its router address, never its name.
+        String net = networkNow(ctx);
+        if (!net.equals(p.getString("net", null))) {
+            lines.add(stateLine(now, "net", net));
+        }
+
         if (lines.isEmpty()) return 0;
         File dir = eventsDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
@@ -170,8 +177,40 @@ final class UsageCollector {
             out.write(bytes);
         }
         RelaySync.append(ctx, bytes);
-        p.edit().putBoolean("charging", charging).putString("alarm", alarm).putBoolean("dnd", dnd).apply();
+        p.edit().putBoolean("charging", charging).putString("alarm", alarm).putBoolean("dnd", dnd).putString("net", net).apply();
         return lines.size();
+    }
+
+    static String networkNow(Context ctx) {
+        android.net.ConnectivityManager cm = ctx.getSystemService(android.net.ConnectivityManager.class);
+        android.net.Network n = cm.getActiveNetwork();
+        android.net.NetworkCapabilities caps = n == null ? null : cm.getNetworkCapabilities(n);
+        if (caps == null) return "none";
+        if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+            android.net.LinkProperties lp = cm.getLinkProperties(n);
+            StringBuilder id = new StringBuilder();
+            if (lp != null) {
+                for (android.net.RouteInfo r : lp.getRoutes()) {
+                    if (r.isDefaultRoute() && r.getGateway() != null) id.append(r.getGateway().getHostAddress());
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 30 && lp.getDhcpServerAddress() != null) {
+                    id.append('|').append(lp.getDhcpServerAddress().getHostAddress());
+                }
+                if (lp.getDomains() != null) id.append('|').append(lp.getDomains());
+            }
+            return "wifi:" + shortHash(id.toString());
+        }
+        if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) return "mobile";
+        return "other";
+    }
+
+    private static String shortHash(String s) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(("planj-net|" + s).getBytes(StandardCharsets.UTF_8));
+            return String.format("%02x%02x%02x%02x", d[0], d[1], d[2], d[3]);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return Integer.toHexString(s.hashCode());
+        }
     }
 
     private static String stateLine(long t, String event, String value) throws IOException {

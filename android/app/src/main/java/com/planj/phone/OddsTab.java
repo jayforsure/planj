@@ -76,8 +76,14 @@ final class OddsTab {
             line("Calendar access is off", a.getColor(R.color.muted), 13);
         }
 
+        List<OddsEngine.Forecast> routines = new java.util.ArrayList<>(), plain = new java.util.ArrayList<>();
+        for (OddsEngine.Forecast fc : r.forecasts) (fc.outcome.id.startsWith("rt_") ? routines : plain).add(fc);
+        if (!routines.isEmpty()) {
+            header("YOUR ROUTINES");
+            for (OddsEngine.Forecast fc : routines) list.addView(card(fc));
+        }
         header("FORECASTS");
-        for (OddsEngine.Forecast fc : r.forecasts) list.addView(card(fc));
+        for (OddsEngine.Forecast fc : plain) list.addView(card(fc));
 
         header("TRACK RECORD");
         LinearLayout table = new LinearLayout(a);
@@ -91,7 +97,10 @@ final class OddsTab {
             String live = lv != null && lv.n > 0 ? lv.hits + "/" + lv.n : "–";
             if (lv != null && lv.n > 0) anyLive = true;
             String replay = bk != null && bk.n > 0 ? bk.hits + "/" + bk.n + "  ·  avg " + bk.baseHits + "/" + bk.n : "–";
-            table.addView(row(fc.outcome.resolved, live, replay, false));
+            Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
+            String label = rt == null ? fc.outcome.resolved
+                    : RoutineNames.name(a, rt).toLowerCase(Locale.ENGLISH) + " " + rt.window();
+            table.addView(row(label, live, replay, false));
         }
         list.addView(table);
 
@@ -164,7 +173,12 @@ final class OddsTab {
         LinearLayout left = new LinearLayout(a);
         left.setOrientation(LinearLayout.VERTICAL);
         TextView q = new TextView(a);
-        q.setText(fc.outcome.question);
+        Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
+        q.setText(rt == null ? fc.outcome.question : RoutineNames.title(a, rt));
+        if (rt != null) {
+            card.setBackgroundResource(R.drawable.card_clickable);
+            card.setOnClickListener(v -> askName(rt));
+        }
         q.setTextColor(a.getColor(R.color.text));
         q.setTextSize(16);
         q.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
@@ -207,6 +221,26 @@ final class OddsTab {
         pct.setPadding(dp(16), 0, 0, 0);
         card.addView(pct);
         return card;
+    }
+
+    /** One question, asked only if the person wants to: what is this routine? */
+    private void askName(Routines.Routine rt) {
+        android.widget.EditText in = new android.widget.EditText(a);
+        String current = RoutineNames.name(a, rt);
+        in.setText(current.equals(rt.kind.defaultName) ? "" : current);
+        in.setHint("Gym, class, work…");
+        in.setSingleLine(true);
+        int pad = dp(20);
+        in.setPadding(pad, pad, pad, pad);
+        new android.app.AlertDialog.Builder(a)
+                .setTitle(rt.days() + " " + rt.window())
+                .setView(in)
+                .setPositiveButton("Save", (d, w) -> {
+                    RoutineNames.set(a, rt, in.getText().toString());
+                    refresh();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private int dp(int v) {

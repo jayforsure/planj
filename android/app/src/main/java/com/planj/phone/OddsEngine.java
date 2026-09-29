@@ -33,14 +33,26 @@ final class OddsEngine {
     static final int MIN_SIDE = 4;
 
     /** One day, as numbers. Nulls mean "not measurable that day". */
-    static final class Day {
+    static final class Day implements Routines.DayBlocks {
         final LocalDate date;
         double screenH, socialH, lateH, unlocks, firstUseHour = -1;
         Double quietH, quietStartHour;
         boolean charged;
+        List<int[]> free;           // phone untouched, within the day
+        List<int[]> away;           // off the home Wi-Fi; null until network samples exist
 
         Day(LocalDate date) {
             this.date = date;
+        }
+
+        @Override
+        public LocalDate date() {
+            return date;
+        }
+
+        @Override
+        public List<int[]> blocks(Routines.Kind kind) {
+            return kind == Routines.Kind.FREE ? free : away;
         }
     }
 
@@ -140,11 +152,20 @@ final class OddsEngine {
         TreeMap<LocalDate, Day> out = new TreeMap<>();
         LocalDate today = LocalDate.now();
         ZoneId zone = ZoneId.systemDefault();
-        for (int i = HISTORY_DAYS; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
-            DayUsage u = DayUsage.load(ctx, date);
+        List<DayUsage> usages = new ArrayList<>();
+        for (int i = HISTORY_DAYS; i >= 0; i--) usages.add(DayUsage.load(ctx, today.minusDays(i)));
+        String home = homeNetwork(usages, zone);
+        String carried = null; // the network state at the start of each day
+        for (DayUsage u : usages) {
+            LocalDate date = u.day;
+            List<int[]> away = awayBlocks(u, carried, home, zone);
+            if (!u.net.isEmpty()) carried = u.net.get(u.net.size() - 1)[1];
             if (u.screenMs == 0 && u.appMs.isEmpty()) continue;
             Day d = new Day(date);
+            d.away = away;
+            List<int[]> used = new ArrayList<>();
+            for (long[] on : u.screenOn) used.add(new int[]{minuteOfDay(on[0], date, zone), minuteOfDay(on[1], date, zone)});
+            d.free = Routines.gaps(used, Routines.Kind.FREE);
             d.screenH = u.screenMs / 3600000.0;
             d.lateH = u.lateNightMs / 3600000.0;
             d.unlocks = u.unlocks;
@@ -167,6 +188,63 @@ final class OddsEngine {
             out.put(date, d);
         }
         return out;
+    }
+
+    private static int minuteOfDay(long ms, LocalDate date, ZoneId zone) {
+        long start = date.atStartOfDay(zone).toInstant().toEpochMilli();
+        return (int) Math.max(0, Math.min(24 * 60, (ms - start) / 60000));
+    }
+
+    /** Home is the Wi-Fi the phone is on at 3am most often. */
+    private static String homeNetwork(List<DayUsage> usages, ZoneId zone) {
+        Map<String, Integer> votes = new java.util.HashMap<>();
+        String state = null;
+        for (DayUsage u : usages) {
+            long three = u.day.atTime(3, 0).atZone(zone).toInstant().toEpochMilli();
+            String at3 = state;
+            for (String[] ev : u.net) {
+                if (Long.parseLong(ev[0]) <= three) at3 = ev[1];
+                state = ev[1];
+            }
+            if (at3 != null && at3.startsWith("wifi:")) votes.merge(at3, 1, Integer::sum);
+        }
+        String best = null;
+        for (Map.Entry<String, Integer> e : votes.entrySet()) if (best == null || e.getValue() > votes.get(best)) best = e.getKey();
+        return best;
+    }
+
+    /** Stretches of the day off the home Wi-Fi. Null when there is nothing to go on yet. */
+    private static List<int[]> awayBlocks(DayUsage u, String carried, String home, ZoneId zone) {
+        if (home == null || (carried == null && u.net.isEmpty())) return null;
+        List<int[]> out = new ArrayList<>();
+        String state = carried;
+        int since = 0;
+        for (String[] ev : u.net) {
+            int m = minuteOfDay(Long.parseLong(ev[0]), u.day, zone);
+            if (state != null && !state.equals(home)) out.add(new int[]{since, m});
+            state = ev[1];
+            since = m;
+        }
+        int end = u.day.equals(LocalDate.now())
+                ? minuteOfDay(System.currentTimeMillis(), u.day, zone) : 24 * 60;
+        if (state != null && !state.equals(home)) out.add(new int[]{since, end});
+        return Routines.clean(out, Routines.Kind.AWAY);
+    }
+
+    // ----- routines as outcomes -----
+
+    /** The routines seen up to and including `evening`, as outcomes that label themselves. */
+    static List<Outcome> routineOutcomes(TreeMap<LocalDate, Day> hist, LocalDate evening) {
+        List<Outcome> out = new ArrayList<>();
+        for (Routines.Routine r : Routines.find(new ArrayList<>(hist.headMap(evening, true).values()))) {
+            out.add(routineOutcome(r));
+        }
+        return out;
+    }
+
+    static Outcome routineOutcome(Routines.Routine r) {
+        return new Outcome(r.id(), r.kind.defaultName + " · " + r.days() + " " + r.window(),
+                r.kind.defaultName.toLowerCase(java.util.Locale.ROOT) + " " + r.window(), (t, b) -> r.happened(t));
     }
 
     private static boolean isSocial(String pkg) {
@@ -216,7 +294,12 @@ final class OddsEngine {
         List<Forecast> out = new ArrayList<>();
         if (today == null) return out;
         List<Day> pastDays = before(hist, evening);
-        for (Outcome oc : OUTCOMES) {
+        List<Outcome> outcomes = new ArrayList<>(OUTCOMES);
+        for (Outcome oc : routineOutcomes(hist, evening)) {
+            Routines.Routine r = Routines.Routine.parse(oc.id);
+            if (r != null && r.appliesTo(evening.plusDays(1))) outcomes.add(oc);
+        }
+        for (Outcome oc : outcomes) {
             List<Object[]> rows = new ArrayList<>(); // {Day evening, List<Day> before, Boolean y}
             for (Map.Entry<LocalDate, Day> e : hist.entrySet()) {
                 LocalDate next = e.getKey().plusDays(1);
@@ -230,7 +313,10 @@ final class OddsEngine {
             for (Object[] r : rows) if ((Boolean) r[2]) k++;
             int n = rows.size();
             double base = (double) k / n;
-            if (k == 0 || k == n) continue; // a question that always has the same answer is not worth asking
+            boolean routine = oc.id.startsWith("rt_");
+            // a question that always has the same answer is not worth asking, except whether a
+            // routine will hold: "92% you'll be out on Tuesday evening" is the point
+            if (k == 0 || (k == n && !routine)) continue;
 
             double bestGap = -1;
             Lever bestLever = null;
@@ -274,7 +360,8 @@ final class OddsEngine {
         Day t = hist.get(target);
         if (t == null) return null;
         for (Outcome oc : OUTCOMES) if (oc.id.equals(outcomeId)) return oc.label.of(t, before(hist, target));
-        return null;
+        Routines.Routine r = Routines.Routine.parse(outcomeId);
+        return r == null ? null : r.happened(t);
     }
 
     static Map<String, Record> backtest(TreeMap<LocalDate, Day> hist) {
