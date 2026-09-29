@@ -216,7 +216,13 @@
 
                 <TextView
                     android:id="@+id/pc_total"
-                    style="@style/SectionAside" />
+                    style="@style/SectionAside"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/pc_see_all"
+                    style="@style/SectionLink"
+                    android:text="See all" />
             </LinearLayout>
 
             <LinearLayout

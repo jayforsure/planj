@@ -88,10 +88,22 @@ func TestNamesComeFromRulesNotTitles(t *testing.T) {
 	if cat != CatEntertainment || name != "YouTube" {
 		t.Fatalf("got %s %q", cat, name)
 	}
-	if _, name := ClassifyNamed("msedge.exe", "Some private page - Microsoft Edge", nil); name != "" {
-		t.Fatalf("an unrecognised page must not produce a name, got %q", name)
+	if _, name := ClassifyNamed("msedge.exe", "Some private page - Microsoft Edge", nil); name != "Other websites" {
+		t.Fatalf("an unrecognised page must only ever be 'Other websites', got %q", name)
 	}
 	if AppName("msedge.exe") != "Edge" || AppName("Code.exe") != "VS Code" || AppName("Figma.exe") != "Figma" {
 		t.Fatal("app names")
+	}
+}
+
+func TestBrowsersNeverCountAsTheApp(t *testing.T) {
+	if _, name := ClassifyNamed("chrome.exe", "Inbox (3) - someone@example.com - Gmail - Google Chrome", nil); name != "Gmail" {
+		t.Fatalf("gmail: %q", name)
+	}
+	if cat, name := ClassifyNamed("msedge.exe", "A page nobody listed - Microsoft Edge", nil); name != "Other websites" || cat != CatOther {
+		t.Fatalf("unlisted page: %s %q", cat, name)
+	}
+	if _, name := ClassifyNamed("Notepad.exe", "notes.txt - Notepad", nil); name != "" {
+		t.Fatalf("a desktop app keeps its own name: %q", name)
 	}
 }

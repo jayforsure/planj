@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:scrollbars="none">
+
+    <LinearLayout style="@style/Page">
+
+        <ImageView
+            android:id="@+id/back"
+            style="@style/CircleButton"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            style="@style/PageTitle"
+            android:text="On your PC" />
+
+        <TextView
+            android:id="@+id/summary"
+            style="@style/PageSubtitle" />
+
+        <LinearLayout
+            style="@style/Card"
+            android:layout_marginTop="24dp"
+            android:paddingVertical="10dp">
+
+            <LinearLayout
+                android:id="@+id/list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

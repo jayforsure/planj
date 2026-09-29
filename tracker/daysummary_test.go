@@ -36,7 +36,7 @@ func TestSummarizeDayMergesPresentTimeByCategory(t *testing.T) {
 	for _, a := range got.Apps {
 		names[a[0].(string)] = true
 	}
-	for _, n := range []string{"VS Code", "Edge", "YouTube", "File Explorer"} {
+	for _, n := range []string{"VS Code", "Other websites", "YouTube", "File Explorer"} {
 		if !names[n] {
 			t.Errorf("missing %s in %v", n, got.Apps)
 		}

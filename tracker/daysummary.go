@@ -75,11 +75,15 @@ func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
 			}
 			segs = append(segs, seg{int(s.Sub(start).Minutes()), int(e.Sub(start).Minutes() + 0.999), cat})
 			name := r.Name
-			if name == "" {
+			if name == "" && IsBrowser(r.App) {
+				name = "Other websites" // recorded before sites were named
+			} else if name == "" {
 				name = AppName(r.App)
 			}
 			appMin[name] += e.Sub(s).Minutes()
-			if _, seen := appCat[name]; !seen || cat != CatOther {
+			if name == "Other websites" {
+				appCat[name] = CatOther // an unnamed page never claims to be focus or fun in the list
+			} else if _, seen := appCat[name]; !seen || cat != CatOther {
 				appCat[name] = cat
 			}
 		}

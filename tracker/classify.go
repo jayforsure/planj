@@ -42,6 +42,15 @@ var builtinRules = []Rule{
 	// chat
 	{"whatsapp", CatChat, "WhatsApp"}, {"telegram", CatChat, "Telegram"}, {"discord", CatChat, "Discord"}, {"wechat", CatChat, "WeChat"},
 	{"messenger", CatChat, "Messenger"}, {"slack", CatChat, "Slack"},
+	// Google and Microsoft services, meetings, shopping: specific names before generic words
+	{"gmail", CatChat, "Gmail"}, {"outlook", CatChat, "Outlook"}, {"microsoft teams", CatChat, "Teams"},
+	{"google meet", CatChat, "Google Meet"}, {"zoom workplace", CatChat, "Zoom"}, {"zoom meeting", CatChat, "Zoom"},
+	{"google docs", CatFocus, "Google Docs"}, {"google sheets", CatFocus, "Google Sheets"},
+	{"google slides", CatFocus, "Google Slides"}, {"google drive", CatFocus, "Google Drive"},
+	{"google calendar", CatFocus, "Google Calendar"}, {"google classroom", CatFocus, "Google Classroom"},
+	{"gemini", CatFocus, "Gemini"}, {"perplexity", CatFocus, "Perplexity"}, {"canva", CatFocus, "Canva"},
+	{"figma", CatFocus, "Figma"}, {"wikipedia", CatFocus, "Wikipedia"}, {"google search", CatOther, "Google Search"},
+	{"shopee", CatOther, "Shopee"}, {"lazada", CatOther, "Lazada"}, {"medium", CatOther, "Medium"},
 	// focus: building, writing, studying
 	{"code.exe", CatFocus, "VS Code"}, {"windowsterminal", CatFocus, "Terminal"}, {"pycharm", CatFocus, "PyCharm"}, {"idea64", CatFocus, "IntelliJ IDEA"},
 	{"android studio", CatFocus, "Android Studio"}, {"studio64", CatFocus, "Android Studio"}, {"winword", CatFocus, "Word"}, {"excel", CatFocus, "Excel"},
@@ -69,7 +78,20 @@ func ClassifyNamed(app, title string, user []Rule) (string, string) {
 			}
 		}
 	}
+	if IsBrowser(app) {
+		// A page we don't recognise: count the time, never the page.
+		return CatOther, "Other websites"
+	}
 	return CatOther, ""
+}
+
+// IsBrowser says whether a program is a web browser, whose own name says nothing about use.
+func IsBrowser(app string) bool {
+	switch strings.ToLower(app) {
+	case "msedge.exe", "chrome.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe", "arc.exe":
+		return true
+	}
+	return false
 }
 
 // AppName turns a program file into a readable name: "msedge.exe" -> "Edge".
