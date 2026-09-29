@@ -41,6 +41,7 @@ final class OddsEngine {
         List<int[]> free;           // phone untouched, within the day
         List<int[]> away;           // off the home Wi-Fi; null until network samples exist
         Map<String, List<int[]>> at; // time at each place other than home; null when places are off
+        PcFocus pc;                  // null when the PC's focus that day can't be known
 
         Day(LocalDate date) {
             this.date = date;
@@ -124,6 +125,8 @@ final class OddsEngine {
         }
     }
 
+    static final String FOCUS = "pc_focus_2h";
+
     static final List<Outcome> OUTCOMES = List.of(
             new Outcome("off_by_1am", "Off all devices by 1am tonight", "off by 1am",
                     (t, b) -> t.quietStartHour == null ? null : t.quietStartHour >= 20 || t.quietStartHour <= 1.0),
@@ -138,7 +141,9 @@ final class OddsEngine {
             new Outcome("social_2h", "Over 2 hours of social apps tomorrow", "2h+ social",
                     (t, b) -> t.socialH > 2),
             new Outcome("up_by_8", "First phone use before 08:00 tomorrow", "up by 8",
-                    (t, b) -> t.firstUseHour < 0 ? null : t.firstUseHour < 8)
+                    (t, b) -> t.firstUseHour < 0 ? null : t.firstUseHour < 8),
+            new Outcome(FOCUS, "2h+ focus on your PC tomorrow", "2h+ PC focus",
+                    (t, b) -> t.pc == null ? null : t.pc.focusH >= PcFocus.GOAL_H)
     );
 
     static final List<Lever> LEVERS = List.of(
@@ -150,6 +155,11 @@ final class OddsEngine {
                 for (Day x : b) past.add(x.unlocks);
                 return past.size() < MIN_HISTORY ? null : d.unlocks > median(past);
             }),
+            new Lever("pc_focus_day", "after a day with 2h+ focus on the PC",
+                    (d, b) -> d.pc == null ? null : d.pc.focusH >= PcFocus.GOAL_H),
+            new Lever("pc_watch_late", "after watching on the PC past 11pm", (d, b) -> d.pc == null ? null : d.pc.lateWatchMin >= 15),
+            new Lever("pc_watch_heavy", "on a day with over 1h watching on the PC", (d, b) -> d.pc == null ? null : d.pc.watchH > 1),
+            new Lever("out_at_place", "on a day out at one of your places", (d, b) -> d.at == null ? null : !d.at.isEmpty()),
             new Lever("charged", "on a night the phone was charging", (d, b) -> d.charged),
             new Lever("weekend_next", "when tomorrow is a weekend day",
                     (d, b) -> d.date.getDayOfWeek().getValue() >= 5) // Fri or Sat evening
@@ -170,14 +180,24 @@ final class OddsEngine {
         String homePlace = markedHome != null ? markedHome : homeOf(usages, zone, false);
         String carried = null; // the network state at the start of each day
         String carriedPlace = null;
+        boolean pcSorting = false; // the PC has sorted focus from watching on some earlier day
         for (DayUsage u : usages) {
             LocalDate date = u.day;
             List<int[]> away = awayBlocks(u, carried, home, zone);
             if (!u.net.isEmpty()) carried = u.net.get(u.net.size() - 1)[1];
             Map<String, List<int[]>> at = placeBlocks(u, carriedPlace, homePlace, zone);
             if (!u.place.isEmpty()) carriedPlace = u.place.get(u.place.size() - 1)[1];
+            PcFocus reported = null;
+            List<PcDays.Seg> segs = PcDays.load(ctx, date);
+            if (segs != null) {
+                reported = new PcFocus();
+                for (PcDays.Seg sg : segs) reported.add(sg.start, sg.end, sg.cat);
+            }
+            PcFocus pc = PcFocus.count(reported, pcSorting, date.isBefore(today.minusDays(1)));
+            if (reported != null && reported.sorted()) pcSorting = true;
             if (u.screenMs == 0 && u.appMs.isEmpty()) continue;
             Day d = new Day(date);
+            d.pc = pc;
             d.away = away;
             d.at = at;
             List<int[]> used = new ArrayList<>();
@@ -394,6 +414,16 @@ final class OddsEngine {
             }
         }
         return out;
+    }
+
+    /** Days so far on which an outcome could be scored the morning after; forecasts start at MIN_HISTORY. */
+    static int daysFor(TreeMap<LocalDate, Day> hist, LocalDate evening, String outcomeId) {
+        int n = 0;
+        for (LocalDate d : hist.keySet()) {
+            LocalDate next = d.plusDays(1);
+            if (next.isBefore(evening) && hist.containsKey(next) && resolve(hist, next, outcomeId) != null) n++;
+        }
+        return n;
     }
 
     static Boolean resolve(TreeMap<LocalDate, Day> hist, LocalDate target, String outcomeId) {

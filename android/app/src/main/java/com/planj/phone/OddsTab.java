@@ -84,6 +84,14 @@ final class OddsTab {
         }
         header("FORECASTS");
         for (OddsEngine.Forecast fc : plain) list.addView(card(fc));
+        boolean focusShown = false;
+        for (OddsEngine.Forecast fc : plain) focusShown |= fc.outcome.id.equals(OddsEngine.FOCUS);
+        if (!focusShown) {
+            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.FOCUS);
+            line(days < OddsEngine.MIN_HISTORY
+                    ? "2h+ focus on your PC · " + days + " of " + OddsEngine.MIN_HISTORY + " days recorded"
+                    : "2h+ focus on your PC · not reached in " + days + " days", a.getColor(R.color.muted), 13);
+        }
 
         header("TRACK RECORD");
         LinearLayout table = new LinearLayout(a);
