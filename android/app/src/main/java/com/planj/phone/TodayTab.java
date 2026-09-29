@@ -112,7 +112,7 @@ final class TodayTab {
         ((GestureScrollView) root).setPrivateLook(priv, false);
 
         if (granted) {
-            if (statScreen.getText().length() == 0) {  // first load: a dash, never a blank card
+            if (!recall(shown) && statScreen.getText().length() == 0) {  // first load: a dash, never a blank card
                 statScreen.setText("—");
                 statUnlocks.setText("—");
                 statQuiet.setText("—");
@@ -154,6 +154,7 @@ final class TodayTab {
             }
             DayUsage.Quiet q = DayUsage.quiet(a, target);
             DayTimeline tl = DayTimeline.build(a, target);
+            List<PcDays.App> pcApps = PcDays.apps(a, target);
             List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
             ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
             List<String> order = new ArrayList<>();
@@ -174,8 +175,115 @@ final class TodayTab {
                 fillLegend(order);
                 AppRows.fill(a, topApps, day, 4);
                 showTimeline(tl);
+                showPcApps(pcApps);
+                remember(target, day.screenMs, day.unlocks, q == null ? -1 : q.ms(), q != null && q.charging);
             });
         }).start();
+    }
+
+    /** The last numbers shown for a day, so reopening the app shows them at once. */
+    private void remember(LocalDate d, long screenMs, int unlocks, long quietMs, boolean charged) {
+        a.getSharedPreferences("planj_today", android.content.Context.MODE_PRIVATE).edit()
+                .putString("day", d.toString()).putLong("screen", screenMs).putInt("unlocks", unlocks)
+                .putLong("quiet", quietMs).putBoolean("charged", charged).apply();
+    }
+
+    private boolean recall(LocalDate d) {
+        android.content.SharedPreferences p = a.getSharedPreferences("planj_today", android.content.Context.MODE_PRIVATE);
+        if (!d.toString().equals(p.getString("day", null))) return false;
+        statScreen.setText(Fmt.shortDuration(p.getLong("screen", 0)));
+        statUnlocks.setText(String.valueOf(p.getInt("unlocks", 0)));
+        long quiet = p.getLong("quiet", -1);
+        statQuiet.setText(quiet < 0 ? "—" : Fmt.shortDuration(quiet));
+        statQuietLabel.setText(p.getBoolean("charged", false) ? "Device-free ⚡" : "Device-free");
+        return true;
+    }
+
+    /** "On your PC": apps and recognised sites, with a bar in the category's colour. */
+    private void showPcApps(List<PcDays.App> apps) {
+        View section = root.findViewById(R.id.pc_section), card = root.findViewById(R.id.pc_card);
+        boolean has = apps != null && !apps.isEmpty();
+        section.setVisibility(has ? View.VISIBLE : View.GONE);
+        card.setVisibility(has ? View.VISIBLE : View.GONE);
+        if (!has) return;
+        int total = 0;
+        for (PcDays.App x : apps) total += x.minutes;
+        ((TextView) root.findViewById(R.id.pc_total)).setText(Fmt.shortDuration(total * 60_000L));
+        LinearLayout list = root.findViewById(R.id.pc_apps);
+        list.removeAllViews();
+        float dp = a.getResources().getDisplayMetrics().density;
+        int max = apps.get(0).minutes;
+        for (int i = 0; i < Math.min(6, apps.size()); i++) {
+            PcDays.App x = apps.get(i);
+            LinearLayout row = new LinearLayout(a);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, Math.round(10 * dp), 0, Math.round(10 * dp));
+
+            TextView badge = new TextView(a); // the first letter on the category's colour
+            badge.setText(x.name.substring(0, 1).toUpperCase(Locale.ENGLISH));
+            badge.setGravity(android.view.Gravity.CENTER);
+            badge.setTextColor(a.getColor(R.color.bg));
+            badge.setTextSize(15);
+            badge.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(10 * dp);
+            bg.setColor(a.getColor(DayTimelineView.color(x.cat)));
+            badge.setBackground(bg);
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(Math.round(36 * dp), Math.round(36 * dp));
+            bp.setMarginEnd(Math.round(16 * dp));
+            row.addView(badge, bp);
+
+            LinearLayout col = new LinearLayout(a);
+            col.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout top = new LinearLayout(a);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            TextView name = new TextView(a);
+            name.setText(x.name);
+            name.setTextColor(a.getColor(R.color.text));
+            name.setTextSize(16);
+            top.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            TextView time = new TextView(a);
+            time.setText(Fmt.shortDuration(x.minutes * 60_000L) + " · " + label(x.cat));
+            time.setTextColor(a.getColor(R.color.muted));
+            time.setTextSize(13);
+            top.addView(time);
+            col.addView(top);
+            android.widget.FrameLayout track = new android.widget.FrameLayout(a);
+            GradientDrawable tb = new GradientDrawable();
+            tb.setCornerRadius(3 * dp);
+            tb.setColor(a.getColor(R.color.surface_alt));
+            track.setBackground(tb);
+            View fill = new View(a);
+            GradientDrawable fb = new GradientDrawable();
+            fb.setCornerRadius(3 * dp);
+            fb.setColor(a.getColor(DayTimelineView.color(x.cat)));
+            fill.setBackground(fb);
+            track.addView(fill, new android.widget.FrameLayout.LayoutParams(0, Math.round(4 * dp)));
+            final float share = (float) x.minutes / Math.max(1, max);
+            track.addOnLayoutChangeListener((v, l, t, rr, b, ol, ot, orr, ob) -> {
+                int w = Math.max(Math.round(4 * dp), Math.round((rr - l) * share));
+                if (fill.getLayoutParams().width != w) {
+                    fill.getLayoutParams().width = w;
+                    fill.requestLayout();
+                }
+            });
+            LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.round(4 * dp));
+            tp.topMargin = Math.round(8 * dp);
+            col.addView(track, tp);
+            row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            list.addView(row);
+        }
+    }
+
+    private static String label(String cat) {
+        switch (cat) {
+            case "focus": return "focus";
+            case "entertainment": return "watching";
+            case "social": return "social";
+            case "chat": return "chat";
+            default: return "other";
+        }
     }
 
     private void showTimeline(DayTimeline tl) {

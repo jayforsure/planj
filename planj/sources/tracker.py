@@ -19,12 +19,12 @@ def read_spans(folder: Path, since: date) -> list[tuple]:
                 r = json.loads(line)
             except json.JSONDecodeError:
                 continue  # the tracker may be mid-write on the last line
-            rows.append((to_utc_iso(r["start"]), to_utc_iso(r["end"]), r["app"], int(r["idle"]), r.get("cat", "")))
+            rows.append((to_utc_iso(r["start"]), to_utc_iso(r["end"]), r["app"], int(r["idle"]), r.get("cat", ""), r.get("name", "")))
     return rows
 
 
 def sync(conn: sqlite3.Connection, folder: Path, since: date) -> int:
     rows = read_spans(folder, since)
-    conn.executemany("INSERT OR REPLACE INTO activity_span (start_utc, end_utc, app, idle, cat) VALUES (?, ?, ?, ?, ?)", rows)
+    conn.executemany("INSERT OR REPLACE INTO activity_span (start_utc, end_utc, app, idle, cat, name) VALUES (?, ?, ?, ?, ?, ?)", rows)
     conn.commit()
     return len(rows)

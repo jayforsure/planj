@@ -127,8 +127,8 @@ func run(root string) {
 			rules, rulesRead = LoadRules(rulesPath), now
 		}
 		app, title := foregroundApp(), foregroundTitle()
-		cat := Classify(app, title, rules)
-		o := Observation{App: app, Cat: cat, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
+		cat, name := ClassifyNamed(app, title, rules)
+		o := Observation{App: app, Cat: cat, Name: name, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
 		title = "" // the title has done its job; it goes no further
 		// Round(0) drops the monotonic reading, which can pause during sleep and hide the gap.
 		if err := w.Write(rec.ObserveFull(now.Round(0), o)); err != nil {

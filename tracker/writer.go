@@ -14,6 +14,7 @@ type record struct {
 	End   string `json:"end"`
 	App   string `json:"app"`
 	Cat   string `json:"cat,omitempty"`
+	Name  string `json:"name,omitempty"`
 	Idle  bool   `json:"idle"`
 }
 
@@ -30,6 +31,7 @@ func (w Writer) Write(spans []Span) error {
 			End:   s.End.UTC().Format(tsLayout),
 			App:   s.App,
 			Cat:   s.Cat,
+			Name:  s.Name,
 			Idle:  s.Idle,
 		})
 		if err != nil {

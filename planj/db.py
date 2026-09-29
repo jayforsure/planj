@@ -80,6 +80,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
     columns = {r[1] for r in conn.execute("PRAGMA table_info(activity_span)")}
     if "cat" not in columns:
         conn.execute("ALTER TABLE activity_span ADD COLUMN cat TEXT NOT NULL DEFAULT ''")
+    if "name" not in columns:  # what the tracker's rule matched ("YouTube"), never a window title
+        conn.execute("ALTER TABLE activity_span ADD COLUMN name TEXT NOT NULL DEFAULT ''")
 
 
 def connect(path: Path | str) -> sqlite3.Connection:

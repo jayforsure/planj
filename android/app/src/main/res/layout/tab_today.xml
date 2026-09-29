@@ -204,6 +204,33 @@
                     android:orientation="vertical" />
             </LinearLayout>
 
+            <!-- PC apps -->
+            <LinearLayout
+                android:id="@+id/pc_section"
+                style="@style/SectionRow">
+
+                <TextView
+                    android:id="@+id/pc_title"
+                    style="@style/SectionTitle"
+                    android:text="On your PC" />
+
+                <TextView
+                    android:id="@+id/pc_total"
+                    style="@style/SectionAside" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pc_card"
+                style="@style/Card"
+                android:paddingVertical="10dp">
+
+                <LinearLayout
+                    android:id="@+id/pc_apps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
             <!-- Mood -->
             <LinearLayout style="@style/SectionRow">
 

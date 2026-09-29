@@ -8,6 +8,7 @@ type Span struct {
 	End   time.Time
 	App   string
 	Cat   string
+	Name  string // what the category rule matched, e.g. "YouTube"; never the window title
 	Idle  bool
 }
 
@@ -23,6 +24,7 @@ type Recorder struct {
 type Observation struct {
 	App       string
 	Cat       string
+	Name      string
 	IdleFor   time.Duration
 	IdleAfter time.Duration // this window's allowance; zero means the recorder's default
 }
@@ -40,9 +42,9 @@ func (r *Recorder) ObserveFull(t time.Time, o Observation) []Span {
 		after = r.IdleAfter
 	}
 	idle := o.IdleFor >= after
-	app, cat, idleFor := o.App, o.Cat, o.IdleFor
+	app, cat, name, idleFor := o.App, o.Cat, o.Name, o.IdleFor
 	if r.cur == nil {
-		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Idle: idle}
+		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Name: name, Idle: idle}
 		return nil
 	}
 
@@ -51,7 +53,7 @@ func (r *Recorder) ObserveFull(t time.Time, o Observation) []Span {
 	case t.Sub(r.cur.End) > r.MaxGap:
 		// Don't stretch the last span across sleep or hibernation.
 		out = r.emit(out, r.cur.End)
-		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Idle: idle}
+		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Name: name, Idle: idle}
 	case idle != r.cur.Idle:
 		// The state really changed at the last input, not at this poll.
 		boundary := t.Add(-idleFor)
@@ -59,10 +61,10 @@ func (r *Recorder) ObserveFull(t time.Time, o Observation) []Span {
 			boundary = r.cur.Start
 		}
 		out = r.emit(out, boundary)
-		r.cur = &Span{Start: boundary, End: t, App: app, Cat: cat, Idle: idle}
-	case app != r.cur.App || cat != r.cur.Cat:
+		r.cur = &Span{Start: boundary, End: t, App: app, Cat: cat, Name: name, Idle: idle}
+	case app != r.cur.App || cat != r.cur.Cat || name != r.cur.Name:
 		out = r.emit(out, t)
-		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Idle: idle}
+		r.cur = &Span{Start: t, End: t, App: app, Cat: cat, Name: name, Idle: idle}
 	default:
 		r.cur.End = t
 		if r.cur.End.Sub(r.cur.Start) >= r.MaxSpan {
@@ -73,7 +75,7 @@ func (r *Recorder) ObserveFull(t time.Time, o Observation) []Span {
 			}
 			if split.After(r.cur.Start) {
 				out = r.emit(out, split)
-				r.cur = &Span{Start: split, End: t, App: app, Cat: cat, Idle: idle}
+				r.cur = &Span{Start: split, End: t, App: app, Cat: cat, Name: name, Idle: idle}
 			}
 		}
 	}

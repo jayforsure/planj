@@ -17,51 +17,73 @@ const (
 	CatOther         = "other"
 )
 
-// Rule maps a lowercase substring of "<app> <title>" to a category.
+// Rule maps a lowercase substring of "<app> <title>" to a category, and names what matched
+// ("YouTube") so the day can list it. The name comes from the rule, never from the title.
 type Rule struct {
 	Needle string
 	Cat    string
+	Name   string
 }
 
 // builtinRules are checked after the user's own rules; first match wins. Order matters:
 // "youtube" beats a generic browser, and chat apps beat the "focus" editors below them.
 var builtinRules = []Rule{
 	// entertainment: watching, listening, playing
-	{"youtube", CatEntertainment}, {"netflix", CatEntertainment}, {"twitch", CatEntertainment},
-	{"bilibili", CatEntertainment}, {"disney+", CatEntertainment}, {"prime video", CatEntertainment},
-	{"iqiyi", CatEntertainment}, {"viu", CatEntertainment}, {"crunchyroll", CatEntertainment},
-	{"spotify", CatEntertainment}, {"vlc", CatEntertainment}, {"potplayer", CatEntertainment},
-	{"steam", CatEntertainment}, {"riotclient", CatEntertainment}, {"leagueclient", CatEntertainment},
-	{"league of legends", CatEntertainment}, {"valorant", CatEntertainment}, {"genshin", CatEntertainment},
+	{"youtube", CatEntertainment, "YouTube"}, {"netflix", CatEntertainment, "Netflix"}, {"twitch", CatEntertainment, "Twitch"},
+	{"bilibili", CatEntertainment, "Bilibili"}, {"disney+", CatEntertainment, "Disney+"}, {"prime video", CatEntertainment, "Prime Video"},
+	{"iqiyi", CatEntertainment, "iQIYI"}, {"viu", CatEntertainment, "Viu"}, {"crunchyroll", CatEntertainment, "Crunchyroll"},
+	{"spotify", CatEntertainment, "Spotify"}, {"vlc", CatEntertainment, "VLC"}, {"potplayer", CatEntertainment, "PotPlayer"},
+	{"steam", CatEntertainment, "Steam"}, {"riotclient", CatEntertainment, "Riot Client"}, {"leagueclient", CatEntertainment, "League of Legends"},
+	{"league of legends", CatEntertainment, "League of Legends"}, {"valorant", CatEntertainment, "Valorant"}, {"genshin", CatEntertainment, "Genshin Impact"},
 	// social feeds
-	{"instagram", CatSocial}, {"facebook", CatSocial}, {"reddit", CatSocial}, {"tiktok", CatSocial},
-	{"twitter", CatSocial}, {" / x ", CatSocial}, {"threads", CatSocial}, {"xiaohongshu", CatSocial},
-	{"rednote", CatSocial}, {"linkedin", CatSocial},
+	{"instagram", CatSocial, "Instagram"}, {"facebook", CatSocial, "Facebook"}, {"reddit", CatSocial, "Reddit"}, {"tiktok", CatSocial, "TikTok"},
+	{"twitter", CatSocial, "X"}, {" / x ", CatSocial, "X"}, {"threads", CatSocial, "Threads"}, {"xiaohongshu", CatSocial, "RedNote"},
+	{"rednote", CatSocial, "RedNote"}, {"linkedin", CatSocial, "LinkedIn"},
 	// chat
-	{"whatsapp", CatChat}, {"telegram", CatChat}, {"discord", CatChat}, {"wechat", CatChat},
-	{"messenger", CatChat}, {"slack", CatChat},
+	{"whatsapp", CatChat, "WhatsApp"}, {"telegram", CatChat, "Telegram"}, {"discord", CatChat, "Discord"}, {"wechat", CatChat, "WeChat"},
+	{"messenger", CatChat, "Messenger"}, {"slack", CatChat, "Slack"},
 	// focus: building, writing, studying
-	{"code.exe", CatFocus}, {"windowsterminal", CatFocus}, {"pycharm", CatFocus}, {"idea64", CatFocus},
-	{"android studio", CatFocus}, {"studio64", CatFocus}, {"winword", CatFocus}, {"excel", CatFocus},
-	{"powerpnt", CatFocus}, {"acrobat", CatFocus}, {".pdf", CatFocus}, {"obsidian", CatFocus},
-	{"notion", CatFocus}, {"github", CatFocus}, {"gitlab", CatFocus}, {"stack overflow", CatFocus},
-	{"leetcode", CatFocus}, {"overleaf", CatFocus}, {"coursera", CatFocus}, {"udemy", CatFocus},
-	{"moodle", CatFocus}, {"lecture", CatFocus}, {"tutorial", CatFocus}, {"documentation", CatFocus},
-	{" docs", CatFocus}, {"claude", CatFocus}, {"chatgpt", CatFocus}, {"railway", CatFocus},
+	{"code.exe", CatFocus, "VS Code"}, {"windowsterminal", CatFocus, "Terminal"}, {"pycharm", CatFocus, "PyCharm"}, {"idea64", CatFocus, "IntelliJ IDEA"},
+	{"android studio", CatFocus, "Android Studio"}, {"studio64", CatFocus, "Android Studio"}, {"winword", CatFocus, "Word"}, {"excel", CatFocus, "Excel"},
+	{"powerpnt", CatFocus, "PowerPoint"}, {"acrobat", CatFocus, "Acrobat"}, {".pdf", CatFocus, "PDF reading"}, {"obsidian", CatFocus, "Obsidian"},
+	{"notion", CatFocus, "Notion"}, {"github", CatFocus, "GitHub"}, {"gitlab", CatFocus, "GitLab"}, {"stack overflow", CatFocus, "Stack Overflow"},
+	{"leetcode", CatFocus, "LeetCode"}, {"overleaf", CatFocus, "Overleaf"}, {"coursera", CatFocus, "Coursera"}, {"udemy", CatFocus, "Udemy"},
+	{"moodle", CatFocus, "Moodle"}, {"lecture", CatFocus, "Lectures"}, {"tutorial", CatFocus, "Tutorials"}, {"documentation", CatFocus, "Documentation"},
+	{" docs", CatFocus, "Docs"}, {"claude", CatFocus, "Claude"}, {"chatgpt", CatFocus, "ChatGPT"}, {"railway", CatFocus, "Railway"},
 }
 
 // Classify sorts a foreground window. User rules come first so a person can say that their
 // university portal is focus, or that one YouTube channel they learn from is focus.
 func Classify(app, title string, user []Rule) string {
+	cat, _ := ClassifyNamed(app, title, user)
+	return cat
+}
+
+// ClassifyNamed also returns what matched ("YouTube", "VS Code"), or "" when nothing did.
+func ClassifyNamed(app, title string, user []Rule) (string, string) {
 	hay := " " + strings.ToLower(app+" "+title) + " "
 	for _, set := range [][]Rule{user, builtinRules} {
 		for _, r := range set {
 			if strings.Contains(hay, r.Needle) {
-				return r.Cat
+				return r.Cat, r.Name
 			}
 		}
 	}
-	return CatOther
+	return CatOther, ""
+}
+
+// AppName turns a program file into a readable name: "msedge.exe" -> "Edge".
+func AppName(exe string) string {
+	known := map[string]string{
+		"msedge.exe": "Edge", "chrome.exe": "Chrome", "firefox.exe": "Firefox", "brave.exe": "Brave",
+		"code.exe": "VS Code", "notepad.exe": "Notepad", "explorer.exe": "File Explorer",
+		"windowsterminal.exe": "Terminal", "notion.exe": "Notion", "searchhost.exe": "Windows Search",
+		"applicationframehost.exe": "Windows app", "(none)": "Desktop", "(unknown)": "Other",
+	}
+	if n, ok := known[strings.ToLower(exe)]; ok {
+		return n
+	}
+	return strings.TrimSuffix(strings.TrimSuffix(exe, ".exe"), ".EXE")
 }
 
 // IdleAllowance is how long without input still counts as present. Watching a video or
@@ -100,7 +122,7 @@ func LoadRules(path string) []Rule {
 		switch cat {
 		case CatFocus, CatEntertainment, CatSocial, CatChat, CatOther:
 			if needle != "" {
-				out = append(out, Rule{Needle: needle, Cat: cat})
+				out = append(out, Rule{Needle: needle, Cat: cat, Name: strings.TrimSpace(strings.SplitN(line, ":", 2)[1])})
 			}
 		}
 	}

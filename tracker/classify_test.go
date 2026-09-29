@@ -82,3 +82,16 @@ func TestRecorderSplitsOnCategoryAndHonoursAllowance(t *testing.T) {
 		t.Fatal("10 minutes of watching without input must not count as idle")
 	}
 }
+
+func TestNamesComeFromRulesNotTitles(t *testing.T) {
+	cat, name := ClassifyNamed("msedge.exe", "My secret doc about something - YouTube - Microsoft Edge", nil)
+	if cat != CatEntertainment || name != "YouTube" {
+		t.Fatalf("got %s %q", cat, name)
+	}
+	if _, name := ClassifyNamed("msedge.exe", "Some private page - Microsoft Edge", nil); name != "" {
+		t.Fatalf("an unrecognised page must not produce a name, got %q", name)
+	}
+	if AppName("msedge.exe") != "Edge" || AppName("Code.exe") != "VS Code" || AppName("Figma.exe") != "Figma" {
+		t.Fatal("app names")
+	}
+}

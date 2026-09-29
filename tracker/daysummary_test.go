@@ -23,7 +23,7 @@ func TestSummarizeDayMergesPresentTimeByCategory(t *testing.T) {
 		// idle is dropped
 		`{"start":"2026-09-29T02:00:00.000Z","end":"2026-09-29T02:30:00.000Z","app":"msedge.exe","cat":"focus","idle":true}`,
 		// 10:30-11:15 watching
-		`{"start":"2026-09-29T02:30:00.000Z","end":"2026-09-29T03:15:00.000Z","app":"msedge.exe","cat":"entertainment","idle":false}`,
+		`{"start":"2026-09-29T02:30:00.000Z","end":"2026-09-29T03:15:00.000Z","app":"msedge.exe","cat":"entertainment","name":"YouTube","idle":false}`,
 		// an old span with no category counts as other
 		`{"start":"2026-09-29T04:00:00.000Z","end":"2026-09-29T04:10:00.000Z","app":"explorer.exe","idle":false}`,
 		`not json`,
@@ -32,6 +32,15 @@ func TestSummarizeDayMergesPresentTimeByCategory(t *testing.T) {
 
 	got := SummarizeDay(dir, time.Date(2026, 9, 29, 12, 0, 0, 0, loc), loc)
 	want := [][3]any{{0, 20, "focus"}, {540, 600, "focus"}, {630, 675, "entertainment"}, {720, 730, "other"}}
+	names := map[string]bool{}
+	for _, a := range got.Apps {
+		names[a[0].(string)] = true
+	}
+	for _, n := range []string{"VS Code", "Edge", "YouTube", "File Explorer"} {
+		if !names[n] {
+			t.Errorf("missing %s in %v", n, got.Apps)
+		}
+	}
 	if got.Day != "2026-09-29" || len(got.Spans) != len(want) {
 		t.Fatalf("got %+v", got)
 	}
@@ -39,6 +48,11 @@ func TestSummarizeDayMergesPresentTimeByCategory(t *testing.T) {
 		if got.Spans[i] != want[i] {
 			t.Errorf("span %d: got %v want %v", i, got.Spans[i], want[i])
 		}
+	}
+	// apps: VS Code 30m (the midnight part is yesterday's file clipped to 20m + 30m today),
+	// Edge 29m of focus, a named site, and File Explorer 10m
+	if len(got.Apps) == 0 || got.Apps[0][0] != "VS Code" {
+		t.Errorf("apps: %v", got.Apps)
 	}
 	if !strings.Contains(string(SummaryLines(dir, time.Date(2026, 9, 29, 12, 0, 0, 0, loc))), `"day":"2026-09-28"`) {
 		t.Error("yesterday's summary should ride along too")

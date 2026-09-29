@@ -28,7 +28,36 @@ final class PcDays {
         }
     }
 
+    static final class App {
+        final String name, cat;
+        final int minutes;
+
+        App(String name, int minutes, String cat) {
+            this.name = name;
+            this.minutes = minutes;
+            this.cat = cat;
+        }
+    }
+
     private PcDays() {}
+
+    /** PC apps and recognised sites that day, most used first. Null when the PC hasn't reported. */
+    static List<App> apps(Context ctx, LocalDate day) {
+        File f = new File(dir(ctx), day + ".json");
+        if (!f.exists()) return null;
+        List<App> out = new ArrayList<>();
+        try {
+            JSONArray apps = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8)).optJSONArray("apps");
+            if (apps == null) return out;
+            for (int i = 0; i < apps.length(); i++) {
+                JSONArray a = apps.getJSONArray(i);
+                out.add(new App(a.getString(0), a.getInt(1), a.getString(2)));
+            }
+        } catch (JSONException | IOException e) {
+            return null;
+        }
+        return out;
+    }
 
     private static File dir(Context ctx) {
         return new File(ctx.getFilesDir(), "pc");
