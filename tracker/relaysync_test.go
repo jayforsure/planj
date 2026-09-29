@@ -46,7 +46,7 @@ func TestConfirmPostsToReplyMailbox(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	if err := Confirm(context.Background(), ts.Client(), ts.URL, p, 3); err != nil {
+	if err := Confirm(context.Background(), ts.Client(), ts.URL, p, 3, nil); err != nil {
 		t.Fatal(err)
 	}
 	if gotPath != "/v1/mailbox/"+p.Reply {

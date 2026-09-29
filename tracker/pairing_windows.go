@@ -66,7 +66,7 @@ func pullOnce(root, inbox string, client *http.Client, base string, p Pairing) {
 	// Confirm regularly, not only when data arrived: a phone with nothing to send still
 	// needs to learn that a PC with the same code is listening.
 	if n > 0 || time.Since(lastConfirm) >= confirmEvery {
-		if err := Confirm(ctx, client, base, p, n); err != nil {
+		if err := Confirm(ctx, client, base, p, n, SummaryLines(filepath.Join(root, "activity"), time.Now())); err != nil {
 			log.Printf("confirm: %v", err)
 		} else {
 			lastConfirm = time.Now()

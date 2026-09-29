@@ -181,9 +181,13 @@ final class RelaySync {
             for (int i = 0; i < items.length(); i++) {
                 JSONObject item = items.getJSONObject(i);
                 byte[] blob = Base64.decode(item.getString("data"), Base64.DEFAULT);
-                String line = new String(crypto.open(blob, crypto.mailbox), StandardCharsets.UTF_8);
-                if (line.contains("\"pc_ack\"")) {
-                    prefs(ctx).edit().putLong("confirmed_ms", System.currentTimeMillis()).apply();
+                String text = new String(crypto.open(blob, crypto.mailbox), StandardCharsets.UTF_8);
+                for (String line : text.split("\n")) {
+                    if (line.contains("\"pc_ack\"")) {
+                        prefs(ctx).edit().putLong("confirmed_ms", System.currentTimeMillis()).apply();
+                    } else if (line.contains("\"pc_day\"")) {
+                        PcDays.save(ctx, line); // the PC's summary of a day, for the timeline
+                    }
                 }
                 lastId = item.getString("id");
             }

@@ -204,9 +204,11 @@ func Pull(ctx context.Context, client *http.Client, baseURL string, p Pairing,
 }
 
 // Confirm tells the phone its uploads are arriving, which is how a mistyped code is caught.
-func Confirm(ctx context.Context, client *http.Client, baseURL string, p Pairing, uploads int) error {
+// Confirm tells the phone this PC is listening, and carries any extra lines with it (the
+// PC's day summaries), sealed together.
+func Confirm(ctx context.Context, client *http.Client, baseURL string, p Pairing, uploads int, extra []byte) error {
 	line := fmt.Sprintf("{\"t\":%q,\"event\":\"pc_ack\",\"uploads\":%d}\n", time.Now().UTC().Format(time.RFC3339), uploads)
-	blob, err := p.Seal([]byte(line))
+	blob, err := p.Seal(append([]byte(line), extra...))
 	if err != nil {
 		return err
 	}

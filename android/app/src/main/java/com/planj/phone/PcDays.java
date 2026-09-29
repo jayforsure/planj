@@ -1,0 +1,68 @@
+package com.planj.phone;
+
+import android.content.Context;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+/** The PC's own summary of each day (present time by category), as it last sent it. */
+final class PcDays {
+    static final class Seg {
+        final int start, end; // minutes since local midnight
+        final String cat;     // focus | entertainment | social | chat | other
+
+        Seg(int start, int end, String cat) {
+            this.start = start;
+            this.end = end;
+            this.cat = cat;
+        }
+    }
+
+    private PcDays() {}
+
+    private static File dir(Context ctx) {
+        return new File(ctx.getFilesDir(), "pc");
+    }
+
+    /** Keeps the newest summary per day; the PC resends today every quarter hour. */
+    static void save(Context ctx, String line) {
+        try {
+            JSONObject o = new JSONObject(line);
+            String day = LocalDate.parse(o.getString("day")).toString();
+            File d = dir(ctx);
+            if (!d.isDirectory() && !d.mkdirs()) return;
+            try (FileOutputStream out = new FileOutputStream(new File(d, day + ".json"))) {
+                out.write(o.toString().getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (JSONException | IOException | RuntimeException e) {
+            // a malformed summary is skipped; the next one replaces it
+        }
+    }
+
+    /** Null when the PC has not reported that day. */
+    static List<Seg> load(Context ctx, LocalDate day) {
+        File f = new File(dir(ctx), day + ".json");
+        if (!f.exists()) return null;
+        List<Seg> out = new ArrayList<>();
+        try {
+            JSONArray spans = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8)).getJSONArray("spans");
+            for (int i = 0; i < spans.length(); i++) {
+                JSONArray s = spans.getJSONArray(i);
+                out.add(new Seg(s.getInt(0), s.getInt(1), s.getString(2)));
+            }
+        } catch (JSONException | IOException e) {
+            return null;
+        }
+        return out;
+    }
+}

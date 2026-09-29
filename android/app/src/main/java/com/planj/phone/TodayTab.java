@@ -153,6 +153,7 @@ final class TodayTab {
                 for (Map.Entry<String, Long> e : u.appMs.entrySet()) weekTotals.merge(e.getKey(), e.getValue(), Long::sum);
             }
             DayUsage.Quiet q = DayUsage.quiet(a, target);
+            DayTimeline tl = DayTimeline.build(a, target);
             List<Map.Entry<String, Long>> ranked = new ArrayList<>(weekTotals.entrySet());
             ranked.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
             List<String> order = new ArrayList<>();
@@ -172,8 +173,20 @@ final class TodayTab {
                 chart.setData(week, order, this::openDay);
                 fillLegend(order);
                 AppRows.fill(a, topApps, day, 4);
+                showTimeline(tl);
             });
         }).start();
+    }
+
+    private void showTimeline(DayTimeline tl) {
+        ((DayTimelineView) root.findViewById(R.id.timeline)).setData(tl);
+        String where = tl.whereLine();
+        TextView w = root.findViewById(R.id.timeline_where);
+        w.setText(where.isEmpty() ? (Places.enabled(a) ? "No places yet that day" : "Places are off") : where);
+        TextView pc = root.findViewById(R.id.timeline_pc);
+        String line = tl.pcLine();
+        pc.setText(line == null ? "PC · not reported for this day" : line);
+        ((TextView) root.findViewById(R.id.day_title)).setText(tl.day.equals(LocalDate.now()) ? "Your day" : "That day");
     }
 
     private void fillLegend(List<String> order) {
