@@ -67,12 +67,19 @@ final class PcIcons {
     }
 
     static boolean known(String name) {
-        return DOMAIN.containsKey(name);
+        return domain(name) != null;
+    }
+
+    /** A listed service's site, or the name itself when it is already a site ("lms.utar.edu.my"). */
+    private static String domain(String name) {
+        String d = DOMAIN.get(name);
+        if (d != null) return d;
+        return name.matches("[a-z0-9-]+(\\.[a-z0-9-]+)+") ? name : null;
     }
 
     /** Fetches the service's icon from its own site: a large touch icon first, the favicon after. */
     static Bitmap fetch(Context ctx, String name) {
-        String domain = DOMAIN.get(name);
+        String domain = domain(name);
         if (domain == null) return null;
         String site = "https://" + domain + "/";
         Bitmap b = usable(get(site + "apple-touch-icon.png"));

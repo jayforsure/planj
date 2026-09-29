@@ -108,7 +108,7 @@ func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
 	}
 	sort.Slice(names, func(i, j int) bool { return appMin[names[i]] > appMin[names[j]] })
 	for i, n := range names {
-		if i == 12 || appMin[n] < 1 {
+		if i == 40 || appMin[n] < 1 {
 			break
 		}
 		out.Apps = append(out.Apps, [3]any{n, int(appMin[n] + 0.5), appCat[n]})

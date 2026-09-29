@@ -70,7 +70,13 @@ func Classify(app, title string, user []Rule) string {
 
 // ClassifyNamed also returns what matched ("YouTube", "VS Code"), or "" when nothing did.
 func ClassifyNamed(app, title string, user []Rule) (string, string) {
-	hay := " " + strings.ToLower(app+" "+title) + " "
+	return ClassifyWithSite(app, title, "", user)
+}
+
+// ClassifyWithSite also looks at the site open in a browser ("youtube.com"), so rules can
+// match it, and names an unlisted page by its site instead of "Other websites".
+func ClassifyWithSite(app, title, site string, user []Rule) (string, string) {
+	hay := " " + strings.ToLower(app+" "+title+" "+site) + " "
 	for _, set := range [][]Rule{user, builtinRules} {
 		for _, r := range set {
 			if strings.Contains(hay, r.Needle) {
@@ -79,7 +85,10 @@ func ClassifyNamed(app, title string, user []Rule) (string, string) {
 		}
 	}
 	if IsBrowser(app) {
-		// A page we don't recognise: count the time, never the page.
+		// A page we don't recognise: count the time under its site, never the page itself.
+		if site != "" {
+			return CatOther, site
+		}
 		return CatOther, "Other websites"
 	}
 	return CatOther, ""

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -117,6 +118,13 @@ func run(root string) {
 	log.Printf("started, writing to %s", dir)
 	go pullLoop(root)
 
+	// UI Automation needs COM on one fixed thread; the loop below runs on this goroutine only.
+	runtime.LockOSThread()
+	sites := newSiteReader()
+	if sites == nil {
+		log.Print("site reading unavailable; browser pages count as Other websites")
+	}
+
 	rec := &Recorder{IdleAfter: 3 * time.Minute, MaxSpan: time.Minute, MaxGap: 30 * time.Second}
 	w := Writer{Dir: dir, Loc: time.Local}
 	rulesPath := filepath.Join(root, "categories.txt")
@@ -127,7 +135,11 @@ func run(root string) {
 			rules, rulesRead = LoadRules(rulesPath), now
 		}
 		app, title := foregroundApp(), foregroundTitle()
-		cat, name := ClassifyNamed(app, title, rules)
+		site := ""
+		if IsBrowser(app) {
+			site = sites.Site(windows.GetForegroundWindow(), title)
+		}
+		cat, name := ClassifyWithSite(app, title, site, rules)
 		o := Observation{App: app, Cat: cat, Name: name, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
 		title = "" // the title has done its job; it goes no further
 		// Round(0) drops the monotonic reading, which can pause during sleep and hide the gap.
