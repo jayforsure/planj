@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:scrollbars="none">
+
+    <LinearLayout style="@style/Page">
+
+        <ImageView
+            android:id="@+id/back"
+            style="@style/CircleButton"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            style="@style/PageTitle"
+            android:text="Places" />
+
+        <TextView
+            android:id="@+id/summary"
+            style="@style/PageSubtitle" />
+
+        <TextView
+            style="@style/Auth.Section"
+            android:layout_marginTop="28dp"
+            android:text="Your places" />
+
+        <LinearLayout
+            android:id="@+id/marked"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_add"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowChevron="false"
+            app:rowIcon="@drawable/ic_add"
+            app:rowTitle="Add a place" />
+
+        <TextView
+            android:id="@+id/noticed_title"
+            style="@style/Auth.Section"
+            android:text="Noticed" />
+
+        <LinearLayout
+            android:id="@+id/noticed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <TextView
+            style="@style/Auth.Section"
+            android:text="Control" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_pause"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowChevron="false"
+            app:rowIcon="@drawable/ic_private"
+            app:rowTitle="Pause places" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_forget"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowChevron="false"
+            app:rowIcon="@drawable/ic_trash"
+            app:rowTint="@color/bad"
+            app:rowTitle="Forget all places" />
+    </LinearLayout>
+</ScrollView>

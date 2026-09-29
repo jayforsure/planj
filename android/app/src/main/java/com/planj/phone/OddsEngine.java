@@ -166,7 +166,8 @@ final class OddsEngine {
         List<DayUsage> usages = new ArrayList<>();
         for (int i = HISTORY_DAYS; i >= 0; i--) usages.add(DayUsage.load(ctx, today.minusDays(i)));
         String home = homeOf(usages, zone, true);
-        String homePlace = homeOf(usages, zone, false);
+        String markedHome = Places.homeId(ctx);
+        String homePlace = markedHome != null ? markedHome : homeOf(usages, zone, false);
         String carried = null; // the network state at the start of each day
         String carriedPlace = null;
         for (DayUsage u : usages) {

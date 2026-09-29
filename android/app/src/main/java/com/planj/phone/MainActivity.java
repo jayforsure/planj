@@ -129,16 +129,7 @@ public class MainActivity extends Activity {
     /** Settings > Places: explain, then ask; or offer pause and forget when already on. */
     void placesTapped() {
         if (Places.enabled(this) && Places.hasForeground(this) && Places.hasBackground(this)) {
-            new android.app.AlertDialog.Builder(this)
-                    .setTitle("Places")
-                    .setMessage(Places.count(this) + " places known. Their centres stay on this phone; only a place number is recorded.")
-                    .setPositiveButton("Pause", (d, w) -> { Places.setEnabled(this, false); refresh(); })
-                    .setNeutralButton("Forget all places", (d, w) -> new android.app.AlertDialog.Builder(this)
-                            .setMessage("Delete every place? Routines tied to them start over.")
-                            .setPositiveButton("Forget", (d2, w2) -> { Places.forget(this); refresh(); })
-                            .setNegativeButton("Cancel", null).show())
-                    .setNegativeButton("Close", null)
-                    .show();
+            startActivity(new Intent(this, PlacesActivity.class));
             return;
         }
         new android.app.AlertDialog.Builder(this)

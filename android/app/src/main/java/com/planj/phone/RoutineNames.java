@@ -16,7 +16,7 @@ final class RoutineNames {
     static String name(Context ctx, Routines.Routine r) {
         String n = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(r), null);
         if (n != null && !n.isEmpty()) return n;
-        return r.kind == Routines.Kind.AT ? Places.label(r.place) : r.kind.defaultName;
+        return r.kind == Routines.Kind.AT ? Places.labelFor(ctx, r.place) : r.kind.defaultName;
     }
 
     static void set(Context ctx, Routines.Routine r, String name) {

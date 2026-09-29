@@ -109,8 +109,8 @@ final class Places {
         }
     }
 
-    @SuppressWarnings("MissingPermission") // checked in sample()
-    private static Location fix(Context ctx) {
+    @SuppressWarnings("MissingPermission") // callers check hasForeground()
+    static Location fix(Context ctx) {
         LocationManager lm = ctx.getSystemService(LocationManager.class);
         String provider = Build.VERSION.SDK_INT >= 31 && lm.hasProvider(LocationManager.FUSED_PROVIDER)
                 ? LocationManager.FUSED_PROVIDER : LocationManager.NETWORK_PROVIDER;
@@ -136,37 +136,157 @@ final class Places {
         return last != null && System.currentTimeMillis() - last.getTime() < 20 * 60_000L ? last : null;
     }
 
-    /** The nearest known place within RADIUS, nudged toward this fix; else a new place. */
+    /**
+     * The place this fix belongs to. A place you marked wins whenever you are inside it; a
+     * noticed place is the nearest within RADIUS and drifts slowly toward where you really
+     * are; anywhere else becomes a new noticed place.
+     */
     private static String match(Context ctx, Location loc) throws IOException, JSONException {
         JSONArray places = read(ctx);
         int best = -1;
         float bestDist = Float.MAX_VALUE;
+        boolean bestMarked = false;
         float[] d = new float[1];
         for (int i = 0; i < places.length(); i++) {
             JSONObject p = places.getJSONObject(i);
             Location.distanceBetween(loc.getLatitude(), loc.getLongitude(), p.getDouble("lat"), p.getDouble("lon"), d);
-            if (d[0] < bestDist) {
-                bestDist = d[0];
+            boolean marked = p.has("label");
+            if (d[0] > p.optDouble("radius", RADIUS)) continue;
+            if (best < 0 || (marked && !bestMarked) || (marked == bestMarked && d[0] < bestDist)) {
                 best = i;
+                bestDist = d[0];
+                bestMarked = marked;
             }
         }
-        if (best >= 0 && bestDist <= RADIUS) {
+        long now = System.currentTimeMillis();
+        if (best >= 0) {
             JSONObject p = places.getJSONObject(best);
-            int n = Math.min(p.optInt("n", 1), 50); // a running mean that keeps adapting slightly
-            p.put("lat", (p.getDouble("lat") * n + loc.getLatitude()) / (n + 1));
-            p.put("lon", (p.getDouble("lon") * n + loc.getLongitude()) / (n + 1));
-            p.put("n", n + 1);
+            if (!p.has("label")) {
+                int n = Math.min(p.optInt("n", 1), 50); // a running mean that keeps adapting slightly
+                p.put("lat", (p.getDouble("lat") * n + loc.getLatitude()) / (n + 1));
+                p.put("lon", (p.getDouble("lon") * n + loc.getLongitude()) / (n + 1));
+                p.put("n", n + 1);
+            }
+            p.put("seen", now).put("samples", p.optInt("samples", 0) + 1);
             write(ctx, places);
             return p.getString("id");
         }
-        int next = places.length() + 1;
-        for (int i = 0; i < places.length(); i++) {
-            next = Math.max(next, Integer.parseInt(places.getJSONObject(i).getString("id").substring(1)) + 1);
-        }
-        JSONObject p = new JSONObject().put("id", "p" + next).put("lat", loc.getLatitude()).put("lon", loc.getLongitude()).put("n", 1);
+        JSONObject p = new JSONObject().put("id", nextId(places)).put("lat", loc.getLatitude()).put("lon", loc.getLongitude())
+                .put("n", 1).put("seen", now).put("samples", 1);
         places.put(p);
         write(ctx, places);
         return p.getString("id");
+    }
+
+    private static String nextId(JSONArray places) throws JSONException {
+        int next = 1;
+        for (int i = 0; i < places.length(); i++) {
+            next = Math.max(next, Integer.parseInt(places.getJSONObject(i).getString("id").substring(1)) + 1);
+        }
+        return "p" + next;
+    }
+
+    // ----- places you mark yourself -----
+
+    /** One place as the Places screen shows it. */
+    static final class Place {
+        final String id, label, kind; // label and kind are null for a noticed place
+        final double lat, lon;
+        final long seenMs;
+        final int samples;           // quarter-hour samples spent there
+
+        Place(JSONObject o) {
+            id = o.optString("id");
+            label = o.has("label") ? o.optString("label") : null;
+            kind = o.has("kind") ? o.optString("kind") : null;
+            lat = o.optDouble("lat");
+            lon = o.optDouble("lon");
+            seenMs = o.optLong("seen", 0);
+            samples = o.optInt("samples", 0);
+        }
+
+        boolean marked() {
+            return label != null;
+        }
+
+        String title() {
+            return marked() ? label : label(id);
+        }
+    }
+
+    static List<Place> list(Context ctx) {
+        JSONArray a = read(ctx);
+        List<Place> out = new java.util.ArrayList<>();
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o != null) out.add(new Place(o));
+        }
+        out.sort((x, y) -> x.marked() != y.marked() ? (x.marked() ? -1 : 1) : Integer.compare(y.samples, x.samples));
+        return out;
+    }
+
+    /**
+     * Marks a place. If a noticed place is already there it is taken over, so its history
+     * keeps counting; otherwise a new place is made. Kind is home, school, work or other.
+     */
+    static synchronized String mark(Context ctx, String label, String kind, double lat, double lon) throws IOException, JSONException {
+        JSONArray places = read(ctx);
+        if ("home".equals(kind)) { // one home at a time
+            for (int i = 0; i < places.length(); i++) {
+                JSONObject o = places.getJSONObject(i);
+                if ("home".equals(o.optString("kind"))) o.remove("kind");
+            }
+        }
+        float[] d = new float[1];
+        JSONObject target = null;
+        float bestDist = Float.MAX_VALUE;
+        for (int i = 0; i < places.length(); i++) {
+            JSONObject o = places.getJSONObject(i);
+            if (o.has("label")) continue;
+            Location.distanceBetween(lat, lon, o.getDouble("lat"), o.getDouble("lon"), d);
+            if (d[0] <= RADIUS && d[0] < bestDist) {
+                bestDist = d[0];
+                target = o;
+            }
+        }
+        if (target == null) {
+            target = new JSONObject().put("id", nextId(places)).put("samples", 0);
+            places.put(target);
+        }
+        target.put("lat", lat).put("lon", lon).put("label", label.trim()).put("kind", kind);
+        write(ctx, places);
+        return target.getString("id");
+    }
+
+    /** Gives a noticed or marked place a name and kind, keeping where it is. */
+    static synchronized void rename(Context ctx, String id, String label, String kind) throws IOException, JSONException {
+        JSONArray places = read(ctx);
+        for (int i = 0; i < places.length(); i++) {
+            JSONObject o = places.getJSONObject(i);
+            if ("home".equals(kind) && "home".equals(o.optString("kind")) && !id.equals(o.optString("id"))) o.remove("kind");
+            if (id.equals(o.optString("id"))) o.put("label", label.trim()).put("kind", kind);
+        }
+        write(ctx, places);
+    }
+
+    static synchronized void remove(Context ctx, String id) throws IOException, JSONException {
+        JSONArray places = read(ctx), kept = new JSONArray();
+        for (int i = 0; i < places.length(); i++) {
+            if (!id.equals(places.getJSONObject(i).optString("id"))) kept.put(places.getJSONObject(i));
+        }
+        write(ctx, kept);
+    }
+
+    /** The place you marked as home, if any. */
+    static String homeId(Context ctx) {
+        for (Place p : list(ctx)) if ("home".equals(p.kind)) return p.id;
+        return null;
+    }
+
+    /** "Gym" for a marked place, else "Place 3". */
+    static String labelFor(Context ctx, String id) {
+        for (Place p : list(ctx)) if (p.id.equals(id)) return p.title();
+        return label(id);
     }
 
     /** "p3" -> "Place 3" */
