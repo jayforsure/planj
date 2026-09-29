@@ -34,9 +34,9 @@ public final class ListRow extends LinearLayout {
         a.recycle();
 
         icon = new ImageView(ctx);
-        int size = (int) (46 * dp), pad = (int) (12 * dp);
+        int size = (int) (32 * dp), pad = (int) (4 * dp);
         LayoutParams ip = new LayoutParams(size, size);
-        ip.setMarginEnd((int) (16 * dp));
+        ip.setMarginEnd((int) (18 * dp));
         icon.setLayoutParams(ip);
         icon.setBackgroundResource(R.drawable.icon_tile);
         icon.setPadding(pad, pad, pad, pad);

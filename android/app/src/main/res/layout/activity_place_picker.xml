@@ -118,7 +118,7 @@
             android:layout_gravity="end"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="12dp"
-            android:background="@drawable/btn_circle"
+            android:background="@drawable/btn_circle_solid"
             android:contentDescription="My location"
             android:elevation="6dp"
             android:padding="12dp"

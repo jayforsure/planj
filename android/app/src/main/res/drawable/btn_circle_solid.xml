@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Round icon buttons: no fill, just a round ripple when pressed. -->
+<!-- For buttons floating over a map, where a bare icon would get lost among the streets. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="@color/ripple">
-    <item android:id="@android:id/mask">
+    <item>
         <shape android:shape="oval">
-            <solid android:color="#FFFFFFFF" />
+            <solid android:color="@color/surface" />
         </shape>
     </item>
 </ripple>
