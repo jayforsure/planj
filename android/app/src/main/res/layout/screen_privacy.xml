@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+    <TextView style="@style/Auth.Title" android:text="How privacy works" />
+    <TextView style="@style/Auth.Blurb" android:text="What planj records, where it goes, and what it never touches." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="On this phone" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Which app is open and for how long, screen on and off, unlocks, charging, your next alarm time and your journal. Wi-Fi is kept as a short fingerprint, never its name." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="On your computer" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="The program in front and for how long. In a browser, only the site, like youtube.com: never the page, the rest of the address or the window title. InPrivate and incognito windows are never read. Window titles are read only to recognise what is in front, and are never stored." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Places" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Off unless you turn it on. The centre of each place stays on this phone and is never synced; only something like “place 3 from 19:04” is recorded. The map and place search send what you type and the part of the map you look at to OpenStreetMap and to your phone’s own place search." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Never recorded" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Notifications, messages, what you type, or what is on your screen." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Between your devices" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Everything goes through a relay, encrypted with a key made on your devices from your password. The relay holds only data it cannot read, including the live “now” status, which it keeps for at most ten minutes. It knows your email, the device names you choose and when each device was last active. Nobody at planj can read your data, which is also why a forgotten password needs your recovery code." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Private mode" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Pauses recording, from Settings, the Quick Settings tile or by pinching in on Today. Money, password, health and dating apps are recorded only as “Private” from the start." />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Icons" />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="A website’s icon is fetched once from that website itself and kept on this phone. No other service is asked." />
+</LinearLayout>

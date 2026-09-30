@@ -143,12 +143,11 @@ public class MainActivity extends Activity {
             startActivity(new Intent(this, PlacesActivity.class));
             return;
         }
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("Turn on places?")
-                .setMessage("Every 15 minutes planj notes which of your places you are at, like home, campus or the gym. "
-                        + "The centre of each place stays on this phone and is never synced. Only \u201cplace 3 from 19:04\u201d is recorded.\n\n"
-                        + "It needs location set to \u201cAllow all the time\u201d.")
-                .setPositiveButton("Turn on", (d, w) -> {
+        Sheet.confirm(this, R.drawable.ic_place, "Turn on places?",
+                "planj notes which of your places you are at, like home, campus or the gym, and when you arrive. "
+                        + "The centre of each place stays on this phone and is never synced; only \u201cplace 3 from 19:04\u201d is recorded. "
+                        + "It needs location set to \u201cAllow all the time\u201d.",
+                "Turn on", "Not now", false, () -> {
                     Places.setEnabled(this, true);
                     if (!Places.hasForeground(this)) {
                         requestPermissions(Places.permissionsToAsk().toArray(new String[0]), REQ_PLACES);
@@ -158,19 +157,14 @@ public class MainActivity extends Activity {
                         finishPlaces();
                     }
                     refresh();
-                })
-                .setNegativeButton("Not now", null)
-                .show();
+                });
     }
 
     private void askBackgroundLocation() {
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("One more step")
-                .setMessage("On the next screen choose \u201cAllow all the time\u201d, so places are noted while planj is closed.")
-                .setPositiveButton("Continue", (d, w) -> requestPermissions(
-                        new String[]{android.Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_PLACES_BG))
-                .setNegativeButton("Later", null)
-                .show();
+        Sheet.confirm(this, R.drawable.ic_place, "One more step",
+                "On the next screen choose \u201cAllow all the time\u201d, so places are noted while planj is closed.",
+                "Continue", "Later", false, () -> requestPermissions(
+                        new String[]{android.Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_PLACES_BG));
     }
 
     /** Honor and others stop background work aggressively; ask to be left running. */

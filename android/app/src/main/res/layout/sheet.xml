@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- planj's bottom sheet: used for every confirmation, choice and quick edit instead of a
+     system dialog. Parts not needed by a sheet stay hidden. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/sheet_bg"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/handle_bg" />
+
+    <ImageView
+        android:id="@+id/sheet_icon"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/icon_circle"
+        android:contentDescription="@null"
+        android:padding="14dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/sheet_title"
+        style="@style/Display.M" />
+
+    <TextView
+        android:id="@+id/sheet_message"
+        style="@style/Body"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/sheet_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/sheet_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/sheet_field"
+            style="@style/Auth.Field"
+            android:layout_marginTop="16dp"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences" />
+
+        <TextView
+            android:id="@+id/sheet_count"
+            style="@style/Auth.Hint"
+            android:gravity="end"
+            android:textColor="@color/muted"
+            android:visibility="visible" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/sheet_yes"
+        style="@style/Pill.Primary"
+        android:layout_marginTop="24dp" />
+
+    <Button
+        android:id="@+id/sheet_no"
+        style="@style/Pill.Secondary"
+        android:layout_marginTop="10dp"
+        android:text="Cancel" />
+</LinearLayout>

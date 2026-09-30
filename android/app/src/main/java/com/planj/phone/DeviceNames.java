@@ -36,6 +36,28 @@ final class DeviceNames {
         return prefs(ctx).getString("other", "PC");
     }
 
+    /** The computer reported in (live status or a quarter-hour check-in) at this time. */
+    static void seenPc(Context ctx, long ms) {
+        if (ms > prefs(ctx).getLong("pc_seen", 0)) prefs(ctx).edit().putLong("pc_seen", ms).apply();
+    }
+
+    /**
+     * When another device was last active. The account only hears from the computer when it
+     * signs in; its live status and check-ins go through the encrypted mailbox instead, so the
+     * newest of all three is the truth. With more than one other device the mailbox cannot say
+     * which one spoke, so only the account's own time is used.
+     */
+    static long lastActive(Context ctx, JSONObject d, int otherDevices) {
+        long account = 0;
+        try {
+            account = java.time.OffsetDateTime.parse(d.optString("last_seen")).toInstant().toEpochMilli();
+        } catch (RuntimeException ignored) {
+            // no time from the account
+        }
+        if (d.optBoolean("this") || otherDevices != 1) return account;
+        return Math.max(account, Math.max(prefs(ctx).getLong("pc_seen", 0), RelaySync.confirmedMs(ctx)));
+    }
+
     /** Stores the names from an account "me" answer. */
     static void save(Context ctx, JSONArray devices) {
         String mine = null, other = null;

@@ -1,7 +1,6 @@
 package com.planj.phone;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -43,14 +42,13 @@ public class PlacesActivity extends Activity {
             rearm();
             render();
         });
-        findViewById(R.id.row_forget).setOnClickListener(v -> new AlertDialog.Builder(this)
-                .setMessage("Delete every place, marked and noticed? Routines tied to them start over.")
-                .setPositiveButton("Forget", (d, w) -> {
+        findViewById(R.id.row_forget).setOnClickListener(v -> Sheet.confirm(this, R.drawable.ic_trash, "Forget every place?",
+                "Marked and noticed places are all deleted from this phone, and routines tied to them start over.",
+                "Forget all places", true, () -> {
                     Places.forget(this);
                     rearm();
                     render();
-                })
-                .setNegativeButton("Cancel", null).show());
+                }));
     }
 
     @Override
@@ -177,27 +175,22 @@ public class PlacesActivity extends Activity {
             startActivity(PlacePickerActivity.edit(this, p.id));
             return;
         }
-        new AlertDialog.Builder(this)
-                .setTitle(p.title())
-                .setItems(new String[]{"Save as a place", "Forget this place"}, (d, which) -> {
-                    if (which == 0) startActivity(PlacePickerActivity.edit(this, p.id));
-                    else confirmRemove(p);
-                })
-                .show();
+        Sheet.choose(this, p.title(), detail(p),
+                new Sheet.Option(R.drawable.ic_add, "Save as a place", false, () -> startActivity(PlacePickerActivity.edit(this, p.id))),
+                new Sheet.Option(R.drawable.ic_trash, "Forget this place", true, () -> confirmRemove(p)));
     }
 
     private void confirmRemove(Places.Place p) {
-        new AlertDialog.Builder(this)
-                .setMessage("Remove " + p.title() + "? If you go there again it will be noticed as a new place.")
-                .setPositiveButton("Remove", (d, w) -> {
+        Sheet.confirm(this, R.drawable.ic_trash, "Forget " + p.title() + "?",
+                "If you go there again it will be noticed as a new place.", "Forget it", true, () -> {
                     try {
                         Places.remove(this, p.id);
                     } catch (Exception e) {
                         toast("Could not remove it");
                     }
+                    rearm();
                     render();
-                })
-                .setNegativeButton("Cancel", null).show();
+                });
     }
 
     private void toast(String s) {

@@ -254,23 +254,13 @@ final class OddsTab {
 
     /** One question, asked only if the person wants to: what is this routine? */
     private void askName(Routines.Routine rt) {
-        android.widget.EditText in = new android.widget.EditText(a);
         String current = RoutineNames.name(a, rt);
         boolean unnamed = current.equals(rt.kind.defaultName) || current.equals(Places.labelFor(a, rt.place));
-        in.setText(unnamed ? "" : current);
-        in.setHint("Gym, class, work…");
-        in.setSingleLine(true);
-        int pad = dp(20);
-        in.setPadding(pad, pad, pad, pad);
-        new android.app.AlertDialog.Builder(a)
-                .setTitle(rt.days() + " " + rt.window())
-                .setView(in)
-                .setPositiveButton("Save", (d, w) -> {
-                    RoutineNames.set(a, rt, in.getText().toString());
+        Sheet.input(a, iconFor(rt.id()), "What is this?", rt.days() + " " + rt.window() + ". A name makes the forecast easier to read.",
+                unnamed ? "" : current, "Gym, class, work…", 30, name -> {
+                    RoutineNames.set(a, rt, name);
                     refresh();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                });
     }
 
     private int dp(int v) {

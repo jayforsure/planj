@@ -126,17 +126,15 @@ public class PlacePickerActivity extends Activity {
         save.setOnClickListener(v -> save());
         if (editing != null) {
             remove.setVisibility(View.VISIBLE);
-            remove.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
-                    .setMessage("Remove " + editing.title() + "?")
-                    .setPositiveButton("Remove", (d, w) -> {
+            remove.setOnClickListener(v -> Sheet.confirm(this, R.drawable.ic_trash, "Remove " + editing.title() + "?",
+                    "It stops being a marked place. If you go there again it will be noticed as a new place.", "Remove", true, () -> {
                         try {
                             Places.remove(this, editing.id);
                         } catch (Exception ignored) {
                             // nothing to undo
                         }
                         finish();
-                    })
-                    .setNegativeButton("Cancel", null).show());
+                    }));
             if (editing.marked()) {
                 label.setText("other".equals(editing.kind) ? editing.label : (editing.where != null ? editing.where : ""));
                 selectKind(editing.kind != null ? editing.kind : "other");

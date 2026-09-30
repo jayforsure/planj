@@ -1,6 +1,5 @@
 package com.planj.phone;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.provider.Settings;
 import android.view.View;
@@ -31,14 +30,8 @@ final class SettingsTab {
         reminder.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())));
         root.findViewById(R.id.row_export).setOnClickListener(v -> a.startExport());
-        root.findViewById(R.id.row_privacy).setOnClickListener(v -> new AlertDialog.Builder(a)
-                .setTitle("How privacy works")
-                .setMessage("Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type.\n\n"
-                        + "Private mode pauses everything, from here, the Quick Settings tile, or by pinching in on Today. Money, password, health and dating apps are recorded only as “Private” from the start.\n\n"
-                        + "Places, if you turn them on, are kept as numbers: each place's centre stays on this phone and is never synced. "
-                        + "The map and place search use OpenStreetMap; only what you type and the part of the map you look at are sent.\n\n"
-                        + "Syncing to your PC goes through a relay that only ever holds ciphertext; the key is derived on your devices from your password.")
-                .setPositiveButton("Got it", null).show());
+        root.findViewById(R.id.row_privacy).setOnClickListener(v -> a.startActivity(new Intent(a, AccountActivity.class)
+                .putExtra(AccountActivity.EXTRA_SCREEN, "privacy")));
 
         ListRow tile = root.findViewById(R.id.row_tile);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {

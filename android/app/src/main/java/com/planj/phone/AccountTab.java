@@ -1,11 +1,8 @@
 package com.planj.phone;
 
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -40,11 +37,7 @@ final class AccountTab {
 
         root.findViewById(R.id.hero_welcome).setOnClickListener(v -> open("create"));
         root.findViewById(R.id.row_signin).setOnClickListener(v -> open("signin"));
-        root.findViewById(R.id.row_how).setOnClickListener(v -> new AlertDialog.Builder(a)
-                .setTitle("How privacy works")
-                .setMessage("Saved on this phone: which app is open, screen on/off, unlocks and your journal. Never notifications, messages, websites or what you type.\n\n"
-                        + "Syncing sends that record to your PC through a relay, encrypted with a key derived on your devices. The relay stores only ciphertext and a hash used to sign you in. Nobody at planj can read your data — which is also why your password cannot be reset without your recovery code.")
-                .setPositiveButton("Got it", null).show());
+        root.findViewById(R.id.row_how).setOnClickListener(v -> open("privacy"));
         rowLegacy.setOnClickListener(v -> {
             RelaySync.signOut(a);
             a.toast("The older key is gone — create an account to sync again");
@@ -64,28 +57,17 @@ final class AccountTab {
         root.findViewById(R.id.row_password).setOnClickListener(v -> open("password"));
         rowRecovery.setOnClickListener(v -> open("newrecovery"));
         root.findViewById(R.id.row_delete).setOnClickListener(v -> open("delete"));
-        root.findViewById(R.id.row_signout).setOnClickListener(v -> new AlertDialog.Builder(a)
-                .setTitle("Sign out on this phone?")
-                .setMessage("Recorded data stays here. Syncing stops until you sign in again.")
-                .setPositiveButton("Sign out", (d, w) -> {
+        root.findViewById(R.id.row_signout).setOnClickListener(v -> Sheet.confirm(a, R.drawable.ic_account, "Sign out on this phone?",
+                "Recorded data stays here. Syncing stops until you sign in again.", "Sign out", true, () -> {
                     String token = AccountStore.token(a);
                     AccountStore.signOut(a);
                     new Thread(() -> { try { AccountApi.logout(token); } catch (Exception ignored) {} }).start();
                     a.refresh();
-                })
-                .setNegativeButton("Cancel", null).show());
+                }));
     }
 
     private void askName() {
-        EditText in = new EditText(a);
-        in.setText(Avatar.name(a));
-        in.setSelectAllOnFocus(true);
-        in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        int pad = Math.round(20 * a.getResources().getDisplayMetrics().density);
-        in.setPadding(pad, pad, pad, pad);
-        new AlertDialog.Builder(a).setTitle("Your name").setView(in)
-                .setPositiveButton("Save", (d, w) -> { Avatar.setName(a, in.getText().toString()); refresh(); })
-                .setNegativeButton("Cancel", null).show();
+        open("name");
     }
 
     private void open(String screen) {

@@ -1,7 +1,6 @@
 package com.planj.phone;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -20,6 +19,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -112,6 +112,11 @@ public class AccountActivity extends Activity {
             case "password": bindPassword(v); break;
             case "newrecovery": bindNewRecovery(v); break;
             case "devices": bindDevices(v); break;
+            case "device": bindDevice(v); break;
+            case "device_name": bindDeviceName(v); break;
+            case "device_signout": bindDeviceSignOut(v); break;
+            case "name": bindName(v); break;
+            case "privacy": break; // words only
             case "delete": bindDelete(v); break;
         }
     }
@@ -330,12 +335,9 @@ public class AccountActivity extends Activity {
                 ui.post(() -> { toast("Your data key is back"); replace("recovery"); });
             }, f);
         };
-        v.findViewById(R.id.btn_fresh).setOnClickListener(x -> new AlertDialog.Builder(this)
-                .setTitle("Start fresh?")
-                .setMessage("Uploads other devices already made cannot be read with a new key. Data on this phone is kept and re-sent.")
-                .setPositiveButton("Start fresh", (d, w) -> { f.busy(true); run(this::startFresh, f); })
-                .setNegativeButton("Cancel", null)
-                .show());
+        v.findViewById(R.id.btn_fresh).setOnClickListener(x -> Sheet.confirm(this, R.drawable.ic_key, "Start fresh?",
+                "Uploads other devices already made cannot be read with a new key. Data on this phone is kept and re-sent.",
+                "Start fresh", true, () -> { f.busy(true); run(this::startFresh, f); }));
     }
 
     private void bindPassword(View v) {
@@ -394,6 +396,7 @@ public class AccountActivity extends Activity {
             ui.post(() -> {
                 progress.setVisibility(View.GONE);
                 list.removeAllViews();
+                others = devs.length() - 1;
                 for (int i = 0; i < devs.length(); i++) {
                     JSONObject d = devs.optJSONObject(i);
                     if (d != null) list.addView(deviceRow(d, f));
@@ -402,58 +405,160 @@ public class AccountActivity extends Activity {
         }, f);
     }
 
-    /** One device as a standard row: its name, what it is, and when it was last seen. Tap to rename. */
+    /** The device being looked at, from the Devices list, and how many devices besides this phone. */
+    private JSONObject device;
+    private int others;
+
+    /** "Now" within two minutes, else the local time. */
+    private String active(JSONObject d) {
+        if (d.optBoolean("this")) return "Now";
+        long ms = DeviceNames.lastActive(this, d, others);
+        if (ms == 0) return "Not yet";
+        if (System.currentTimeMillis() - ms < 120_000) return "Now";
+        return java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
+                .format(java.time.format.DateTimeFormatter.ofPattern("d MMM, HH:mm"));
+    }
+
+    /** One device as a standard row: its name, what it is, and when it was last active. */
     private View deviceRow(JSONObject d, Form f) {
         boolean thisOne = d.optBoolean("this");
-        int index = d.optInt("index");
-        String name = DeviceNames.display(d), model = d.optString("name");
         ListRow row = new ListRow(this);
         row.setIcon(thisOne ? R.drawable.ic_phone : R.drawable.ic_monitor);
-        row.setTitle(name);
-        row.setSubtitle(thisOne ? model + " · this phone" : model + " · last seen " + localTime(d.optString("last_seen")));
+        row.setTitle(DeviceNames.display(d));
+        String act = active(d);
+        row.setSubtitle(thisOne ? d.optString("name") + " · this phone"
+                : d.optString("name") + (act.equals("Now") ? " · active now" : " · active " + act));
         row.setOnClickListener(x -> {
-            String[] actions = thisOne ? new String[]{"Rename"} : new String[]{"Rename", "Sign out this device"};
-            new AlertDialog.Builder(this)
-                    .setTitle(name)
-                    .setItems(actions, (dlg, which) -> {
-                        if (which == 0) rename(index, d.optString("label"), name, f);
-                        else confirmRemove(index, name, f);
-                    })
-                    .show();
+            device = d;
+            show("device");
         });
         return row;
     }
 
-    private void rename(int index, String current, String shown, Form f) {
-        EditText in = new EditText(this);
-        in.setText(current);
-        in.setHint(shown);
-        in.setSingleLine(true);
-        in.setSelectAllOnFocus(true);
-        in.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(30)});
-        int pad = dp(20);
-        in.setPadding(pad, pad, pad, pad);
-        new AlertDialog.Builder(this)
-                .setTitle("Name this device")
-                .setView(in)
-                .setPositiveButton("Save", (dlg, w) -> run(() -> {
-                    AccountApi.labelDevice(AccountStore.token(this), index, in.getText().toString().trim());
-                    ui.post(() -> render("devices"));
-                }, f))
-                .setNegativeButton("Cancel", null)
-                .show();
+    /** A device's own page: what it is, since when, and what can be done with it. */
+    private void bindDevice(View v) {
+        if (device == null) {
+            replace("devices");
+            return;
+        }
+        boolean thisOne = device.optBoolean("this");
+        String name = DeviceNames.display(device), model = device.optString("name");
+        ((ImageView) v.findViewById(R.id.device_icon)).setImageResource(thisOne ? R.drawable.ic_phone : R.drawable.ic_monitor);
+        ((ImageView) v.findViewById(R.id.device_icon)).setImageTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.text)));
+        ((TextView) v.findViewById(R.id.title)).setText(name);
+        ((TextView) v.findViewById(R.id.blurb)).setText(thisOne ? "This phone. Its name titles its section on Today."
+                : "Signed in to your account. Its name titles its section on Today.");
+        ListRow rowName = v.findViewById(R.id.row_name);
+        rowName.setSubtitle(name);
+        rowName.setOnClickListener(x -> show("device_name"));
+        ListRow type = v.findViewById(R.id.row_type);
+        type.setIcon(thisOne ? R.drawable.ic_phone : R.drawable.ic_monitor);
+        type.setSubtitle(thisOne ? "Phone" : "Computer");
+        ListRow m = v.findViewById(R.id.row_model);
+        m.setTitle(thisOne ? "Model" : "Computer name");
+        m.setSubtitle(model);
+        ((ListRow) v.findViewById(R.id.row_since)).setSubtitle(localTime(device.optString("created")));
+        ((ListRow) v.findViewById(R.id.row_seen)).setSubtitle(active(device));
+        for (int id : new int[]{R.id.row_type, R.id.row_model, R.id.row_since, R.id.row_seen}) {
+            v.findViewById(id).setClickable(false);
+            v.findViewById(id).setBackground(null);
+        }
+        v.findViewById(R.id.signout_section).setVisibility(thisOne ? View.GONE : View.VISIBLE);
+        v.findViewById(R.id.row_signout).setVisibility(thisOne ? View.GONE : View.VISIBLE);
+        v.findViewById(R.id.row_signout).setOnClickListener(x -> show("device_signout"));
     }
 
-    private void confirmRemove(int index, String name, Form f) {
-        new AlertDialog.Builder(this)
-                .setTitle("Sign out " + name + "?")
-                .setMessage("It will need the password to sign in again.")
-                .setPositiveButton("Sign out", (dlg, w) -> run(() -> {
-                    AccountApi.revokeDevice(AccountStore.token(this), index);
-                    ui.post(() -> render("devices"));
-                }, f))
-                .setNegativeButton("Cancel", null)
-                .show();
+    /** Naming a device: a proper form, saved to the account so every device shows the same name. */
+    private void bindDeviceName(View v) {
+        if (device == null) {
+            replace("devices");
+            return;
+        }
+        Form f = new Form(v);
+        EditText field = f.edit(R.id.name);
+        TextView count = v.findViewById(R.id.count);
+        int index = device.optInt("index");
+        String fallback = "Device " + (index + 1);
+        ((TextView) v.findViewById(R.id.blurb)).setText("Shown on Today and on your other devices. Leave it empty and it is called " + fallback + ".");
+        field.setHint(fallback);
+        field.setText(device.optString("label"));
+        field.setSelection(field.getText().length());
+        f.validate = () -> {
+            count.setText(field.getText().length() + " / 30");
+            f.ok(f.hint(field, R.id.name_hint, field.getText().toString().trim().length() > 30 ? "Use 30 characters or fewer" : null));
+        };
+        f.watch(field);
+        f.submitOnDone(field);
+        f.onSubmit = () -> save(f, index, field.getText().toString().trim());
+        v.findViewById(R.id.btn_default).setOnClickListener(x -> save(f, index, ""));
+        field.requestFocus();
+    }
+
+    private void save(Form f, int index, String label) {
+        f.busy(true);
+        run(() -> {
+            AccountApi.labelDevice(AccountStore.token(this), index, label);
+            JSONArray devs = AccountApi.me(AccountStore.token(this)).getJSONArray("devices");
+            DeviceNames.save(this, devs);
+            for (int i = 0; i < devs.length(); i++) {
+                if (devs.getJSONObject(i).optInt("index") == index) device = devs.getJSONObject(i);
+            }
+            ui.post(() -> {
+                toast(label.isEmpty() ? "Back to " + DeviceNames.display(device) : "Saved as " + label);
+                onBackPressed(); // to the device page, now under its new name
+            });
+        }, f);
+    }
+
+    /** Signing another device out: said plainly, with the red button, and a way to keep it. */
+    private void bindDeviceSignOut(View v) {
+        if (device == null) {
+            replace("devices");
+            return;
+        }
+        Form f = new Form(v);
+        String name = DeviceNames.display(device);
+        ((TextView) v.findViewById(R.id.title)).setText("Sign out " + name + "?");
+        ((TextView) v.findViewById(R.id.blurb)).setText(device.optString("name") + " stops syncing straight away. What it has recorded stays on it, "
+                + "and it can join again by signing in with your password.");
+        ((Button) v.findViewById(R.id.btn_submit)).setText("Sign out " + name);
+        v.findViewById(R.id.btn_cancel).setOnClickListener(x -> onBackPressed());
+        f.onSubmit = () -> {
+            f.busy(true);
+            int index = device.optInt("index");
+            run(() -> {
+                AccountApi.revokeDevice(AccountStore.token(this), index);
+                DeviceNames.refresh(this);
+                ui.post(() -> {
+                    toast(name + " is signed out");
+                    device = null;
+                    replace("devices");
+                });
+            }, f);
+        };
+        f.validate = () -> f.ok(true);
+        f.validate.run();
+    }
+
+    /** Your own name, on this phone only. */
+    private void bindName(View v) {
+        Form f = new Form(v);
+        EditText field = f.edit(R.id.name);
+        TextView count = v.findViewById(R.id.count);
+        field.setText(Avatar.name(this));
+        field.setSelection(field.getText().length());
+        f.validate = () -> {
+            count.setText(field.getText().length() + " / 40");
+            f.ok(f.present(field, R.id.name_hint, "Enter a name"));
+        };
+        f.watch(field);
+        f.submitOnDone(field);
+        f.onSubmit = () -> {
+            Avatar.setName(this, field.getText().toString().trim());
+            toast("Saved");
+            done();
+        };
+        field.requestFocus();
     }
 
     private void bindDelete(View v) {
@@ -462,10 +567,8 @@ public class AccountActivity extends Activity {
         f.eye(R.id.password_eye, pw);
         f.validate = () -> f.ok(f.present(pw, R.id.password_hint, "Enter your password"));
         f.watch(pw);
-        f.onSubmit = () -> new AlertDialog.Builder(this)
-                .setTitle("Delete your account?")
-                .setMessage("Other devices lose access immediately. This cannot be undone.")
-                .setPositiveButton("Delete", (d, w) -> {
+        f.onSubmit = () -> Sheet.confirm(this, R.drawable.ic_trash, "Delete your account?",
+                "Other devices lose access immediately. This cannot be undone.", "Delete account", true, () -> {
                     f.busy(true);
                     String e = AccountStore.email(this), token = AccountStore.token(this), typed = pw.getText().toString();
                     run(() -> {
@@ -475,9 +578,7 @@ public class AccountActivity extends Activity {
                         AccountStore.signOut(this);
                         ui.post(() -> { toast("Account deleted"); done(); });
                     }, f);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                });
     }
 
     // ---- helpers -----------------------------------------------------------

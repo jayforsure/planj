@@ -83,7 +83,9 @@ final class PcLive {
             String text = new String(crypto.open(blob, crypto.mailbox), StandardCharsets.UTF_8).trim();
             JSONObject o = new JSONObject(text);
             PcDays.save(ctx, o.getJSONObject("day").toString());
-            return new PcLive(o);
+            PcLive live = new PcLive(o);
+            DeviceNames.seenPc(ctx, live.atMs);
+            return live;
         } catch (Exception e) {
             return null;
         } finally {

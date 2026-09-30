@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+    <ImageView
+        android:id="@+id/device_icon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/icon_circle"
+        android:contentDescription="@null"
+        android:padding="15dp" />
+
+    <TextView android:id="@+id/title" style="@style/Auth.Title" />
+    <TextView android:id="@+id/blurb" style="@style/Auth.Blurb" />
+    <TextView android:id="@+id/error" style="@style/Auth.Error" />
+
+    <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Details" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowIcon="@drawable/ic_edit"
+        app:rowTitle="Name" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowChevron="false"
+        app:rowTitle="Type" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_model"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowChevron="false"
+        app:rowIcon="@drawable/ic_devices" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_since"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowChevron="false"
+        app:rowIcon="@drawable/ic_key"
+        app:rowTitle="Signed in" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_seen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowChevron="false"
+        app:rowIcon="@drawable/ic_sync"
+        app:rowTitle="Last active" />
+
+    <TextView
+        android:id="@+id/signout_section"
+        style="@style/Auth.Section"
+        android:layout_marginTop="28dp"
+        android:text="Access" />
+
+    <com.planj.phone.ListRow
+        android:id="@+id/row_signout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:rowIcon="@drawable/ic_close"
+        app:rowTint="@color/bad"
+        app:rowTitle="Sign out this device" />
+</LinearLayout>

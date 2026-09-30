@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp">
+
+    <TextView style="@style/Auth.Title" android:text="Your name" />
+    <TextView style="@style/Auth.Blurb" android:text="Shown on your account page and in your avatar. It stays on this phone." />
+    <TextView android:id="@+id/error" style="@style/Auth.Error" />
+    <TextView style="@style/Auth.Label" android:text="Name" />
+    <EditText
+        android:id="@+id/name"
+        style="@style/Auth.Field"
+        android:layout_marginTop="6dp"
+        android:hint="What should planj call you?"
+        android:imeOptions="actionDone"
+        android:inputType="textPersonName|textCapWords"
+        android:maxLength="40" />
+    <TextView android:id="@+id/name_hint" style="@style/Auth.Hint" />
+    <TextView
+        android:id="@+id/count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="end"
+        android:paddingHorizontal="4dp"
+        android:textColor="@color/muted"
+        android:textSize="13sp" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button android:id="@+id/btn_submit" style="@style/Auth.Primary" android:text="Save" />
+        <ProgressBar android:id="@+id/progress" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:layout_marginTop="20dp" android:indeterminateTint="@color/on_accent" android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

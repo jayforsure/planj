@@ -124,6 +124,17 @@
         <item name="android:textColor">@color/accent</item>
     </style>
 
+    <!-- Bottom sheets slide up from the edge and back down. -->
+    <style name="SheetAnimation" parent="">
+        <item name="android:windowEnterAnimation">@anim/sheet_in</item>
+        <item name="android:windowExitAnimation">@anim/sheet_out</item>
+    </style>
+
+    <style name="Pill.Danger">
+        <item name="android:background">@drawable/btn_danger</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+
     <style name="Pill.Secondary">
         <item name="android:background">@drawable/btn_secondary</item>
         <item name="android:textColor">@color/text</item>
