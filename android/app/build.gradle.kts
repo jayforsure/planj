@@ -10,8 +10,18 @@ android {
         applicationId = "com.planj.phone"
         minSdk = 28
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.28.0"
+        versionCode = 43
+        versionName = "0.28.1"
+    }
+
+    buildTypes {
+        // The build to install: compiled ahead of time on the phone, so pages open at full
+        // speed the first time. Signed with the same local key as debug builds, so it installs
+        // over them and keeps all the data on the phone.
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 
     compileOptions {

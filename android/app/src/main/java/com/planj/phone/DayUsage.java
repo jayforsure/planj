@@ -41,6 +41,7 @@ final class DayUsage {
     final List<long[]> screenOn = new ArrayList<>();   // [startMs, endMs]
     final List<String[]> net = new ArrayList<>();       // [tMs, "wifi:<fingerprint>" | "mobile" | "none"]
     final List<String[]> place = new ArrayList<>();     // [tMs, "p3"]
+    final List<long[]> charge = new ArrayList<>();      // [tMs, 1 plugged in / 0 unplugged]
 
     private DayUsage(LocalDate day) {
         this.day = day;
@@ -53,16 +54,11 @@ final class DayUsage {
         File file = new File(UsageCollector.eventsDir(ctx), day + ".jsonl");
         boolean today = day.equals(LocalDate.now());
         String key = day + "|" + file.length() + "|" + file.lastModified();
-        if (!today) {
-            DayUsage hit = CACHE.get(key);
-            if (hit != null) return hit;
-        }
-        DayUsage u = parse(ctx, day, file);
-        if (!today) {
-            if (CACHE.size() > 60) CACHE.clear();
-            CACHE.put(key, u);
-        }
-        return u;
+        if (today) return parse(ctx, day, file);
+        DayUsage hit = CACHE.get(key);
+        if (hit != null) return hit;
+        if (CACHE.size() > 120) CACHE.clear();
+        return CACHE.computeIfAbsent(key, k -> parse(ctx, day, file)); // two threads asking at once parse it once
     }
 
     private static DayUsage parse(Context ctx, LocalDate day, File file) {
@@ -75,14 +71,31 @@ final class DayUsage {
         long nightEnd = day.atTime(5, 0).atZone(zone).toInstant().toEpochMilli();
         try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             for (String line; (line = r.readLine()) != null; ) {
-                JSONObject o;
-                try {
-                    o = new JSONObject(line);
-                } catch (JSONException e) {
-                    continue; // a half-written last line
+                String event, tRaw, appVal;
+                if (line.indexOf('\\') < 0) {
+                    // Every event is {"t":…,"event":…,"app":…} with plain values; reading the three
+                    // fields directly is many times quicker than a general JSON parse over a month.
+                    event = field(line, "event");
+                    tRaw = field(line, "t");
+                    appVal = field(line, "app");
+                    if (event == null || tRaw == null) continue; // a half-written last line
+                } else {
+                    try {
+                        JSONObject o = new JSONObject(line);
+                        event = o.optString("event");
+                        tRaw = o.getString("t");
+                        appVal = o.optString("app");
+                    } catch (JSONException e) {
+                        continue;
+                    }
                 }
-                String event = o.optString("event");
-                long t = Instant.parse(o.getString("t")).toEpochMilli();
+                if (appVal == null) appVal = "";
+                long t;
+                try {
+                    t = millis(tRaw);
+                } catch (RuntimeException e) {
+                    continue;
+                }
                 switch (event) {
                     case "screen_on":
                         if (onSince < 0) onSince = t;
@@ -101,14 +114,20 @@ final class DayUsage {
                     case "unlock":
                         u.unlocks++;
                         break;
+                    case "charging_on":
+                        u.charge.add(new long[]{t, 1});
+                        break;
+                    case "charging_off":
+                        u.charge.add(new long[]{t, 0});
+                        break;
                     case "net":
-                        u.net.add(new String[]{Long.toString(t), o.optString("app")});
+                        u.net.add(new String[]{Long.toString(t), appVal});
                         break;
                     case "place":
-                        u.place.add(new String[]{Long.toString(t), o.optString("app")});
+                        u.place.add(new String[]{Long.toString(t), appVal});
                         break;
                     case "app_fg": {
-                        String pkg = o.optString("app");
+                        String pkg = appVal;
                         if (pkg.equals(app)) break;
                         if (app != null) u.addSession(app, appSince, t);
                         app = pkg;
@@ -116,7 +135,7 @@ final class DayUsage {
                         break;
                     }
                     case "app_bg":
-                        if (o.optString("app").equals(app)) {
+                        if (appVal.equals(app)) {
                             u.addSession(app, appSince, t);
                             app = null;
                         }
@@ -125,7 +144,7 @@ final class DayUsage {
                         break;
                 }
             }
-        } catch (IOException | JSONException | RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
             return u; // no file yet
         }
         long now = System.currentTimeMillis();
@@ -137,6 +156,45 @@ final class DayUsage {
             if (app != null) u.addSession(app, appSince, now);
         }
         return u;
+    }
+
+    /** The string value of "key" in a flat JSON line without escapes, or null when absent. */
+    static String field(String line, String key) {
+        String k = "\"" + key + "\":\"";
+        int i = line.indexOf(k);
+        if (i < 0) return null;
+        int from = i + k.length(), to = line.indexOf('"', from);
+        return to < 0 ? null : line.substring(from, to);
+    }
+
+    /**
+     * "2026-09-28T16:13:38.074Z" to epoch milliseconds. Events are always written in this
+     * shape, and reading it by position is far quicker than the general parser over a
+     * month of lines; anything else falls back to that parser.
+     */
+    static long millis(String t) {
+        int n = t.length();
+        if ((n == 24 || n == 20) && t.charAt(4) == '-' && t.charAt(10) == 'T' && t.charAt(n - 1) == 'Z'
+                && (n == 20 || t.charAt(19) == '.')) {
+            try {
+                long days = LocalDate.of(num(t, 0, 4), num(t, 5, 7), num(t, 8, 10)).toEpochDay();
+                long secs = days * 86400L + num(t, 11, 13) * 3600L + num(t, 14, 16) * 60L + num(t, 17, 19);
+                return secs * 1000 + (n == 24 ? num(t, 20, 23) : 0);
+            } catch (RuntimeException e) {
+                // not the usual shape after all
+            }
+        }
+        return Instant.parse(t).toEpochMilli();
+    }
+
+    private static int num(String s, int from, int to) {
+        int v = 0;
+        for (int i = from; i < to; i++) {
+            int d = s.charAt(i) - '0';
+            if (d < 0 || d > 9) throw new NumberFormatException(s);
+            v = v * 10 + d;
+        }
+        return v;
     }
 
     private void addSession(String pkg, long start, long end) {
@@ -187,39 +245,14 @@ final class DayUsage {
 
         List<long[]> awake = new ArrayList<>();
         List<long[]> chargeChanges = new ArrayList<>(); // {time, 1 on / 0 off}
+        // The three days come from the parsed-day cache, so a run over many nights reads each file once.
         for (LocalDate d : new LocalDate[]{day.minusDays(2), day.minusDays(1), day}) {
-            File file = new File(UsageCollector.eventsDir(ctx), d + ".jsonl");
-            long onSince = -1;
-            try (BufferedReader r = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-                for (String line; (line = r.readLine()) != null; ) {
-                    JSONObject o = new JSONObject(line);
-                    String event = o.optString("event");
-                    long t = Instant.parse(o.getString("t")).toEpochMilli();
-                    switch (event) {
-                        case "screen_on":
-                            if (onSince < 0) onSince = t;
-                            break;
-                        case "screen_off":
-                        case "shutdown":
-                            if (onSince >= 0) {
-                                long s = Math.max(onSince, windowStart), e = Math.min(t, windowEnd);
-                                if (e - s >= brief) awake.add(new long[]{s, e});
-                                onSince = -1;
-                            }
-                            break;
-                        case "charging_on":
-                            chargeChanges.add(new long[]{t, 1});
-                            break;
-                        case "charging_off":
-                            chargeChanges.add(new long[]{t, 0});
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            } catch (IOException | JSONException | RuntimeException e) {
-                // missing day, keep going with what we have
+            DayUsage u = load(ctx, d);
+            for (long[] on : u.screenOn) {
+                long s = Math.max(on[0], windowStart), e = Math.min(on[1], windowEnd);
+                if (e - s >= brief) awake.add(new long[]{s, e});
             }
+            chargeChanges.addAll(u.charge);
         }
         awake.sort((a, b) -> Long.compare(a[0], b[0]));
         long bestStart = 0, bestEnd = 0;

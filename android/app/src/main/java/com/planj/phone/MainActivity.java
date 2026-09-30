@@ -107,10 +107,20 @@ public class MainActivity extends Activity {
     }
 
     private void select(View tab, View navItem) {
-        for (View v : new View[]{today.view(), odds.view(), journal.view(), accountTab.view(), settings.view()}) v.setVisibility(View.GONE);
+        boolean changed = tab.getVisibility() != View.VISIBLE;
+        for (View v : new View[]{today.view(), odds.view(), journal.view(), accountTab.view(), settings.view()}) {
+            if (v != tab) v.setVisibility(View.GONE);
+        }
         for (View v : new View[]{navToday, navOdds, navJournal, navAccount, navSettings}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
+        if (changed) { // a short rise so the new page arrives rather than blinks in
+            tab.animate().cancel();
+            tab.setAlpha(0f);
+            tab.setTranslationY(10 * getResources().getDisplayMetrics().density);
+            tab.animate().alpha(1f).translationY(0f).setDuration(200)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+        }
     }
 
     @Override

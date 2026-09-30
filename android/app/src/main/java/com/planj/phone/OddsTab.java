@@ -42,7 +42,16 @@ final class OddsTab {
         List<Agenda.Event> tomorrow;
     }
 
+    private boolean running, again; // main thread only
+
+    /** One calculation at a time; a request that arrives meanwhile runs once after it. */
     void refresh() {
+        if (running) {
+            again = true;
+            return;
+        }
+        running = true;
+        if (list.getChildCount() == 0) showSkeleton(); // first time: the shape of what's coming
         new Thread(() -> {
             Result r = new Result();
             r.hist = OddsEngine.history(a);
@@ -52,11 +61,67 @@ final class OddsTab {
             r.live = OddsEngine.settle(a, r.hist);
             r.back = OddsEngine.backtest(r.hist);
             r.tomorrow = Agenda.on(a, today.plusDays(1));
-            a.runOnUiThread(() -> render(r));
+            a.runOnUiThread(() -> {
+                render(r);
+                running = false;
+                if (again) {
+                    again = false;
+                    refresh();
+                }
+            });
         }).start();
     }
 
+    private android.animation.ObjectAnimator pulse;
+
+    /** Grey cards shaped like forecasts, breathing gently, while the numbers are worked out. */
+    private void showSkeleton() {
+        summary.setText(" ");
+        LinearLayout ghosts = new LinearLayout(a);
+        ghosts.setOrientation(LinearLayout.VERTICAL);
+        ghosts.setPadding(0, dp(28), 0, 0);
+        for (int i = 0; i < 4; i++) {
+            LinearLayout card = new LinearLayout(a);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setBackgroundResource(R.drawable.card_bg);
+            card.setPadding(dp(18), dp(20), dp(18), dp(20));
+            card.addView(bar(i % 2 == 0 ? 0.72f : 0.58f, 14));
+            card.addView(bar(0.45f, 10));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = dp(8);
+            ghosts.addView(card, lp);
+        }
+        list.addView(ghosts);
+        pulse = android.animation.ObjectAnimator.ofFloat(ghosts, View.ALPHA, 1f, 0.45f);
+        pulse.setDuration(700);
+        pulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+        pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        pulse.start();
+    }
+
+    private View bar(float share, int heightDp) {
+        View v = new View(a);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(a.getColor(R.color.surface_alt));
+        g.setCornerRadius(dp(4));
+        v.setBackground(g);
+        int w = Math.round((a.getResources().getDisplayMetrics().widthPixels - dp(76)) * share);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, dp(heightDp));
+        lp.topMargin = heightDp == 14 ? 0 : dp(12);
+        v.setLayoutParams(lp);
+        return v;
+    }
+
     private void render(Result r) {
+        boolean fromSkeleton = pulse != null;
+        if (pulse != null) {
+            pulse.cancel();
+            pulse = null;
+        }
+        if (fromSkeleton) { // the real cards settle in where the grey ones were
+            list.setAlpha(0f);
+            list.animate().alpha(1f).setDuration(220).start();
+        }
         list.removeAllViews();
         first = true;
         LocalDate tomorrow = LocalDate.now().plusDays(1);

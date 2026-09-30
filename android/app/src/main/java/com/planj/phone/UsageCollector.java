@@ -246,7 +246,7 @@ final class UsageCollector {
             for (String line; (line = r.readLine()) != null; ) {
                 JSONObject o = new JSONObject(line);
                 String event = o.optString("event");
-                long t = Instant.parse(o.getString("t")).toEpochMilli();
+                long t = DayUsage.millis(o.getString("t"));
                 if (event.equals("screen_on")) {
                     if (onSince < 0) onSince = t;
                 } else if (event.equals("screen_off") || event.equals("shutdown")) {
