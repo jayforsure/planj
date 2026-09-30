@@ -57,25 +57,56 @@ final class AppPalette {
         return FALLBACK[Math.floorMod(low.hashCode(), FALLBACK.length)];
     }
 
+    /**
+     * The app's own name. It is kept the first time it is read, so an app you later uninstall
+     * is still listed by its name, not "com.example.app".
+     */
     static String label(Context ctx, String pkg) {
         if (pkg.equals(UsageCollector.PRIVATE_APP)) return "Private";
+        android.content.SharedPreferences kept = ctx.getSharedPreferences("planj_app_names", Context.MODE_PRIVATE);
         try {
             PackageManager pm = ctx.getPackageManager();
             ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
-            return String.valueOf(pm.getApplicationLabel(info));
+            String name = String.valueOf(pm.getApplicationLabel(info));
+            if (!name.equals(kept.getString(pkg, null))) kept.edit().putString(pkg, name).apply();
+            return name;
         } catch (PackageManager.NameNotFoundException e) {
+            String name = kept.getString(pkg, null);
+            if (name != null) return name;
             String[] parts = pkg.split("\\.");
             String last = parts[parts.length - 1];
             return last.isEmpty() ? pkg : Character.toUpperCase(last.charAt(0)) + last.substring(1);
         }
     }
 
+    /** The app's own icon; a copy is kept the first time, for apps uninstalled later. */
     static Drawable icon(Context ctx, String pkg) {
         if (pkg.equals(UsageCollector.PRIVATE_APP)) return ctx.getDrawable(R.drawable.ic_private);
+        java.io.File kept = new java.io.File(new java.io.File(ctx.getFilesDir(), "appicons"), pkg.replaceAll("[^A-Za-z0-9._]", "_") + ".png");
         try {
-            return ctx.getPackageManager().getApplicationIcon(pkg);
+            Drawable d = ctx.getPackageManager().getApplicationIcon(pkg);
+            if (!kept.exists()) keep(d, kept);
+            return d;
         } catch (PackageManager.NameNotFoundException e) {
-            return null;
+            if (!kept.exists()) return null;
+            android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(kept.getPath());
+            return b == null ? null : new android.graphics.drawable.BitmapDrawable(ctx.getResources(), b);
+        }
+    }
+
+    private static void keep(Drawable d, java.io.File out) {
+        try {
+            java.io.File dir = out.getParentFile();
+            if (dir != null && !dir.isDirectory() && !dir.mkdirs()) return;
+            android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(144, 144, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas c = new android.graphics.Canvas(b);
+            d.setBounds(0, 0, 144, 144);
+            d.draw(c);
+            try (java.io.FileOutputStream fo = new java.io.FileOutputStream(out)) {
+                b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fo);
+            }
+        } catch (Exception ignored) {
+            // kept next time
         }
     }
 }

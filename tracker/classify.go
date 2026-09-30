@@ -103,16 +103,23 @@ func IsBrowser(app string) bool {
 	return false
 }
 
-// AppName turns a program file into a readable name: "msedge.exe" -> "Edge".
+// AppName turns a program file into a readable name: "msedge.exe" -> "Edge". A short list of
+// well-known programs is named by hand; any other takes the name it gave when first seen.
 func AppName(exe string) string {
 	known := map[string]string{
 		"msedge.exe": "Edge", "chrome.exe": "Chrome", "firefox.exe": "Firefox", "brave.exe": "Brave",
 		"code.exe": "VS Code", "notepad.exe": "Notepad", "explorer.exe": "File Explorer",
-		"windowsterminal.exe": "Terminal", "notion.exe": "Notion", "searchhost.exe": "Windows Search",
-		"applicationframehost.exe": "Windows app", "(none)": "Desktop", "(unknown)": "Other",
-		"rcclient.exe": "AnyViewer", // AOMEI AnyViewer's remote-control window
+		"windowsterminal.exe": "Terminal", "notion.exe": "Notion",
+		"(none)": "Desktop", "(unknown)": "Other", "systemsettings.exe": "Settings",
+		"snippingtool.exe": "Snipping Tool", "planj-tracker.exe": "planj",
 	}
 	if n, ok := known[strings.ToLower(exe)]; ok {
+		return n
+	}
+	if windowsScreens[strings.ToLower(exe)] {
+		return "Windows"
+	}
+	if n, ok := programs.Name(exe); ok { // what the program said about itself when first seen
 		return n
 	}
 	return strings.TrimSuffix(strings.TrimSuffix(exe, ".exe"), ".EXE")

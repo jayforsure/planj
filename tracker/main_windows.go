@@ -119,6 +119,11 @@ func run(root string) {
 	go pullLoop(root)
 	liveCh := make(chan liveUpdate, 1)
 	go liveLoop(root, liveCh)
+	LoadPrograms(root)
+	iconCh := make(chan programSeen, 64)
+	go iconLoop(root, iconCh)
+	go warmUp(dir, iconCh)
+	lastProgram := ""
 	var liveNow LiveTracker
 
 	// UI Automation needs COM on one fixed thread; the loop below runs on this goroutine only.
@@ -137,12 +142,20 @@ func run(root string) {
 		if now.Sub(rulesRead) > time.Minute { // edits to categories.txt apply within a minute
 			rules, rulesRead = LoadRules(rulesPath), now
 		}
-		app, title := foregroundApp(), foregroundTitle()
+		app, path := foregroundAppPath()
+		title := foregroundTitle()
 		site := ""
 		if IsBrowser(app) {
 			site = sites.Site(windows.GetForegroundWindow(), title)
 		}
 		cat, name := ClassifyWithSite(app, title, site, rules)
+		if app != lastProgram { // a program came to the front: know its name, and send its icon once
+			lastProgram = app
+			if !IsBrowser(app) && !Locked(app) {
+				pname, _ := programName(app, path)
+				offerProgram(iconCh, programSeen{name: pname, path: path})
+			}
+		}
 		o := Observation{App: app, Cat: cat, Name: name, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
 		title = "" // the title has done its job; it goes no further
 		// Round(0) drops the monotonic reading, which can pause during sleep and hide the gap.

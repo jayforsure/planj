@@ -159,6 +159,17 @@ final class RelaySync {
         if (!tmp.renameTo(f)) throw new IOException("could not update outbox");
     }
 
+    /** Reads what the PC has sent (confirmations, day summaries, icons) without uploading. */
+    static void pullReplies(Context ctx) {
+        String code = pairedCode(ctx);
+        if (code == null) return;
+        try {
+            checkConfirmation(ctx, RelayCrypto.derive(code));
+        } catch (IOException e) {
+            // offline: the next pull gets it
+        }
+    }
+
     /** Reads the PC's confirmations, if any, and clears them from the relay. */
     private static void checkConfirmation(Context ctx, RelayCrypto crypto) throws IOException {
         String box = RELAY_URL + "/v1/mailbox/" + crypto.reply;
@@ -187,6 +198,8 @@ final class RelaySync {
                         prefs(ctx).edit().putLong("confirmed_ms", System.currentTimeMillis()).apply();
                     } else if (line.contains("\"pc_day\"")) {
                         PcDays.save(ctx, line); // the PC's summary of a day, for the timeline
+                    } else if (line.contains("\"pc_icon\"")) {
+                        PcIcons.savePc(ctx, line); // a program's own icon, sent once by the PC
                     }
                 }
                 lastId = item.getString("id");

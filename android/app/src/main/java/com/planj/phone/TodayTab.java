@@ -234,10 +234,12 @@ final class TodayTab {
                     // the next tick tries again
                 }
                 PhoneLive.publish(a, a.getPackageName(), a.resumedAtMs()); // planj is in front: you are looking at it
+                RelaySync.pullReplies(a); // icons and summaries the PC sent
             }
             a.runOnUiThread(() -> {
                 fetching = false;
                 if (!live) return;
+                if (phoneToo) liveAppsKey = null; // redraw the PC rows too, in case new icons came
                 showLive(l);
                 showPhoneNow();
                 if (phoneToo && liveTicks > 1) refresh(a.hasUsageAccess());

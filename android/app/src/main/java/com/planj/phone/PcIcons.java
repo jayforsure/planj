@@ -105,6 +105,21 @@ final class PcIcons {
         return b;
     }
 
+    /**
+     * Keeps an icon the PC took from the program itself ({"event":"pc_icon","name":…,"png":…}).
+     * It is the real program's icon, so it replaces a website's icon of the same name.
+     */
+    static void savePc(Context ctx, String line) {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject(line);
+            byte[] png = android.util.Base64.decode(o.getString("png"), android.util.Base64.DEFAULT);
+            Bitmap b = BitmapFactory.decodeByteArray(png, 0, png.length);
+            if (b != null) save(file(ctx, o.getString("name")), b);
+        } catch (Exception ignored) {
+            // a damaged icon is skipped; the letter stays
+        }
+    }
+
     private static Bitmap usable(Bitmap b) {
         return b != null && b.getWidth() >= 16 ? b : null;
     }

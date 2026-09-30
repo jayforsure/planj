@@ -26,8 +26,9 @@ final class PcAppRows {
         row.setValue(Fmt.shortDuration(x.minutes * 60_000L), false);
         row.setClickable(false);
         row.setBackground(null);
-        if ("Other websites".equals(x.name)) {
-            row.setIcon(R.drawable.ic_globe);
+        int glyph = glyph(x.name);
+        if (glyph != 0) {
+            row.setIcon(glyph);
             return row;
         }
         row.setLetter(x.name);
@@ -50,12 +51,23 @@ final class PcAppRows {
         return row;
     }
 
+    /** Rows that stand for a group rather than one program get a drawn glyph instead. */
+    private static int glyph(String name) {
+        switch (name) {
+            case "Other websites": return R.drawable.ic_globe;
+            case "Windows":
+            case "Desktop": return R.drawable.ic_monitor;
+            default: return 0;
+        }
+    }
+
     /** The app's or site's icon on a row that stays on screen and changes what it shows (the live row). */
     static void bindIcon(Activity a, ListRow row, String name) {
         if (name.equals(row.getTag())) return; // already showing this one
         row.setTag(name);
-        if ("Other websites".equals(name)) {
-            row.setIcon(R.drawable.ic_globe);
+        int glyph = glyph(name);
+        if (glyph != 0) {
+            row.setIcon(glyph);
             return;
         }
         row.setLetter(name);

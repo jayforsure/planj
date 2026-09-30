@@ -248,3 +248,26 @@ func doJSON(ctx context.Context, client *http.Client, method, u string, out any)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }
+
+// PostReply sends lines to the phone through the reply mailbox, sealed like everything else.
+func PostReply(ctx context.Context, client *http.Client, baseURL string, p Pairing, lines []byte) error {
+	blob, err := p.Seal(lines)
+	if err != nil {
+		return err
+	}
+	u := strings.TrimRight(baseURL, "/") + "/v1/mailbox/" + p.Reply
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(blob))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("reply: %s", resp.Status)
+	}
+	return nil
+}
