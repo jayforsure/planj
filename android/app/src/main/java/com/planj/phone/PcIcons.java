@@ -60,6 +60,15 @@ final class PcIcons {
         return new File(new File(ctx.getFilesDir(), "pcicons"), name.replaceAll("[^A-Za-z0-9]", "_") + ".png");
     }
 
+    /** Below this width an icon looks soft in the 52dp square, so a sharper one is worth a look. */
+    static final int SHARP = 128;
+    private static final java.util.Set<String> RETRIED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Whether a small cached icon should be looked up again; once per app run, so offline costs nothing. */
+    static boolean worthRetry(String name, Bitmap cached) {
+        return cached.getWidth() < SHARP && RETRIED.add(name);
+    }
+
     /** The icon if it is already here; null otherwise (then call fetch on a worker thread). */
     static Bitmap cached(Context ctx, String name) {
         File f = file(ctx, name);
@@ -83,12 +92,15 @@ final class PcIcons {
         if (domain == null) return null;
         String site = "https://" + domain + "/";
         Bitmap b = usable(get(site + "apple-touch-icon.png"));
-        if (b == null) b = usable(get(site + "favicon.ico"));
-        if (b == null) { // some sites only name their icon in the page itself
+        if (b == null || b.getWidth() < SHARP) {
+            // No large touch icon: the page often names a sharper one than the 16-32px favicon
             for (String url : declared(site)) {
-                if ((b = usable(get(url))) != null) break;
+                Bitmap c = usable(get(url));
+                if (c != null && (b == null || c.getWidth() > b.getWidth())) b = c;
+                if (b != null && b.getWidth() >= SHARP) break;
             }
         }
+        if (b == null) b = usable(get(site + "favicon.ico"));
         if (b != null) save(file(ctx, name), b);
         return b;
     }
@@ -144,7 +156,8 @@ final class PcIcons {
             conn.setConnectTimeout(8_000);
             conn.setReadTimeout(10_000);
             conn.setInstanceFollowRedirects(true);
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) planj/" + BuildInfo.VERSION);
+            // ask as a desktop browser: these are PC sites, and some send phones to a mobile page with only a tiny icon
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36");
             if (conn.getResponseCode() / 100 != 2) return null;
             try (InputStream in = conn.getInputStream()) {
                 ByteArrayOutputStream buf = new ByteArrayOutputStream();

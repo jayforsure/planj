@@ -103,18 +103,12 @@
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
 
-            <HorizontalScrollView
+            <LinearLayout
+                android:id="@+id/tags"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:id="@+id/tags"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
+                android:orientation="vertical" />
 
             <EditText
                 android:id="@+id/entry_note"
@@ -147,15 +141,16 @@
                 android:textAllCaps="false"
                 android:textColor="@color/on_accent"
                 android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/entry_usage"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/btn_text"
-                android:textColor="@color/muted"
-                android:textSize="13sp" />
         </LinearLayout>
+
+        <com.planj.phone.ListRow
+            android:id="@+id/entry_usage"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone"
+            app:rowIcon="@drawable/ic_phone"
+            app:rowTitle="Phone that day" />
     </LinearLayout>
 </ScrollView>

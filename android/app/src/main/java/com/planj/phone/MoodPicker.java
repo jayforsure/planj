@@ -19,7 +19,7 @@ import android.widget.TextView;
 
 import java.util.function.IntConsumer;
 
-/** The five mood circles, shared by the Today and Journal screens. */
+/** The five mood buttons, shared by the Today and Journal screens. */
 final class MoodPicker {
     static final String[] LABELS = {"Awful", "Bad", "Okay", "Good", "Great"};
 
@@ -50,7 +50,7 @@ final class MoodPicker {
                                 .setInterpolator(new OvershootInterpolator(2.5f)).start()).start();
                 onPick.accept(mood);
             });
-            int size = dp(a, 56);
+            int size = dp(a, 52);
             column.addView(circle, new LinearLayout.LayoutParams(size, size));
 
             TextView label = new TextView(a);
@@ -76,28 +76,32 @@ final class MoodPicker {
         return Math.round(v * a.getResources().getDisplayMetrics().density);
     }
 
-    /** Outlined when idle; when chosen, a solid disc inside a translucent halo of the same colour. */
+    /**
+     * The same softly rounded square as every icon: an outline when idle; when chosen, filled
+     * with the mood's colour inside a faint square of the same colour.
+     */
     private static Drawable circle(Activity a, int color) {
+        float r = dp(a, 16);
         GradientDrawable halo = new GradientDrawable();
-        halo.setShape(GradientDrawable.OVAL);
+        halo.setCornerRadius(r);
         halo.setColor((color & 0x00FFFFFF) | 0x40000000);
-        GradientDrawable disc = new GradientDrawable();
-        disc.setShape(GradientDrawable.OVAL);
-        disc.setColor(color);
-        int inset = dp(a, 5);
-        LayerDrawable selected = new LayerDrawable(new Drawable[]{halo, new InsetDrawable(disc, inset)});
+        GradientDrawable fill = new GradientDrawable();
+        fill.setCornerRadius(r - dp(a, 4));
+        fill.setColor(color);
+        int inset = dp(a, 4);
+        LayerDrawable selected = new LayerDrawable(new Drawable[]{halo, new InsetDrawable(fill, inset)});
 
-        GradientDrawable idleDisc = new GradientDrawable();
-        idleDisc.setShape(GradientDrawable.OVAL);
-        idleDisc.setColor(a.getColor(R.color.surface_alt));
-        idleDisc.setStroke(dp(a, 1), a.getColor(R.color.border));
+        GradientDrawable idle = new GradientDrawable();
+        idle.setCornerRadius(r);
+        idle.setColor(0x00000000);
+        idle.setStroke(Math.max(1, Math.round(1.2f * a.getResources().getDisplayMetrics().density)), a.getColor(R.color.border_strong));
 
         StateListDrawable states = new StateListDrawable();
         states.addState(new int[]{android.R.attr.state_selected}, selected);
-        states.addState(new int[]{}, new InsetDrawable(idleDisc, inset));
+        states.addState(new int[]{}, idle);
 
         GradientDrawable mask = new GradientDrawable();
-        mask.setShape(GradientDrawable.OVAL);
+        mask.setCornerRadius(r);
         mask.setColor(0xFFFFFFFF);
         return new RippleDrawable(ColorStateList.valueOf(a.getColor(R.color.ripple)), states, mask);
     }

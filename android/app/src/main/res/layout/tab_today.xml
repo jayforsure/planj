@@ -194,15 +194,10 @@
             </LinearLayout>
 
             <LinearLayout
-                style="@style/Card"
-                android:paddingVertical="10dp">
-
-                <LinearLayout
-                    android:id="@+id/top_apps"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </LinearLayout>
+                android:id="@+id/top_apps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
             <!-- PC apps -->
             <LinearLayout
@@ -227,8 +222,9 @@
 
             <LinearLayout
                 android:id="@+id/pc_card"
-                style="@style/Card"
-                android:paddingVertical="10dp">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
                 <LinearLayout
                     android:id="@+id/pc_apps"

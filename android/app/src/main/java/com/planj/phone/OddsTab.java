@@ -1,10 +1,8 @@
 package com.planj.phone;
 
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -74,22 +72,28 @@ final class OddsTab {
 
     private android.animation.ObjectAnimator pulse;
 
-    /** Grey cards shaped like forecasts, breathing gently, while the numbers are worked out. */
+    /** Grey rows shaped like forecasts, breathing gently, while the numbers are worked out. */
     private void showSkeleton() {
         summary.setText(" ");
         LinearLayout ghosts = new LinearLayout(a);
         ghosts.setOrientation(LinearLayout.VERTICAL);
-        ghosts.setPadding(0, dp(28), 0, 0);
-        for (int i = 0; i < 4; i++) {
-            LinearLayout card = new LinearLayout(a);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setBackgroundResource(R.drawable.card_bg);
-            card.setPadding(dp(18), dp(20), dp(18), dp(20));
-            card.addView(bar(i % 2 == 0 ? 0.72f : 0.58f, 14));
-            card.addView(bar(0.45f, 10));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.bottomMargin = dp(8);
-            ghosts.addView(card, lp);
+        ghosts.setPadding(0, dp(72), 0, 0);
+        for (int i = 0; i < 5; i++) {
+            LinearLayout row = new LinearLayout(a);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, dp(10), 0, dp(10));
+            View square = new View(a);
+            square.setBackgroundResource(R.drawable.icon_circle);
+            LinearLayout.LayoutParams sq = new LinearLayout.LayoutParams(dp(52), dp(52));
+            sq.setMarginEnd(dp(16));
+            row.addView(square, sq);
+            LinearLayout text = new LinearLayout(a);
+            text.setOrientation(LinearLayout.VERTICAL);
+            text.addView(bar(i % 2 == 0 ? 0.62f : 0.5f, 14));
+            text.addView(bar(0.4f, 10));
+            row.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            ghosts.addView(row);
         }
         list.addView(ghosts);
         pulse = android.animation.ObjectAnimator.ofFloat(ghosts, View.ALPHA, 1f, 0.45f);
@@ -105,9 +109,9 @@ final class OddsTab {
         g.setColor(a.getColor(R.color.surface_alt));
         g.setCornerRadius(dp(4));
         v.setBackground(g);
-        int w = Math.round((a.getResources().getDisplayMetrics().widthPixels - dp(76)) * share);
+        int w = Math.round((a.getResources().getDisplayMetrics().widthPixels - dp(108)) * share);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, dp(heightDp));
-        lp.topMargin = heightDp == 14 ? 0 : dp(12);
+        lp.topMargin = heightDp == 14 ? 0 : dp(10);
         v.setLayoutParams(lp);
         return v;
     }
@@ -134,11 +138,11 @@ final class OddsTab {
         if (!r.tomorrow.isEmpty()) {
             header("TOMORROW'S PLANS");
             for (Agenda.Event e : r.tomorrow) {
-                line((e.allDay ? "All day" : Fmt.clock(e.startMs)) + "  ·  " + e.title, a.getColor(R.color.text), 15);
+                list.addView(plainRow(R.drawable.ic_journal, e.title, e.allDay ? "All day" : Fmt.clock(e.startMs)));
             }
         } else if (!Agenda.allowed(a)) {
             header("TOMORROW'S PLANS");
-            line("Calendar access is off", a.getColor(R.color.muted), 13);
+            list.addView(plainRow(R.drawable.ic_journal, "Calendar", "Access is off"));
         }
 
         List<OddsEngine.Forecast> routines = new java.util.ArrayList<>(), plain = new java.util.ArrayList<>();
@@ -153,63 +157,62 @@ final class OddsTab {
         for (OddsEngine.Forecast fc : plain) focusShown |= fc.outcome.id.equals(OddsEngine.FOCUS);
         if (!focusShown) {
             int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.FOCUS);
-            line(days < OddsEngine.MIN_HISTORY
-                    ? "2h+ focus on your PC · " + days + " of " + OddsEngine.MIN_HISTORY + " days recorded"
-                    : "2h+ focus on your PC · not reached in " + days + " days", a.getColor(R.color.muted), 13);
+            list.addView(plainRow(R.drawable.ic_monitor, "2h+ focus on your PC", days < OddsEngine.MIN_HISTORY
+                    ? "Gathering · " + days + " of " + OddsEngine.MIN_HISTORY + " days"
+                    : "Not reached in " + days + " days yet"));
         }
 
-        header("TRACK RECORD");
-        LinearLayout table = new LinearLayout(a);
-        table.setOrientation(LinearLayout.VERTICAL);
-        table.setBackgroundResource(R.drawable.card_bg);
-        table.setPadding(dp(18), dp(12), dp(18), dp(12));
-        table.addView(row("", "Live", "Replay", true));
-        boolean anyLive = false;
+        header("TRACK RECORD", "live");
         for (OddsEngine.Forecast fc : r.forecasts) {
             OddsEngine.Record lv = r.live.get(fc.outcome.id), bk = r.back.get(fc.outcome.id);
-            String live = lv != null && lv.n > 0 ? lv.hits + "/" + lv.n : "–";
-            if (lv != null && lv.n > 0) anyLive = true;
-            String replay = bk != null && bk.n > 0 ? bk.hits + "/" + bk.n + "  ·  avg " + bk.baseHits + "/" + bk.n : "–";
             Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
             String label = rt == null ? fc.outcome.resolved
                     : RoutineNames.name(a, rt).toLowerCase(Locale.ENGLISH) + " " + rt.window();
-            table.addView(row(label, live, replay, false));
+            // right: how the forecasts made so far turned out; below: the same rule replayed over past days
+            String replay = bk != null && bk.n > 0
+                    ? "Replay " + bk.hits + "/" + bk.n + " · average " + bk.baseHits + "/" + bk.n : "No replay yet";
+            ListRow row = plainRow(iconFor(fc.outcome.id), label.substring(0, 1).toUpperCase(Locale.ENGLISH) + label.substring(1), replay);
+            row.setValue(lv != null && lv.n > 0 ? lv.hits + "/" + lv.n : "–", lv == null || lv.n == 0);
+            list.addView(row);
         }
-        list.addView(table);
-
     }
 
-    private View row(String name, String live, String replay, boolean head) {
-        LinearLayout r = new LinearLayout(a);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setPadding(0, dp(head ? 2 : 7), 0, dp(head ? 6 : 7));
-        int muted = a.getColor(R.color.muted), text = a.getColor(R.color.text);
-        TextView n = cell(name, head ? muted : text, head ? 12 : 14);
-        TextView l = cell(live, muted, head ? 12 : 14);
-        TextView p = cell(replay, muted, head ? 12 : 14);
-        if (head) {
-            for (TextView t : new TextView[]{n, l, p}) t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+    /** What each question is about, as the icon in its square. */
+    private static int iconFor(String id) {
+        Routines.Routine rt = Routines.Routine.parse(id);
+        if (rt != null) return rt.kind == Routines.Kind.FREE ? R.drawable.ic_phone : R.drawable.ic_place;
+        switch (id) {
+            case "off_by_1am":
+            case "quiet_7h": return R.drawable.ic_moon;
+            case "heavy_screen": return R.drawable.ic_phone;
+            case "social_2h": return R.drawable.ic_people;
+            case "up_by_8": return R.drawable.ic_sun;
+            case OddsEngine.FOCUS: return R.drawable.ic_monitor;
+            default: return R.drawable.ic_odds;
         }
-        r.addView(n, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.5f));
-        r.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.6f));
-        r.addView(p, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.3f));
-        return r;
     }
 
-    private TextView cell(String s, int color, int sp) {
-        TextView t = new TextView(a);
-        t.setText(s);
-        t.setTextColor(color);
-        t.setTextSize(sp);
-        t.setMaxLines(1);
-        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        return t;
+    /** An information row: same shape as every list row, but nothing to tap. */
+    private ListRow plainRow(int icon, String title, String subtitle) {
+        ListRow row = new ListRow(a);
+        row.setIcon(icon);
+        row.setTitle(title);
+        row.setSubtitle(subtitle);
+        row.setChevron(false);
+        row.setClickable(false);
+        row.setBackground(null);
+        return row;
     }
 
     /** A section heading in planj's voice: the display face with the teal dot. */
     private boolean first = true;
 
     private void header(String text) {
+        header(text, null);
+    }
+
+    /** A section heading, with an optional note on the right as on the other pages ("live"). */
+    private void header(String text, String aside) {
         TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
         h.setText(text.charAt(0) + text.substring(1).toLowerCase(java.util.Locale.ENGLISH));
         h.setTextAppearance(R.style.Heading);
@@ -218,82 +221,35 @@ final class OddsTab {
         h.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.dot_accent, 0, 0, 0);
         h.setCompoundDrawablePadding(dp(10));
         h.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        h.setPadding(0, dp(first ? 28 : 32), 0, dp(12));
+        LinearLayout line = new LinearLayout(a);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        line.setPadding(0, dp(first ? 28 : 32), 0, dp(12));
         first = false;
-        list.addView(h);
-    }
-
-    private void line(String text, int color, int sp) {
-        TextView t = new TextView(a);
-        t.setText(text);
-        t.setTextColor(color);
-        t.setTextSize(sp);
-        t.setLineSpacing(dp(3), 1f);
-        t.setPadding(0, dp(4), 0, dp(4));
-        list.addView(t);
+        line.addView(h, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        if (aside != null) {
+            TextView t = new TextView(a);
+            t.setText(aside);
+            t.setTextColor(a.getColor(R.color.muted));
+            t.setTextSize(14);
+            line.addView(t);
+        }
+        list.addView(line);
     }
 
     private View card(OddsEngine.Forecast fc) {
-        LinearLayout card = new LinearLayout(a);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        card.setBackgroundResource(R.drawable.card_bg);
-        card.setPadding(dp(18), dp(16), dp(18), dp(16));
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cp.bottomMargin = dp(8);
-        card.setLayoutParams(cp);
-
-        LinearLayout left = new LinearLayout(a);
-        left.setOrientation(LinearLayout.VERTICAL);
-        TextView q = new TextView(a);
         Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
-        q.setText(rt == null ? fc.outcome.question : RoutineNames.title(a, rt));
-        if (rt != null) {
-            card.setBackgroundResource(R.drawable.card_clickable);
-            card.setOnClickListener(v -> askName(rt));
-        }
-        q.setTextColor(a.getColor(R.color.text));
-        q.setTextSize(16);
-        q.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        left.addView(q);
-        TextView ev = new TextView(a);
-        String evidence = "usually " + Math.round(fc.base * 100) + "% of " + fc.n + " days";
+        String evidence = "Usually " + Math.round(fc.base * 100) + "%";
         if (fc.leverText != null) evidence += " · " + fc.sideK + " of " + fc.sideN + " " + fc.leverText;
-        ev.setText(evidence);
-        ev.setTextColor(a.getColor(R.color.muted));
-        ev.setTextSize(12);
-        ev.setPadding(0, dp(3), 0, dp(8));
-        left.addView(ev);
-
-        FrameLayout track = new FrameLayout(a);
-        track.setBackgroundResource(R.drawable.field_bg);
-        View fill = new View(a);
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(4));
-        g.setColor(a.getColor(R.color.accent));
-        fill.setBackground(g);
-        track.addView(fill, new FrameLayout.LayoutParams(0, dp(5)));
-        left.addView(track, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(5)));
-        int percent = (int) Math.round(fc.prob * 100);
-        track.addOnLayoutChangeListener((v, l, t, rr, b, ol, ot, or, ob) -> {
-            int width = Math.max(dp(4), Math.round((rr - l) * percent / 100f));
-            if (fill.getLayoutParams().width != width) {
-                fill.getLayoutParams().width = width;
-                fill.requestLayout();
-            }
-        });
-        card.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-
-        TextView pct = new TextView(a);
-        pct.setText(percent + "%");
-        pct.setTextColor(a.getColor(R.color.text));
-        pct.setTextSize(30);
-        pct.setTypeface(a.getResources().getFont(R.font.display));
-        pct.setFontVariationSettings("'wght' 800, 'opsz' 96, 'wdth' 100");
-        pct.setLetterSpacing(-0.03f);
-        pct.setPadding(dp(16), 0, 0, 0);
-        card.addView(pct);
-        return card;
+        ListRow row = plainRow(iconFor(fc.outcome.id), rt == null ? fc.outcome.question : RoutineNames.title(a, rt), evidence);
+        row.setSubtitleLines(2);
+        row.setBigValue(Math.round(fc.prob * 100) + "%", false);
+        if (rt != null) { // a routine can be named; tapping asks what it is
+            row.setBackgroundResource(R.drawable.btn_text);
+            row.setClickable(true);
+            row.setOnClickListener(v -> askName(rt));
+        }
+        return row;
     }
 
     /** One question, asked only if the person wants to: what is this routine? */

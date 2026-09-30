@@ -18,7 +18,8 @@ import java.util.Map;
 final class JournalTab {
     private final MainActivity a;
     private final View root;
-    private final TextView summary, monthTitle, entryTitle, entryState, entryUsage;
+    private final TextView summary, monthTitle, entryTitle, entryState;
+    private final ListRow entryUsage;
     private final MonthView month;
     private final LinearLayout tags;
     private final EditText note;
@@ -60,21 +61,32 @@ final class JournalTab {
         return root;
     }
 
+    /** Tags as rounded squares, three to a row, so every one is in view without scrolling. */
     private void buildChips() {
         float density = a.getResources().getDisplayMetrics().density;
+        int gap = (int) (8 * density);
+        LinearLayout line = null;
         for (int i = 0; i < MoodStore.TAGS.length; i++) {
+            if (i % 3 == 0) {
+                line = new LinearLayout(a);
+                line.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                if (i > 0) lp.topMargin = gap;
+                tags.addView(line, lp);
+            }
             TextView chip = new TextView(a);
             String tag = MoodStore.TAGS[i];
             chip.setText(Character.toUpperCase(tag.charAt(0)) + tag.substring(1));
             chip.setTextSize(13);
+            chip.setGravity(android.view.Gravity.CENTER);
             chip.setTextColor(a.getColorStateList(R.color.chip_text));
             chip.setBackgroundResource(R.drawable.chip_bg);
-            chip.setPadding((int) (14 * density), (int) (8 * density), (int) (14 * density), (int) (8 * density));
+            chip.setPadding(0, (int) (10 * density), 0, (int) (10 * density));
             chip.setOnClickListener(v -> v.setSelected(!v.isSelected()));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.rightMargin = (int) (8 * density);
-            tags.addView(chip, lp);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            if (i % 3 != 2) lp.setMarginEnd(gap);
+            line.addView(chip, lp);
             chips[i] = chip;
         }
     }
@@ -118,8 +130,9 @@ final class JournalTab {
             DayUsage.Quiet q = DayUsage.quiet(a, forUsage);
             a.runOnUiThread(() -> {
                 if (!forUsage.equals(selected)) return;
-                entryUsage.setText(usage.screenMs == 0 ? "" : Fmt.duration(usage.screenMs) + " on screen · " + usage.unlocks + " unlocks"
-                        + Fmt.quietSuffix(q) + "  ›");
+                entryUsage.setVisibility(usage.screenMs == 0 ? View.GONE : View.VISIBLE);
+                entryUsage.setSubtitle(Fmt.shortDuration(usage.screenMs) + " on screen · " + usage.unlocks + " unlocks"
+                        + Fmt.quietSuffix(q));
             });
         }).start();
     }

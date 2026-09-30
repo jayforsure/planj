@@ -85,12 +85,13 @@ final class OddsEngine {
     }
 
     static final class Lever {
-        final String id, whenTrue;
+        final String id, whenTrue, whenFalse; // short enough to sit on one line under a forecast
         final Label test; // evaluated on the evening's day, with the days before it
 
-        Lever(String id, String whenTrue, Label test) {
+        Lever(String id, String whenTrue, String whenFalse, Label test) {
             this.id = id;
             this.whenTrue = whenTrue;
+            this.whenFalse = whenFalse;
             this.test = test;
         }
     }
@@ -128,40 +129,42 @@ final class OddsEngine {
     static final String FOCUS = "pc_focus_2h";
 
     static final List<Outcome> OUTCOMES = List.of(
-            new Outcome("off_by_1am", "Off all devices by 1am tonight", "off by 1am",
+            new Outcome("off_by_1am", "Off devices by 1am tonight", "off by 1am",
                     (t, b) -> t.quietStartHour == null ? null : t.quietStartHour >= 20 || t.quietStartHour <= 1.0),
-            new Outcome("quiet_7h", "At least 7 hours device-free tonight", "7h+ device-free",
+            new Outcome("quiet_7h", "7h+ device-free tonight", "7h+ device-free",
                     (t, b) -> t.quietH == null ? null : t.quietH >= 7),
-            new Outcome("heavy_screen", "Tomorrow is a heavier-than-usual screen day", "heavy screen day",
+            new Outcome("heavy_screen", "Heavier screen day", "heavy screen day",
                     (t, b) -> {
                         List<Double> past = new ArrayList<>();
                         for (Day d : b) past.add(d.screenH);
                         return past.size() < MIN_HISTORY ? null : t.screenH > median(past);
                     }),
-            new Outcome("social_2h", "Over 2 hours of social apps tomorrow", "2h+ social",
+            new Outcome("social_2h", "2h+ on social apps", "2h+ social",
                     (t, b) -> t.socialH > 2),
-            new Outcome("up_by_8", "First phone use before 08:00 tomorrow", "up by 8",
+            new Outcome("up_by_8", "Up by 8", "up by 8",
                     (t, b) -> t.firstUseHour < 0 ? null : t.firstUseHour < 8),
-            new Outcome(FOCUS, "2h+ focus on your PC tomorrow", "2h+ PC focus",
+            new Outcome(FOCUS, "2h+ focus on your PC", "2h+ PC focus",
                     (t, b) -> t.pc == null ? null : t.pc.focusH >= PcFocus.GOAL_H)
     );
 
     static final List<Lever> LEVERS = List.of(
-            new Lever("short_night", "after a night under 7h device-free", (d, b) -> d.quietH == null ? null : d.quietH < 7),
-            new Lever("late_phone", "after phone use between midnight and 5am", (d, b) -> d.lateH > 0.5),
-            new Lever("social_heavy", "on a day with over 2h of social apps", (d, b) -> d.socialH > 2),
-            new Lever("many_unlocks", "on a day with more unlocks than usual", (d, b) -> {
+            new Lever("short_night", "after a short night", "after a full night", (d, b) -> d.quietH == null ? null : d.quietH < 7),
+            new Lever("late_phone", "after phone past midnight", "after no phone past midnight", (d, b) -> d.lateH > 0.5),
+            new Lever("social_heavy", "after 2h+ social", "after under 2h social", (d, b) -> d.socialH > 2),
+            new Lever("many_unlocks", "after many unlocks", "after few unlocks", (d, b) -> {
                 List<Double> past = new ArrayList<>();
                 for (Day x : b) past.add(x.unlocks);
                 return past.size() < MIN_HISTORY ? null : d.unlocks > median(past);
             }),
-            new Lever("pc_focus_day", "after a day with 2h+ focus on the PC",
+            new Lever("pc_focus_day", "after a focused PC day", "after little PC focus",
                     (d, b) -> d.pc == null ? null : d.pc.focusH >= PcFocus.GOAL_H),
-            new Lever("pc_watch_late", "after watching on the PC past 11pm", (d, b) -> d.pc == null ? null : d.pc.lateWatchMin >= 15),
-            new Lever("pc_watch_heavy", "on a day with over 1h watching on the PC", (d, b) -> d.pc == null ? null : d.pc.watchH > 1),
-            new Lever("out_at_place", "on a day out at one of your places", (d, b) -> d.at == null ? null : !d.at.isEmpty()),
-            new Lever("charged", "on a night the phone was charging", (d, b) -> d.charged),
-            new Lever("weekend_next", "when tomorrow is a weekend day",
+            new Lever("pc_watch_late", "after watching past 11pm", "after no late watching",
+                    (d, b) -> d.pc == null ? null : d.pc.lateWatchMin >= 15),
+            new Lever("pc_watch_heavy", "after 1h+ watching", "after under 1h watching",
+                    (d, b) -> d.pc == null ? null : d.pc.watchH > 1),
+            new Lever("out_at_place", "after a day out", "after a day at home", (d, b) -> d.at == null ? null : !d.at.isEmpty()),
+            new Lever("charged", "charging overnight", "not charging overnight", (d, b) -> d.charged),
+            new Lever("weekend_next", "before a weekend day", "before a weekday",
                     (d, b) -> d.date.getDayOfWeek().getValue() >= 5) // Fri or Sat evening
     );
 
@@ -408,7 +411,7 @@ final class OddsEngine {
             }
             if (bestLever != null) {
                 out.add(new Forecast(oc, (bestK + 1.0) / (bestN + 2), base, n,
-                        bestSide ? bestLever.whenTrue : "not " + bestLever.whenTrue, bestK, bestN));
+                        bestSide ? bestLever.whenTrue : bestLever.whenFalse, bestK, bestN));
             } else {
                 out.add(new Forecast(oc, (k + 1.0) / (n + 2), base, n, null, k, n));
             }

@@ -22,13 +22,25 @@ public class AppDetailActivity extends Activity {
         findViewById(R.id.back).setOnClickListener(v -> finish());
 
         Drawable icon = AppPalette.icon(this, pkg);
-        if (icon != null) ((ImageView) findViewById(R.id.icon)).setImageDrawable(icon);
+        ImageView iv = findViewById(R.id.icon);
+        if (icon != null) {
+            iv.setImageDrawable(icon);
+            iv.setClipToOutline(true);
+            iv.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(android.view.View v, android.graphics.Outline o) {
+                    o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 16 * getResources().getDisplayMetrics().density);
+                }
+            });
+        } else {
+            iv.setVisibility(android.view.View.GONE);
+        }
         ((TextView) findViewById(R.id.title)).setText(AppPalette.label(this, pkg));
 
         DayUsage usage = DayUsage.load(this, day);
         long ms = usage.appMs.getOrDefault(pkg, 0L);
         long share = usage.appTotalMs() == 0 ? 0 : Math.round(100.0 * ms / usage.appTotalMs());
-        ((TextView) findViewById(R.id.subtitle)).setText(Fmt.duration(ms) + " on " + Fmt.shortDate(day) + " · " + share + "% of app time");
+        ((TextView) findViewById(R.id.subtitle)).setText(Fmt.shortDuration(ms) + " on " + Fmt.shortDate(day) + " · " + share + "% of app time");
 
         float[] hours = new float[7];
         String[] labels = new String[7];
@@ -43,27 +55,18 @@ public class AppDetailActivity extends Activity {
 
         LinearLayout sessions = findViewById(R.id.sessions);
         int count = 0;
-        float density = getResources().getDisplayMetrics().density;
         for (int i = usage.sessions.size() - 1; i >= 0; i--) {
             DayUsage.Session s = usage.sessions.get(i);
             if (!s.pkg.equals(pkg) || s.endMs - s.startMs < 30_000) continue;
             count++;
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setPadding(0, (int) (10 * density), 0, (int) (10 * density));
-            TextView when = new TextView(this);
-            when.setText(Fmt.clock(s.startMs) + " – " + Fmt.clock(s.endMs));
-            when.setTextColor(getColor(R.color.text));
-            when.setTextSize(14);
-            row.addView(when, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-            TextView len = new TextView(this);
-            len.setText(Fmt.duration(s.endMs - s.startMs));
-            len.setTextColor(getColor(R.color.muted));
-            len.setTextSize(13);
-            row.addView(len);
+            ListRow row = new ListRow(this);
+            row.setIcon(R.drawable.ic_today);
+            row.setTitle(Fmt.clock(s.startMs) + " – " + Fmt.clock(s.endMs));
+            row.setValue(Fmt.shortDuration(s.endMs - s.startMs), false);
+            row.setClickable(false);
+            row.setBackground(null);
             sessions.addView(row);
         }
-        ((TextView) findViewById(R.id.sessions_title)).setText(
-                count == 0 ? "NO SESSIONS OVER 30 SECONDS" : count + (count == 1 ? " SESSION" : " SESSIONS") + " · LATEST FIRST");
+        ((TextView) findViewById(R.id.sessions_title)).setText(count == 0 ? "none over 30s" : "latest first");
     }
 }
