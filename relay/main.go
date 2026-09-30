@@ -42,6 +42,7 @@ type server struct {
 	dir  string
 	mu   sync.Mutex // serialises writes so the per-mailbox cap holds
 	mail mailer
+	live liveStore // the PC's latest status per mailbox, replaced on every write
 }
 
 type item struct {
@@ -55,6 +56,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/mailbox/{box}", s.put)
 	mux.HandleFunc("GET /v1/mailbox/{box}", s.list)
 	mux.HandleFunc("DELETE /v1/mailbox/{box}", s.ack)
+	mux.HandleFunc("PUT /v1/live/{box}", s.putLive)
+	mux.HandleFunc("GET /v1/live/{box}", s.getLive)
 	s.accountRoutes(mux)
 	return mux
 }

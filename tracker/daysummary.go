@@ -34,6 +34,12 @@ type spanRec struct {
 // SummarizeDay reads one local day's activity file (and the day before, for spans that
 // cross midnight) and returns present PC time as merged [start, end, cat] minute ranges.
 func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
+	return SummarizeDayWith(dir, day, loc, nil)
+}
+
+// SummarizeDayWith also counts spans not yet on disk, such as the one still in progress,
+// so a live view is right to the second rather than to the last write.
+func SummarizeDayWith(dir string, day time.Time, loc *time.Location, extra []Span) DaySummary {
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
 	end := start.AddDate(0, 0, 1)
 	type seg struct {
@@ -43,6 +49,7 @@ func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
 	var segs []seg
 	appMin := map[string]float64{}
 	appCat := map[string]string{}
+	var recs []spanRec
 	for _, d := range []time.Time{start.AddDate(0, 0, -1), start} {
 		f, err := os.Open(filepath.Join(dir, d.Format("2006-01-02")+".jsonl"))
 		if err != nil {
@@ -52,42 +59,45 @@ func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
 			var r spanRec
-			if json.Unmarshal(sc.Bytes(), &r) != nil || r.Idle || notUse[strings.ToLower(r.App)] {
-				continue
-			}
-			s, err1 := time.Parse(tsLayout, r.Start)
-			e, err2 := time.Parse(tsLayout, r.End)
-			if err1 != nil || err2 != nil {
-				continue
-			}
-			if s.Before(start) {
-				s = start
-			}
-			if e.After(end) {
-				e = end
-			}
-			if !e.After(s) {
-				continue
-			}
-			cat := r.Cat
-			if cat == "" {
-				cat = CatOther
-			}
-			segs = append(segs, seg{int(s.Sub(start).Minutes()), int(e.Sub(start).Minutes() + 0.999), cat})
-			name := r.Name
-			if name == "" && IsBrowser(r.App) {
-				name = "Other websites" // recorded before sites were named
-			} else if name == "" {
-				name = AppName(r.App)
-			}
-			appMin[name] += e.Sub(s).Minutes()
-			if name == "Other websites" {
-				appCat[name] = CatOther // an unnamed page never claims to be focus or fun in the list
-			} else if _, seen := appCat[name]; !seen || cat != CatOther {
-				appCat[name] = cat
+			if json.Unmarshal(sc.Bytes(), &r) == nil {
+				recs = append(recs, r)
 			}
 		}
 		f.Close()
+	}
+	for _, x := range extra {
+		recs = append(recs, spanRec{Start: x.Start.Format(tsLayout), End: x.End.Format(tsLayout), App: x.App, Cat: x.Cat, Name: x.Name, Idle: x.Idle})
+	}
+	for _, r := range recs {
+		if r.Idle || notUse[strings.ToLower(r.App)] {
+			continue
+		}
+		s, err1 := time.Parse(tsLayout, r.Start)
+		e, err2 := time.Parse(tsLayout, r.End)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		if s.Before(start) {
+			s = start
+		}
+		if e.After(end) {
+			e = end
+		}
+		if !e.After(s) {
+			continue
+		}
+		cat := r.Cat
+		if cat == "" {
+			cat = CatOther
+		}
+		segs = append(segs, seg{int(s.Sub(start).Minutes()), int(e.Sub(start).Minutes() + 0.999), cat})
+		name := DisplayName(r.App, r.Name)
+		appMin[name] += e.Sub(s).Minutes()
+		if name == "Other websites" {
+			appCat[name] = CatOther // an unnamed page never claims to be focus or fun in the list
+		} else if _, seen := appCat[name]; !seen || cat != CatOther {
+			appCat[name] = cat
+		}
 	}
 	sort.Slice(segs, func(i, j int) bool { return segs[i].s < segs[j].s })
 	var merged []seg
@@ -119,6 +129,24 @@ func SummarizeDay(dir string, day time.Time, loc *time.Location) DaySummary {
 		}
 	}
 	return out
+}
+
+// DisplayName is how a span is listed: the rule's name ("YouTube", a site), "Other websites"
+// for an unnamed browser page, else the program's readable name.
+func DisplayName(app, name string) string {
+	switch {
+	case name != "":
+		return name
+	case IsBrowser(app):
+		return "Other websites" // includes spans recorded before sites were named
+	default:
+		return AppName(app)
+	}
+}
+
+// Locked says whether a program is the computer waiting for you rather than you using it.
+func Locked(app string) bool {
+	return notUse[strings.ToLower(app)]
 }
 
 // SummaryLines is today's and yesterday's summary as JSON lines, ready to seal.

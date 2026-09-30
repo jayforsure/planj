@@ -82,6 +82,14 @@ func (r *Recorder) ObserveFull(t time.Time, o Observation) []Span {
 	return out
 }
 
+// Current is the span in progress, not yet written, as it stands at its last observation.
+func (r *Recorder) Current() (Span, bool) {
+	if r.cur == nil {
+		return Span{}, false
+	}
+	return *r.cur, true
+}
+
 // Flush closes the span in progress, e.g. on shutdown.
 func (r *Recorder) Flush() []Span {
 	if r.cur == nil {

@@ -25,7 +25,7 @@ const (
 	exeName   = appName + ".exe"
 	mutexName = `Local\` + appName
 	runKey    = `Software\Microsoft\Windows\CurrentVersion\Run`
-	pollEvery = 5 * time.Second
+	pollEvery = time.Second // a switch shows on the phone within a second or two
 )
 
 func main() {
@@ -117,6 +117,9 @@ func run(root string) {
 	defer windows.CloseHandle(mutex)
 	log.Printf("started, writing to %s", dir)
 	go pullLoop(root)
+	liveCh := make(chan liveUpdate, 1)
+	go liveLoop(root, liveCh)
+	var liveNow LiveTracker
 
 	// UI Automation needs COM on one fixed thread; the loop below runs on this goroutine only.
 	runtime.LockOSThread()
@@ -143,9 +146,16 @@ func run(root string) {
 		o := Observation{App: app, Cat: cat, Name: name, IdleFor: idleDuration(), IdleAfter: IdleAllowance(cat, app, title, rec.IdleAfter)}
 		title = "" // the title has done its job; it goes no further
 		// Round(0) drops the monotonic reading, which can pause during sleep and hide the gap.
-		if err := w.Write(rec.ObserveFull(now.Round(0), o)); err != nil {
+		t := now.Round(0)
+		if err := w.Write(rec.ObserveFull(t, o)); err != nil {
 			log.Printf("write: %v", err)
 		}
+		ln, changed := liveNow.Observe(t, o, o.IdleFor >= o.IdleAfter)
+		var cur *Span
+		if c, ok := rec.Current(); ok {
+			cur = &c
+		}
+		offerLive(liveCh, liveUpdate{at: t, now: ln, changed: changed, cur: cur})
 	}
 
 	stop := make(chan os.Signal, 1)
