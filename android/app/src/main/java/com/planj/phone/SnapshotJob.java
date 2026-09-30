@@ -39,6 +39,11 @@ public class SnapshotJob extends JobService {
     /** Collect then upload; used by the job and whenever the app is opened. */
     static void collectAndSync(Context ctx) {
         try {
+            ArrivalWatch.arm(ctx); // re-armed after a reboot or an update cleared the watches
+        } catch (Exception e) {
+            Log.w("planj", "arrival watch", e);
+        }
+        try {
             String place = Places.sample(ctx);
             if (place != null) UsageCollector.appendLines(ctx, java.util.List.of(place));
         } catch (Exception e) {

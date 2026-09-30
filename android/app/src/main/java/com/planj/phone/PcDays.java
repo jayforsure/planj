@@ -63,14 +63,19 @@ final class PcDays {
         return new File(ctx.getFilesDir(), "pc");
     }
 
-    /** Keeps the newest summary per day; the PC resends today every quarter hour. */
-    static void save(Context ctx, String line) {
+    /** Keeps the newest summary per day: the live status every few seconds, the quarter-hourly one as backup. */
+    static synchronized void save(Context ctx, String line) {
         try {
             JSONObject o = new JSONObject(line);
             String day = LocalDate.parse(o.getString("day")).toString();
             File d = dir(ctx);
             if (!d.isDirectory() && !d.mkdirs()) return;
-            try (FileOutputStream out = new FileOutputStream(new File(d, day + ".json"))) {
+            File f = new File(d, day + ".json");
+            if (f.exists()) { // a summary that arrives late must not replace a newer one
+                String at = o.optString("at"), had = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8)).optString("at");
+                if (!had.isEmpty() && (at.isEmpty() || at.compareTo(had) < 0)) return;
+            }
+            try (FileOutputStream out = new FileOutputStream(f)) {
                 out.write(o.toString().getBytes(StandardCharsets.UTF_8));
             }
         } catch (JSONException | IOException | RuntimeException e) {

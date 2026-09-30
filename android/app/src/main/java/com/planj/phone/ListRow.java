@@ -101,7 +101,18 @@ public final class ListRow extends LinearLayout {
     }
 
     public void setIcon(int res) {
+        outline();
         icon.setImageResource(res);
+    }
+
+    /** Back to the outlined square, after an app's own icon was shown in it. */
+    private void outline() {
+        int pad = (int) (14 * dp);
+        icon.setBackgroundResource(R.drawable.icon_circle);
+        icon.setPadding(pad, pad, pad, pad);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setClipToOutline(false);
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(title.getCurrentTextColor()));
     }
 
     public void setIcon(android.graphics.drawable.Drawable d) {
@@ -127,6 +138,8 @@ public final class ListRow extends LinearLayout {
     /** No icon to show: the first letter, inside the usual outline. */
     public void setLetter(String name) {
         String l = name == null || name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+        outline();
+        icon.setImageTintList(null);
         icon.setImageDrawable(new LetterDrawable(l, getContext().getColor(R.color.text), 20 * dp));
     }
 
@@ -151,6 +164,10 @@ public final class ListRow extends LinearLayout {
         value.setTextColor(getContext().getColor(muted ? R.color.muted : R.color.text));
         value.setVisibility(v == null || v.length() == 0 ? GONE : VISIBLE);
         chevron.setVisibility(GONE);
+    }
+
+    public void setValueColor(int color) {
+        value.setTextColor(color);
     }
 
     public void setChevron(boolean shown) {

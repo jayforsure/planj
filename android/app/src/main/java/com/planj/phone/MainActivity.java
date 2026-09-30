@@ -114,6 +114,7 @@ public class MainActivity extends Activity {
         for (View v : new View[]{navToday, navOdds, navJournal, navAccount, navSettings}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
+        today.setLive(tab == today.view() && resumed);
         if (changed) { // a short rise so the new page arrives rather than blinks in
             tab.animate().cancel();
             tab.setAlpha(0f);
@@ -211,9 +212,20 @@ public class MainActivity extends Activity {
         refresh();
     }
 
+    private boolean resumed;
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        resumed = false;
+        today.setLive(false); // nothing polls while the app is in the background
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
+        today.setLive(today.view().getVisibility() == View.VISIBLE);
         MoodReminder.schedule(this);
         refresh();
         if (hasUsageAccess()) {

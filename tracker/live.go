@@ -61,8 +61,9 @@ func BuildLive(dir string, t time.Time, now LiveNow, cur *Span) []byte {
 	if cur != nil && cur.End.After(cur.Start) {
 		extra = append(extra, *cur)
 	}
-	st := LiveStatus{Event: "pc_live", T: t.UTC().Format(time.RFC3339), Now: now,
-		Day: SummarizeDayWith(dir, t, t.Location(), extra)}
+	day := SummarizeDayWith(dir, t, t.Location(), extra)
+	day.At = t.UTC().Format(time.RFC3339)
+	st := LiveStatus{Event: "pc_live", T: day.At, Now: now, Day: day}
 	b, _ := json.Marshal(st)
 	return append(b, '\n')
 }

@@ -31,6 +31,15 @@ final class TodayTab {
     private final MoodPicker picker;
     private LocalDate shown = LocalDate.now();
 
+    // Live: while Today is on screen, the PC's "now" every 3 s and the phone's own numbers every 30 s.
+    private static final long LIVE_EVERY_MS = 3_000;
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable liveTick = this::pollLive;
+    private boolean live, fetching;
+    private int liveTicks;
+    private String liveAppsKey;
+    private PcLive lastLive;
+
     TodayTab(MainActivity a, ViewGroup container) {
         this.a = a;
         root = a.getLayoutInflater().inflate(R.layout.tab_today, container, false);
@@ -199,15 +208,95 @@ final class TodayTab {
         return true;
     }
 
+    /** Starts or stops live updates; on only while Today is the visible tab and the app is open. */
+    void setLive(boolean on) {
+        if (on == live) return;
+        live = on;
+        ui.removeCallbacks(liveTick);
+        if (on) ui.post(liveTick);
+    }
+
+    private void pollLive() {
+        if (!live) return;
+        ui.postDelayed(liveTick, LIVE_EVERY_MS);
+        if (fetching || !shown.equals(LocalDate.now())) return;
+        fetching = true;
+        final boolean phoneToo = ++liveTicks % 10 == 0;
+        new Thread(() -> {
+            PcLive l = PcLive.fetch(a);
+            if (phoneToo && !PrivateMode.isOn(a)) {
+                try {
+                    UsageCollector.collect(a);
+                } catch (Exception ignored) {
+                    // the next tick tries again
+                }
+            }
+            a.runOnUiThread(() -> {
+                fetching = false;
+                if (!live) return;
+                showLive(l);
+                if (phoneToo) refresh(a.hasUsageAccess());
+            });
+        }).start();
+    }
+
+    /** The live row at the top of "On your PC", and the day's totals as the PC has them now. */
+    private void showLive(PcLive l) {
+        ListRow now = root.findViewById(R.id.pc_now);
+        if (l == null || !l.fresh() || !shown.equals(LocalDate.now())) {
+            now.setVisibility(View.GONE);
+            lastLive = null;
+            return;
+        }
+        lastLive = l;
+        now.setVisibility(View.VISIBLE);
+        String since = Fmt.clock(l.sinceMs);
+        if (l.locked) {
+            now.setTag(null);
+            now.setIcon(R.drawable.ic_lock);
+            now.setTitle("PC locked");
+            now.setSubtitle("Since " + since);
+            now.setValue("", false);
+        } else if (l.idle) {
+            now.setTag(null);
+            now.setIcon(R.drawable.ic_monitor);
+            now.setTitle("Away from your PC");
+            now.setSubtitle("Since " + since + " · last on " + l.name);
+            now.setValue("", false);
+        } else {
+            PcAppRows.bindIcon(a, now, l.name);
+            now.setTitle(l.name);
+            long ms = System.currentTimeMillis() - l.sinceMs;
+            now.setSubtitle(PcAppRows.label(l.cat) + " · " + (ms < 60_000 ? "just now" : Fmt.shortDuration(ms) + " so far"));
+            now.setValue("● Now", false);
+            now.setValueColor(a.getColor(R.color.accent));
+        }
+        StringBuilder key = new StringBuilder();
+        for (PcDays.App x : l.apps) key.append(x.name).append(x.minutes).append(',');
+        if (!key.toString().equals(liveAppsKey)) {
+            liveAppsKey = key.toString();
+            showPcApps(l.apps, shown);
+        } else {
+            showSection(true);
+        }
+    }
+
+    private void showSection(boolean has) {
+        root.findViewById(R.id.pc_section).setVisibility(has ? View.VISIBLE : View.GONE);
+        root.findViewById(R.id.pc_card).setVisibility(has ? View.VISIBLE : View.GONE);
+    }
+
     /** "On your PC": apps and recognised sites, with a bar in the category's colour. */
     private void showPcApps(List<PcDays.App> apps, LocalDate day) {
         View section = root.findViewById(R.id.pc_section), card = root.findViewById(R.id.pc_card);
-        boolean has = apps != null && !apps.isEmpty();
+        boolean live = lastLive != null && lastLive.fresh() && day.equals(LocalDate.now());
+        boolean has = (apps != null && !apps.isEmpty()) || live;
+        if (!live) root.findViewById(R.id.pc_now).setVisibility(View.GONE); // only today has a "now"
         section.setVisibility(has ? View.VISIBLE : View.GONE);
         card.setVisibility(has ? View.VISIBLE : View.GONE);
         if (!has) return;
         int total = 0;
-        for (PcDays.App x : apps) total += x.minutes;
+        if (apps != null) for (PcDays.App x : apps) total += x.minutes;
         ((TextView) root.findViewById(R.id.pc_total)).setText(Fmt.shortDuration(total * 60_000L));
         PcAppRows.fill(a, root.findViewById(R.id.pc_apps), apps, 5);
         root.findViewById(R.id.pc_see_all).setOnClickListener(v -> a.startActivity(

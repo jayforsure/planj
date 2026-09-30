@@ -13,10 +13,11 @@ import (
 // DaySummary is what the PC tells the phone about a day: present time by category, in
 // minutes since local midnight. No app names, no titles; the phone draws it on its timeline.
 type DaySummary struct {
-	Event string   `json:"event"` // "pc_day"
-	Day   string   `json:"day"`   // local date, 2006-01-02
-	Spans [][3]any `json:"spans"` // [startMin, endMin, category]
-	Apps  [][3]any `json:"apps"`  // [name, minutes, category], most used first
+	Event string   `json:"event"`        // "pc_day"
+	Day   string   `json:"day"`          // local date, 2006-01-02
+	Spans [][3]any `json:"spans"`        // [startMin, endMin, category]
+	Apps  [][3]any `json:"apps"`         // [name, minutes, category], most used first
+	At    string   `json:"at,omitempty"` // when this was worked out; the phone keeps the newest
 }
 
 // Screens that are the computer waiting for you, not you using it.
@@ -153,7 +154,9 @@ func Locked(app string) bool {
 func SummaryLines(dir string, now time.Time) []byte {
 	var buf []byte
 	for _, d := range []time.Time{now.AddDate(0, 0, -1), now} {
-		line, err := json.Marshal(SummarizeDay(dir, d, now.Location()))
+		sum := SummarizeDay(dir, d, now.Location())
+		sum.At = now.UTC().Format(time.RFC3339)
+		line, err := json.Marshal(sum)
 		if err != nil {
 			continue
 		}

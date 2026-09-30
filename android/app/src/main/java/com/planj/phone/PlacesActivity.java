@@ -40,12 +40,14 @@ public class PlacesActivity extends Activity {
         setUpOverview();
         findViewById(R.id.row_pause).setOnClickListener(v -> {
             Places.setEnabled(this, !Places.enabled(this));
+            rearm();
             render();
         });
         findViewById(R.id.row_forget).setOnClickListener(v -> new AlertDialog.Builder(this)
                 .setMessage("Delete every place, marked and noticed? Routines tied to them start over.")
                 .setPositiveButton("Forget", (d, w) -> {
                     Places.forget(this);
+                    rearm();
                     render();
                 })
                 .setNegativeButton("Cancel", null).show());
@@ -55,6 +57,18 @@ public class PlacesActivity extends Activity {
     protected void onResume() {
         super.onResume();
         render();
+        rearm(); // after marking, moving or removing a place in the picker
+    }
+
+    /** Arrival alerts follow the marked places, so they are re-armed whenever places change. */
+    private void rearm() {
+        new Thread(() -> {
+            try {
+                ArrivalWatch.arm(this);
+            } catch (Exception e) {
+                android.util.Log.w("planj", "arrival watch", e);
+            }
+        }).start();
     }
 
     private android.webkit.WebView overview;

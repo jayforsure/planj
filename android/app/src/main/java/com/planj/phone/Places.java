@@ -91,22 +91,38 @@ final class Places {
      */
     static String sample(Context ctx) {
         if (!enabled(ctx) || !hasForeground(ctx)) return null;
-        Location loc = fix(ctx);
-        if (loc == null || !loc.hasAccuracy() || loc.getAccuracy() > MAX_ACCURACY) return null;
+        return fromLocation(ctx, fix(ctx));
+    }
+
+    /** The event line for a fix that arrived by other means (another app's fix), if the place changed. */
+    static String fromLocation(Context ctx, Location loc) {
+        if (!enabled(ctx) || loc == null || !loc.hasAccuracy() || loc.getAccuracy() > MAX_ACCURACY) return null;
         String place;
         try {
             place = match(ctx, loc);
         } catch (IOException | JSONException e) {
             return null;
         }
-        if (place.equals(prefs(ctx).getString("last", null))) return null;
+        return change(ctx, place, System.currentTimeMillis());
+    }
+
+    /**
+     * Records being at a place from time t, and returns the event line if that is a change.
+     * One gate for every source (samples, Wi-Fi, proximity alerts), so none records twice.
+     */
+    static synchronized String change(Context ctx, String place, long t) {
+        if (place == null || place.equals(prefs(ctx).getString("last", null))) return null;
         prefs(ctx).edit().putString("last", place).apply();
         try {
-            return new JSONObject().put("t", java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString())
+            return new JSONObject().put("t", java.time.Instant.ofEpochMilli(t).toString())
                     .put("event", "place").put("app", place).toString();
         } catch (JSONException e) {
             return null;
         }
+    }
+
+    static double radius() {
+        return RADIUS;
     }
 
     @SuppressWarnings("MissingPermission") // callers check hasForeground()

@@ -51,6 +51,29 @@ final class PcAppRows {
         return row;
     }
 
+    /** The app's or site's icon on a row that stays on screen and changes what it shows (the live row). */
+    static void bindIcon(Activity a, ListRow row, String name) {
+        if (name.equals(row.getTag())) return; // already showing this one
+        row.setTag(name);
+        if ("Other websites".equals(name)) {
+            row.setIcon(R.drawable.ic_globe);
+            return;
+        }
+        row.setLetter(name);
+        Bitmap cached = PcIcons.cached(a, name);
+        if (cached != null) {
+            row.setImage(new BitmapDrawable(a.getResources(), cached));
+        } else if (PcIcons.known(name) && FETCHING.add(name)) {
+            new Thread(() -> {
+                Bitmap b = PcIcons.fetch(a, name);
+                FETCHING.remove(name);
+                if (b != null) a.runOnUiThread(() -> {
+                    if (name.equals(row.getTag())) row.setImage(new BitmapDrawable(a.getResources(), b));
+                });
+            }).start();
+        }
+    }
+
     static String label(String cat) {
         switch (cat) {
             case "focus": return "Focus";

@@ -74,6 +74,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Not exported: only the system's own PendingIntents (Wi-Fi, location) reach it. -->
+        <receiver
+            android:name=".ArrivalWatch"
+            android:exported="false" />
+
         <service
             android:name=".SnapshotJob"
             android:exported="false"
