@@ -26,6 +26,7 @@ public class PcAppsActivity extends Activity {
         if (apps != null) for (PcDays.App a : apps) total += a.minutes;
         String when = day.equals(LocalDate.now()) ? "Today" : day.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH));
         ((TextView) findViewById(R.id.summary)).setText(when + " · " + Fmt.shortDuration(total * 60_000L));
+        ((TextView) findViewById(R.id.title)).setText(DeviceNames.pc(this));
         PcAppRows.fill(this, findViewById(R.id.list), apps, Integer.MAX_VALUE);
     }
 }

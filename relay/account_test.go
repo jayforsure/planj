@@ -200,3 +200,40 @@ func TestCodesExpireAndLockAfterTries(t *testing.T) {
 		t.Fatal("expired code accepted")
 	}
 }
+
+func TestDevicesCanBeNamed(t *testing.T) {
+	ts, m := newAccountServer(t)
+	phone := signUp(t, ts, m, "name@example.com", auth1)
+	st, out := call(t, ts, "POST", "/v1/account/login", "", map[string]string{"email": "name@example.com", "auth": auth1, "device": "LAPTOP-7Q"})
+	if st != 200 {
+		t.Fatalf("login: %d %v", st, out)
+	}
+	pc := out["token"].(string)
+	labels := func(token string) []string {
+		_, me := call(t, ts, "GET", "/v1/account/me", token, nil)
+		var got []string
+		for _, d := range me["devices"].([]any) {
+			got = append(got, d.(map[string]any)["label"].(string))
+		}
+		return got
+	}
+	if got := labels(phone); len(got) != 2 || got[0] != "" || got[1] != "" {
+		t.Fatalf("unnamed at first: %v", got)
+	}
+	// the phone names the PC, and the PC sees it
+	if st, _ := call(t, ts, "PUT", "/v1/account/device/1/label", phone, map[string]string{"label": "  Desk PC "}); st != 204 {
+		t.Fatalf("label: %d", st)
+	}
+	if got := labels(pc); got[1] != "Desk PC" {
+		t.Fatalf("pc label: %v", got)
+	}
+	if st, _ := call(t, ts, "PUT", "/v1/account/device/9/label", phone, map[string]string{"label": "x"}); st != 404 {
+		t.Fatalf("missing device: %d", st)
+	}
+	if st, _ := call(t, ts, "PUT", "/v1/account/device/0/label", phone, map[string]string{"label": strings.Repeat("a", 31)}); st != 400 {
+		t.Fatalf("too long: %d", st)
+	}
+	if st, _ := call(t, ts, "PUT", "/v1/account/device/0/label", "", map[string]string{"label": "x"}); st != 401 {
+		t.Fatalf("signed out: %d", st)
+	}
+}

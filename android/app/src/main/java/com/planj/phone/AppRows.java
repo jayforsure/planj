@@ -10,14 +10,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-/** Fills a column with phone app rows, in the same row as every other list: icon, name, time and share. */
+/** Fills a column with phone app rows, in the same row as every other list: icon, name, time. */
 final class AppRows {
     private AppRows() {}
 
     static void fill(Activity a, LinearLayout column, DayUsage usage, int limit) {
         column.removeAllViews();
         List<Map.Entry<String, Long>> ranked = usage.ranked();
-        long total = Math.max(usage.appTotalMs(), 1);
         int shown = 0;
         for (Map.Entry<String, Long> e : ranked) {
             if (shown++ == limit) break;
@@ -28,7 +27,6 @@ final class AppRows {
             if (d != null) row.setImage(d);
             else row.setLetter(name);
             row.setTitle(name);
-            row.setSubtitle(Math.round(100.0 * e.getValue() / total) + "% of app time");
             row.setValue(Fmt.shortDuration(e.getValue()), false);
             LocalDate day = usage.day;
             row.setOnClickListener(v -> a.startActivity(new Intent(a, AppDetailActivity.class)

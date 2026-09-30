@@ -47,7 +47,8 @@ type codeChallenge struct {
 
 type device struct {
 	TokenHash string    `json:"token_hash"`
-	Name      string    `json:"name"`
+	Name      string    `json:"name"`            // what the device called itself (model, host name)
+	Label     string    `json:"label,omitempty"` // what the person named it; "Device N" until then
 	Created   time.Time `json:"created"`
 	LastSeen  time.Time `json:"last_seen"`
 }
@@ -316,6 +317,7 @@ func (s *server) accountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/account/keybox", s.getKeybox)
 	mux.HandleFunc("PUT /v1/account/keybox", s.putKeybox)
 	mux.HandleFunc("DELETE /v1/account/device/{index}", s.revokeDevice)
+	mux.HandleFunc("PUT /v1/account/device/{index}/label", s.labelDevice)
 }
 
 type accountRequest struct {
@@ -568,13 +570,14 @@ func (s *server) me(w http.ResponseWriter, r *http.Request) {
 	type dev struct {
 		Index    int       `json:"index"`
 		Name     string    `json:"name"`
+		Label    string    `json:"label"`
 		Created  time.Time `json:"created"`
 		LastSeen time.Time `json:"last_seen"`
 		This     bool      `json:"this"`
 	}
 	devs := []dev{}
 	for i, d := range a.Devices {
-		devs = append(devs, dev{Index: i, Name: d.Name, Created: d.Created, LastSeen: d.LastSeen, This: i == idx})
+		devs = append(devs, dev{Index: i, Name: d.Name, Label: d.Label, Created: d.Created, LastSeen: d.LastSeen, This: i == idx})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"email": a.Email, "created": a.Created, "has_keybox": a.Keybox != nil,
@@ -610,6 +613,39 @@ func (s *server) revokeDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.Devices = append(a.Devices[:i], a.Devices[i+1:]...)
+	if err := s.saveAccount(a); err != nil {
+		serverError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// labelDevice names one of the account's devices ("Jay's phone"); any signed-in device may
+// name any other, and an empty label goes back to "Device N".
+func (s *server) labelDevice(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Label string `json:"label"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	label := strings.TrimSpace(req.Label)
+	if len([]rune(label)) > 30 {
+		http.Error(w, "label too long", http.StatusBadRequest)
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a, _, ok := s.authed(w, r)
+	if !ok {
+		return
+	}
+	var i int
+	if _, err := fmt.Sscanf(r.PathValue("index"), "%d", &i); err != nil || i < 0 || i >= len(a.Devices) {
+		http.Error(w, "no such device", http.StatusNotFound)
+		return
+	}
+	a.Devices[i].Label = label
 	if err := s.saveAccount(a); err != nil {
 		serverError(w, err)
 		return

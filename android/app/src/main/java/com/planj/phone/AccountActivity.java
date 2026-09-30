@@ -98,7 +98,7 @@ public class AccountActivity extends Activity {
         stage.removeAllViews();
         stage.addView(v);
         v.startAnimation(android.view.animation.AnimationUtils.loadAnimation(this, R.anim.fade_up));
-        back.setVisibility(stack.size() > 1 && !"recovery".equals(name) ? View.VISIBLE : View.INVISIBLE);
+        back.setVisibility(!"recovery".equals(name) ? View.VISIBLE : View.INVISIBLE); // back closes the page when it is the first
         step.setText("");
         switch (name) {
             case "welcome": bindWelcome(v); break;
@@ -390,62 +390,70 @@ public class AccountActivity extends Activity {
         run(() -> {
             JSONObject me = AccountApi.me(token);
             JSONArray devs = me.getJSONArray("devices");
+            DeviceNames.save(this, devs);
             ui.post(() -> {
                 progress.setVisibility(View.GONE);
                 list.removeAllViews();
                 for (int i = 0; i < devs.length(); i++) {
                     JSONObject d = devs.optJSONObject(i);
-                    list.addView(deviceRow(d.optString("name"), d.optString("last_seen"), d.optBoolean("this"), d.optInt("index"), f));
+                    if (d != null) list.addView(deviceRow(d, f));
                 }
             });
         }, f);
     }
 
-    private View deviceRow(String name, String lastSeen, boolean thisOne, int index, Form f) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        int pad = dp(14);
-        row.setPadding(dp(18), pad, dp(10), pad);
-        row.setBackgroundResource(R.drawable.card_bg);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(10);
-        row.setLayoutParams(lp);
-
-        LinearLayout text = new LinearLayout(this);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        TextView title = new TextView(this);
-        title.setText(thisOne ? name + " · this phone" : name);
-        title.setTextColor(getColor(R.color.text));
-        title.setTextSize(15);
-        title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
-        TextView sub = new TextView(this);
-        sub.setText("last seen " + localTime(lastSeen));
-        sub.setTextColor(getColor(R.color.muted));
-        sub.setTextSize(12);
-        text.addView(title);
-        text.addView(sub);
-        row.addView(text);
-
-        if (!thisOne) {
-            Button remove = new Button(this, null, android.R.attr.borderlessButtonStyle);
-            remove.setText("Remove");
-            remove.setAllCaps(false);
-            remove.setTextColor(getColor(R.color.bad));
-            remove.setBackgroundResource(R.drawable.btn_text);
-            remove.setOnClickListener(x -> new AlertDialog.Builder(this)
-                    .setTitle("Sign out " + name + "?")
-                    .setMessage("It will need the password to sign in again.")
-                    .setPositiveButton("Remove", (d, w) -> run(() -> {
-                        AccountApi.revokeDevice(AccountStore.token(this), index);
-                        ui.post(() -> render("devices"));
-                    }, f))
-                    .setNegativeButton("Cancel", null)
-                    .show());
-            row.addView(remove);
-        }
+    /** One device as a standard row: its name, what it is, and when it was last seen. Tap to rename. */
+    private View deviceRow(JSONObject d, Form f) {
+        boolean thisOne = d.optBoolean("this");
+        int index = d.optInt("index");
+        String name = DeviceNames.display(d), model = d.optString("name");
+        ListRow row = new ListRow(this);
+        row.setIcon(thisOne ? R.drawable.ic_phone : R.drawable.ic_monitor);
+        row.setTitle(name);
+        row.setSubtitle(thisOne ? model + " · this phone" : model + " · last seen " + localTime(d.optString("last_seen")));
+        row.setOnClickListener(x -> {
+            String[] actions = thisOne ? new String[]{"Rename"} : new String[]{"Rename", "Sign out this device"};
+            new AlertDialog.Builder(this)
+                    .setTitle(name)
+                    .setItems(actions, (dlg, which) -> {
+                        if (which == 0) rename(index, d.optString("label"), name, f);
+                        else confirmRemove(index, name, f);
+                    })
+                    .show();
+        });
         return row;
+    }
+
+    private void rename(int index, String current, String shown, Form f) {
+        EditText in = new EditText(this);
+        in.setText(current);
+        in.setHint(shown);
+        in.setSingleLine(true);
+        in.setSelectAllOnFocus(true);
+        in.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(30)});
+        int pad = dp(20);
+        in.setPadding(pad, pad, pad, pad);
+        new AlertDialog.Builder(this)
+                .setTitle("Name this device")
+                .setView(in)
+                .setPositiveButton("Save", (dlg, w) -> run(() -> {
+                    AccountApi.labelDevice(AccountStore.token(this), index, in.getText().toString().trim());
+                    ui.post(() -> render("devices"));
+                }, f))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void confirmRemove(int index, String name, Form f) {
+        new AlertDialog.Builder(this)
+                .setTitle("Sign out " + name + "?")
+                .setMessage("It will need the password to sign in again.")
+                .setPositiveButton("Sign out", (dlg, w) -> run(() -> {
+                    AccountApi.revokeDevice(AccountStore.token(this), index);
+                    ui.post(() -> render("devices"));
+                }, f))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void bindDelete(View v) {

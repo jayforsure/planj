@@ -114,7 +114,8 @@ final class TodayTab {
         int hour = LocalTime.now().getHour();
         greeting.setText(!isToday ? Fmt.shortDate(shown)
                 : hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
-        appsTitle.setText(isToday ? "Today's apps" : "Apps that day");
+        appsTitle.setText(DeviceNames.phone(a));
+        showPhoneNow();
 
         boolean priv = PrivateMode.isOn(a);
         privateBanner.setVisibility(priv ? View.VISIBLE : View.GONE);
@@ -183,6 +184,7 @@ final class TodayTab {
                 chart.setData(week, order, this::openDay);
                 fillLegend(order);
                 AppRows.fill(a, topApps, day, 4);
+                ((TextView) root.findViewById(R.id.apps_total)).setText(Fmt.shortDuration(day.appTotalMs()));
                 showTimeline(tl);
                 showPcApps(pcApps, target);
                 remember(target, day.screenMs, day.unlocks, q == null ? -1 : q.ms(), q != null && q.charging);
@@ -214,6 +216,7 @@ final class TodayTab {
         live = on;
         ui.removeCallbacks(liveTick);
         if (on) ui.post(liveTick);
+        showPhoneNow();
     }
 
     private void pollLive() {
@@ -221,7 +224,7 @@ final class TodayTab {
         ui.postDelayed(liveTick, LIVE_EVERY_MS);
         if (fetching || !shown.equals(LocalDate.now())) return;
         fetching = true;
-        final boolean phoneToo = ++liveTicks % 10 == 0;
+        final boolean phoneToo = ++liveTicks % 10 == 1; // on the first tick, then every 30 s
         new Thread(() -> {
             PcLive l = PcLive.fetch(a);
             if (phoneToo && !PrivateMode.isOn(a)) {
@@ -230,12 +233,14 @@ final class TodayTab {
                 } catch (Exception ignored) {
                     // the next tick tries again
                 }
+                PhoneLive.publish(a, a.getPackageName(), a.resumedAtMs()); // planj is in front: you are looking at it
             }
             a.runOnUiThread(() -> {
                 fetching = false;
                 if (!live) return;
                 showLive(l);
-                if (phoneToo) refresh(a.hasUsageAccess());
+                showPhoneNow();
+                if (phoneToo && liveTicks > 1) refresh(a.hasUsageAccess());
             });
         }).start();
     }
@@ -254,20 +259,20 @@ final class TodayTab {
         if (l.locked) {
             now.setTag(null);
             now.setIcon(R.drawable.ic_lock);
-            now.setTitle("PC locked");
+            now.setTitle("Locked");
             now.setSubtitle("Since " + since);
             now.setValue("", false);
         } else if (l.idle) {
             now.setTag(null);
             now.setIcon(R.drawable.ic_monitor);
-            now.setTitle("Away from your PC");
+            now.setTitle("Away");
             now.setSubtitle("Since " + since + " · last on " + l.name);
             now.setValue("", false);
         } else {
             PcAppRows.bindIcon(a, now, l.name);
             now.setTitle(l.name);
             long ms = System.currentTimeMillis() - l.sinceMs;
-            now.setSubtitle(PcAppRows.label(l.cat) + " · " + (ms < 60_000 ? "just now" : Fmt.shortDuration(ms) + " so far"));
+            now.setSubtitle(ms < 60_000 ? "Just now" : Fmt.shortDuration(ms) + " so far");
             now.setValue("● Now", false);
             now.setValueColor(a.getColor(R.color.accent));
         }
@@ -279,6 +284,31 @@ final class TodayTab {
         } else {
             showSection(true);
         }
+    }
+
+    /**
+     * The phone's own "now": while you look at Today that is planj itself, shown all the same,
+     * so both devices read the same way.
+     */
+    private void showPhoneNow() {
+        ListRow now = root.findViewById(R.id.phone_now);
+        if (!live || !shown.equals(LocalDate.now())) {
+            now.setVisibility(View.GONE);
+            return;
+        }
+        now.setVisibility(View.VISIBLE);
+        String pkg = a.getPackageName();
+        if (now.getTag() == null) {
+            android.graphics.drawable.Drawable d = AppPalette.icon(a, pkg);
+            if (d != null) now.setImage(d);
+            else now.setLetter(AppPalette.label(a, pkg));
+            now.setTitle(AppPalette.label(a, pkg));
+            now.setValue("● Now", false);
+            now.setValueColor(a.getColor(R.color.accent));
+            now.setTag(pkg);
+        }
+        long ms = System.currentTimeMillis() - a.resumedAtMs();
+        now.setSubtitle(ms < 60_000 ? "Just now" : Fmt.shortDuration(ms) + " so far");
     }
 
     private void showSection(boolean has) {
@@ -294,6 +324,7 @@ final class TodayTab {
         if (!live) root.findViewById(R.id.pc_now).setVisibility(View.GONE); // only today has a "now"
         section.setVisibility(has ? View.VISIBLE : View.GONE);
         card.setVisibility(has ? View.VISIBLE : View.GONE);
+        ((TextView) root.findViewById(R.id.pc_title)).setText(DeviceNames.pc(a));
         if (!has) return;
         int total = 0;
         if (apps != null) for (PcDays.App x : apps) total += x.minutes;
@@ -308,9 +339,6 @@ final class TodayTab {
         String where = tl.whereLine();
         TextView w = root.findViewById(R.id.timeline_where);
         w.setText(where.isEmpty() ? (Places.enabled(a) ? "No places yet that day" : "Places are off") : where);
-        TextView pc = root.findViewById(R.id.timeline_pc);
-        String line = tl.pcLine();
-        pc.setText(line == null ? "PC · not reported for this day" : line);
         ((TextView) root.findViewById(R.id.day_title)).setText(tl.day.equals(LocalDate.now()) ? "Your day" : "That day");
     }
 

@@ -213,6 +213,12 @@ public class MainActivity extends Activity {
     }
 
     private boolean resumed;
+    private long resumedAtMs = System.currentTimeMillis();
+
+    /** When planj last came to the front: how long "planj · now" has been going. */
+    long resumedAtMs() {
+        return resumedAtMs;
+    }
 
     @Override
     protected void onPause() {
@@ -225,6 +231,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        resumedAtMs = System.currentTimeMillis();
         today.setLive(today.view().getVisibility() == View.VISIBLE);
         MoodReminder.schedule(this);
         refresh();
@@ -248,6 +255,7 @@ public class MainActivity extends Activity {
 
     void syncInBackground() {
         new Thread(() -> {
+            DeviceNames.refresh(this); // renamed on another device? the titles follow
             SnapshotJob.collectAndSync(this);
             runOnUiThread(this::refresh);
         }).start();

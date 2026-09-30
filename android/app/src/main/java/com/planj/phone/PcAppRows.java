@@ -7,7 +7,7 @@ import android.widget.LinearLayout;
 
 import java.util.List;
 
-/** PC apps and websites, in the same row as every other list: icon, name, what it counted as, time. */
+/** PC apps and websites, in the same row as every other list: icon, name, time. */
 final class PcAppRows {
     private PcAppRows() {}
 
@@ -23,7 +23,6 @@ final class PcAppRows {
         ListRow row = new ListRow(a);
         row.setTag(x.name);
         row.setTitle(x.name);
-        row.setSubtitle(label(x.cat));
         row.setValue(Fmt.shortDuration(x.minutes * 60_000L), false);
         row.setClickable(false);
         row.setBackground(null);
@@ -74,13 +73,4 @@ final class PcAppRows {
         }
     }
 
-    static String label(String cat) {
-        switch (cat) {
-            case "focus": return "Focus";
-            case "entertainment": return "Watching";
-            case "social": return "Social";
-            case "chat": return "Chat";
-            default: return "Other";
-        }
-    }
 }

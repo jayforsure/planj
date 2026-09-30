@@ -54,6 +54,7 @@ public class SnapshotJob extends JobService {
         } catch (Exception e) {
             Log.w("planj", "collect failed", e);
         }
+        PhoneLive.publishFromEvents(ctx); // what the phone is doing, for a computer to show
         try {
             RelaySync.upload(ctx);
         } catch (Exception e) {

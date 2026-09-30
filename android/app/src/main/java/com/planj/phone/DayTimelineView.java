@@ -29,6 +29,10 @@ public final class DayTimelineView extends View {
         small.setColor(ctx.getColor(R.color.muted));
     }
 
+    private String fit(String s, float width) {
+        return android.text.TextUtils.ellipsize(s, new android.text.TextPaint(small), width, android.text.TextUtils.TruncateAt.END).toString();
+    }
+
     void setData(DayTimeline d) {
         data = d;
         invalidate();
@@ -41,16 +45,17 @@ public final class DayTimelineView extends View {
 
     @Override
     protected void onDraw(Canvas c) {
-        float labelW = 44 * dp;
+        float labelW = 56 * dp;
         float left = labelW, right = getWidth();
         float yWhere = 4 * dp, hWhere = 28 * dp;
         float yPhone = yWhere + hWhere + 12 * dp, hLane = 10 * dp;
         float yPc = yPhone + hLane + 12 * dp;
         float yAxis = yPc + hLane + 18 * dp;
 
+        float room = labelW - 6 * dp; // device names are the person's own, so long ones are cut short
         c.drawText("Place", 0, yWhere + hWhere / 2 + 4 * dp, small);
-        c.drawText("Phone", 0, yPhone + hLane - 1 * dp, small);
-        c.drawText("PC", 0, yPc + hLane - 1 * dp, small);
+        c.drawText(fit(DeviceNames.phone(getContext()), room), 0, yPhone + hLane - 1 * dp, small);
+        c.drawText(fit(DeviceNames.pc(getContext()), room), 0, yPc + hLane - 1 * dp, small);
 
         // tracks
         fill.setColor(getContext().getColor(R.color.surface_alt));

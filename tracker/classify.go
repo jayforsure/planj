@@ -110,6 +110,7 @@ func AppName(exe string) string {
 		"code.exe": "VS Code", "notepad.exe": "Notepad", "explorer.exe": "File Explorer",
 		"windowsterminal.exe": "Terminal", "notion.exe": "Notion", "searchhost.exe": "Windows Search",
 		"applicationframehost.exe": "Windows app", "(none)": "Desktop", "(unknown)": "Other",
+		"rcclient.exe": "AnyViewer", // AOMEI AnyViewer's remote-control window
 	}
 	if n, ok := known[strings.ToLower(exe)]; ok {
 		return n

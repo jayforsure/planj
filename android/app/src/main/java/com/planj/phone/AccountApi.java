@@ -90,6 +90,15 @@ final class AccountApi {
         call("DELETE", "/v1/account/device/" + index, null, token);
     }
 
+    /** Names one of the account's devices; an empty label goes back to "Device N". */
+    static void labelDevice(String token, int index, String label) throws IOException {
+        try {
+            call("PUT", "/v1/account/device/" + index + "/label", new JSONObject().put("label", label).toString(), token);
+        } catch (org.json.JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
     static void deleteAccount(String token) throws IOException {
         call("DELETE", "/v1/account/me", null, token);
     }

@@ -112,29 +112,5 @@ final class DayTimeline {
         return String.join(" · ", parts);
     }
 
-    /** "PC · 2h 10m focus · 45m watching · 10m social" */
-    String pcLine() {
-        if (pc == null) return null;
-        int focus = 0, fun = 0, social = 0, chat = 0;
-        for (PcDays.Seg s : pc) {
-            int m = s.end - s.start;
-            switch (s.cat) {
-                case "focus": focus += m; break;
-                case "entertainment": fun += m; break;
-                case "social": social += m; break;
-                case "chat": chat += m; break;
-                default: break;
-            }
-        }
-        List<String> parts = new ArrayList<>();
-        if (focus > 0) parts.add(dur(focus) + " focus");
-        if (fun > 0) parts.add(dur(fun) + " watching");
-        if (social > 0) parts.add(dur(social) + " social");
-        if (chat > 0) parts.add(dur(chat) + " chat");
-        return parts.isEmpty() ? "PC · no focus or watching recorded" : "PC · " + String.join(" · ", parts);
-    }
 
-    private static String dur(int minutes) {
-        return minutes >= 60 ? (minutes / 60) + "h " + (minutes % 60) + "m" : minutes + "m";
-    }
 }

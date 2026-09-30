@@ -135,14 +135,6 @@
                     android:lineSpacingExtra="3dp"
                     android:textColor="@color/text"
                     android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/timeline_pc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
             </LinearLayout>
 
             <!-- This week -->
@@ -185,13 +177,26 @@
                 <TextView
                     android:id="@+id/apps_title"
                     style="@style/SectionTitle"
-                    android:text="Today's apps" />
+                    android:text="Phone" />
+
+                <TextView
+                    android:id="@+id/apps_total"
+                    style="@style/SectionAside"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/see_all"
                     style="@style/SectionLink"
                     android:text="See all" />
             </LinearLayout>
+
+            <com.planj.phone.ListRow
+                android:id="@+id/phone_now"
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:rowChevron="false" />
 
             <LinearLayout
                 android:id="@+id/top_apps"
@@ -207,7 +212,7 @@
                 <TextView
                     android:id="@+id/pc_title"
                     style="@style/SectionTitle"
-                    android:text="On your PC" />
+                    android:text="PC" />
 
                 <TextView
                     android:id="@+id/pc_total"

@@ -13,6 +13,13 @@
         <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Recording" />
 
         <com.planj.phone.ListRow
+            android:id="@+id/row_devices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_devices"
+            app:rowTitle="Devices" />
+
+        <com.planj.phone.ListRow
             android:id="@+id/row_tracking"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

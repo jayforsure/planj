@@ -16,8 +16,9 @@
             android:src="@drawable/ic_back" />
 
         <TextView
+            android:id="@+id/title"
             style="@style/PageTitle"
-            android:text="On your PC" />
+            android:text="PC" />
 
         <TextView
             android:id="@+id/summary"

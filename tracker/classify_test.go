@@ -91,7 +91,7 @@ func TestNamesComeFromRulesNotTitles(t *testing.T) {
 	if _, name := ClassifyNamed("msedge.exe", "Some private page - Microsoft Edge", nil); name != "Other websites" {
 		t.Fatalf("an unrecognised page must only ever be 'Other websites', got %q", name)
 	}
-	if AppName("msedge.exe") != "Edge" || AppName("Code.exe") != "VS Code" || AppName("Figma.exe") != "Figma" {
+	if AppName("msedge.exe") != "Edge" || AppName("Code.exe") != "VS Code" || AppName("Figma.exe") != "Figma" || AppName("RCClient.exe") != "AnyViewer" {
 		t.Fatal("app names")
 	}
 }

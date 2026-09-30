@@ -10,7 +10,7 @@ import android.widget.TextView;
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final ListRow tracking, priv, reminder, places;
+    private final ListRow tracking, priv, reminder, places, devices;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -21,6 +21,9 @@ final class SettingsTab {
         reminder = root.findViewById(R.id.row_reminder);
         places = root.findViewById(R.id.row_places);
         places.setOnClickListener(v -> a.placesTapped());
+        devices = root.findViewById(R.id.row_devices);
+        devices.setOnClickListener(v -> a.startActivity(new Intent(a, AccountActivity.class)
+                .putExtra(AccountActivity.EXTRA_SCREEN, AccountStore.signedIn(a) ? "devices" : "welcome")));
 
         tracking.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
         priv.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
@@ -60,6 +63,7 @@ final class SettingsTab {
     }
 
     void refresh(boolean granted) {
+        devices.setSubtitle(DeviceNames.phone(a) + " · " + DeviceNames.pc(a));
         tracking.setSubtitle(granted ? "On" : "Off");
         tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
         boolean p = PrivateMode.isOn(a);
