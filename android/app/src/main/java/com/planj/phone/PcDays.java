@@ -83,7 +83,7 @@ final class PcDays {
         }
     }
 
-    /** Each stretch on one app or site that day, as [startMin, endMin]; empty when unknown. */
+    /** Each stretch on one app or site that day, as [startSec, endSec] since midnight; empty when unknown. */
     static List<int[]> sessions(Context ctx, LocalDate day, String name) {
         List<int[]> out = new ArrayList<>();
         File f = new File(dir(ctx), day + ".json");

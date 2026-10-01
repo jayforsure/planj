@@ -84,8 +84,9 @@ public class PcAppActivity extends Activity {
             int[] s = sessions.get(i);
             ListRow r = new ListRow(this);
             r.setIcon(R.drawable.ic_today);
-            r.setTitle(DayTimeline.clock(s[0]) + " – " + DayTimeline.clock(s[1]));
-            r.setValue(Fmt.shortDuration((s[1] - s[0]) * 60_000L), false);
+            r.setTitle(DayTimeline.clock(s[0] / 60) + " – " + DayTimeline.clock(s[1] / 60));
+            long ms = (s[1] - s[0]) * 1000L;
+            r.setValue(ms < 60_000 ? "<1m" : Fmt.shortDuration(ms), false);
             r.setClickable(false);
             r.setBackground(null);
             list.addView(r);

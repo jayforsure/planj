@@ -49,7 +49,7 @@ func TestPhoneChoicesResortThePastToo(t *testing.T) {
 		t.Fatalf("timeline re-sorted: %v", got.Spans)
 	}
 	// sessions: the course site 09:00-10:00 is one (the 20 s glance between is skipped), then VS Code 10:00-10:30
-	want := [][3]any{{540, 600, "lms.utar.edu.my"}, {600, 630, "VS Code"}}
+	want := [][3]any{{32400, 36000, "lms.utar.edu.my"}, {36000, 37800, "VS Code"}}
 	if len(got.Sessions) != len(want) {
 		t.Fatalf("sessions: %v", got.Sessions)
 	}

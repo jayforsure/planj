@@ -18,7 +18,7 @@ type DaySummary struct {
 	Spans [][3]any `json:"spans"`        // [startMin, endMin, category]
 	Apps  [][3]any `json:"apps"`         // [name, minutes, category], most used first
 	At    string   `json:"at,omitempty"` // when this was worked out; the phone keeps the newest
-	// [startMin, endMin, name]: each stretch on one app or site, for its own page on the phone
+	// [startSec, endSec, name] since local midnight: each stretch on one app or site, to the second
 	Sessions [][3]any `json:"sessions"`
 }
 
@@ -142,7 +142,7 @@ func SummarizeDayWith(dir string, day time.Time, loc *time.Location, extra []Spa
 		if r.e.Sub(r.s) < 30*time.Second || len(out.Sessions) == 500 {
 			continue
 		}
-		out.Sessions = append(out.Sessions, [3]any{int(r.s.Sub(start).Minutes()), int(r.e.Sub(start).Minutes() + 0.999), r.name})
+		out.Sessions = append(out.Sessions, [3]any{int(r.s.Sub(start).Seconds()), int(r.e.Sub(start).Seconds()), r.name})
 	}
 	names := make([]string, 0, len(appMin))
 	for n := range appMin {
