@@ -45,6 +45,31 @@ public class TarcParseCheck {
         check(s0.start.equals(LocalDate.of(2030, 1, 7)) && s0.end.equals(LocalDate.of(2030, 4, 14)) && s0.weeks == 14, "semester dates and weeks");
         check(s0.timetableUrl().endsWith("viewTimetable.jsp?fsid=BBB-222&fsession=203001&fbrncd=KL"), "how to open its timetable");
         check(TarcParse.resultsHidden("<b>Block Viewing</b> You have not completed your online evaluation") && !TarcParse.resultsHidden("<table></table>"), "hidden results are recognised");
+        String tt = "<p>Week 1 : 2030-01-07 ~ 2030-01-13<br>Week 2 : 2030-01-14 ~ 2030-01-20</p>"
+                + "<label>Semester Timetable By Course :</label><table id=\"simple-table\"><thead><tr><td>No</td><td>Course</td>"
+                + "<td>Day &amp; Time (Duration)</td><td>Venue</td><td>Lecturer</td></tr></thead><tbody>"
+                + "<tr><td rowspan=\"2\">1</td><td rowspan=\"2\"><a href=\"viewAttendance.jsp?crs=ABCD1234\"><span class=\"badge badge-danger\">71.4%</span></a>"
+                + " &nbsp;<strong>ABCD1234</strong> &nbsp;INTRODUCTION TO TESTING <span><div><a href=\"x\"><strong>Course Plan</strong></a></div></span></td>"
+                + "<td>&nbsp; <span>Mon , 12:00 PM ~ 2:00 PM ( Lecture: <span> 2.0 hours )</span><br><span class=\"red\"> ( having replacement class )</span></span></td>"
+                + "<td> HALL A, Block A </td><td> Someone (Weekly)</td></tr>"
+                + "<tr><td>&nbsp; <span>Wed , 1:00 PM ~ 3:00 PM ( Practical: <span> 2.0 hours )</span></span></td><td> LAB 2, Block D </td><td> Someone</td></tr>"
+                + "<tr><td rowspan=\"1\">2</td><td rowspan=\"1\"><a href=\"viewAttendance.jsp?crs=XY-1234\"><span class=\"badge\">85.7%</span></a>"
+                + " &nbsp;<strong>XY-1234</strong> &nbsp;Ethics Today </td>"
+                + "<td><span>Tue , 9:30 AM ~ 10:30 AM ( Tutorial: <span> 1.0 hour )</span></span></td><td> ROOM 9 </td><td> Someone</td></tr>"
+                + "</tbody></table>";
+        List<TarcParse.Course> cs = TarcParse.courses(tt);
+        check(cs.size() == 2, "two courses");
+        TarcParse.Course c0 = cs.get(0), c1 = cs.get(1);
+        check(c0.code.equals("ABCD1234") && c0.name.equals("Introduction to Testing") && c0.attendance == 71.4, "code, name and attendance");
+        check(c0.lessons.size() == 2, "a course's second class on its own row");
+        TarcParse.Lesson l0 = c0.lessons.get(0), l1 = c0.lessons.get(1);
+        check(l0.day == java.time.DayOfWeek.MONDAY && l0.startMin == 12 * 60 && l0.endMin == 14 * 60 && l0.type.equals("Lecture"), "Mon 12:00-14:00 lecture");
+        check(l0.venue.equals("HALL A, Block A"), "venue");
+        check(l1.day == java.time.DayOfWeek.WEDNESDAY && l1.startMin == 13 * 60 && l1.type.equals("Practical"), "Wed practical");
+        check(c1.code.equals("XY-1234") && c1.lessons.size() == 1 && c1.lessons.get(0).startMin == 9 * 60 + 30, "a hyphenated code, 9:30 AM");
+        List<Object[]> ws = TarcParse.weeks(tt);
+        check(ws.size() == 2 && ws.get(1)[1].equals(LocalDate.of(2030, 1, 14)), "semester weeks");
+        check(TarcParse.clock("12:00 PM") == 720 && TarcParse.clock("12:30 AM") == 30, "noon and midnight");
         System.out.println(failures == 0 ? "ALL PASS" : failures + " FAILED");
         System.exit(failures == 0 ? 0 : 1);
     }

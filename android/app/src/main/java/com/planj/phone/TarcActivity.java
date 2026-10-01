@@ -46,7 +46,7 @@ public class TarcActivity extends Activity {
             {"Exam Timetable", "exams"},
     };
 
-    private enum Mode { INTRO, SIGNIN, READING, DONE }
+    private enum Mode { INTRO, SIGNIN, READING, DONE, WEEK }
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private WebView web;
@@ -152,7 +152,15 @@ public class TarcActivity extends Activity {
         section("Found");
         int tt = TarcStore.rows(this, "timetable"), rs = TarcStore.rows(this, "results");
         row(R.drawable.ic_school, "Semester", semester(st));
-        row(R.drawable.ic_today, "Timetable", tt > 0 ? "Read · " + tt + " rows" : "Not found on your portal yet");
+        List<TarcParse.Course> courses = TarcTimetable.courses(this);
+        ListRow week = row(R.drawable.ic_today, "Timetable", courses.isEmpty() ? (tt > 0 ? "Read, but no classes were listed" : "Not found on your portal yet")
+                : courses.size() + " courses · " + TarcTimetable.lessonsPerWeek(courses) + " classes a week");
+        if (!courses.isEmpty()) {
+            week.setChevron(true);
+            week.setClickable(true);
+            week.setBackgroundResource(R.drawable.btn_text);
+            week.setOnClickListener(v -> showWeek());
+        }
         boolean hidden = false;
         for (JSONObject p : TarcStore.pages(this)) {
             if ("results".equals(p.optString("kind")) && TarcParse.resultsHidden(p.optString("html"))) hidden = true;
@@ -161,7 +169,7 @@ public class TarcActivity extends Activity {
                 : rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
         List<TarcParse.Exam> exams = TarcExams.read(this);
         row(R.drawable.ic_edit, "Exams", exams.isEmpty() ? "None on your exam timetable" : TarcExams.summary(exams));
-        if (tt == 0 || rs == 0) {
+        if (courses.isEmpty() || (rs == 0 && !hidden)) { // something is genuinely missing, not just hidden
             TextView note = text("Your portal's pages were saved, so planj can learn where these live. "
                     + "They are part of Export my data.", R.color.muted, 13);
             ((LinearLayout.LayoutParams) note.getLayoutParams()).topMargin = dp(8);
@@ -197,6 +205,36 @@ public class TarcActivity extends Activity {
         java.time.ZonedDateTime z = Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault());
         if (z.toLocalDate().equals(java.time.LocalDate.now())) return "today at " + Fmt.clock(ms);
         return Fmt.clock(ms) + ", " + z.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
+    }
+
+    /** Your week: each day's classes, then each course with your attendance so far. */
+    private void showWeek() {
+        mode = Mode.WEEK;
+        showPages();
+        title("Your week");
+        JSONObject st = TarcStore.state(this);
+        blurb(st.optString("session").isEmpty() ? "From TAR UMT." : "Semester " + semester(st) + ".");
+        List<TarcParse.Course> courses = TarcTimetable.courses(this);
+        for (java.time.DayOfWeek d : java.time.DayOfWeek.values()) {
+            List<String[]> lines = new ArrayList<>();
+            List<int[]> order = new ArrayList<>();
+            for (TarcParse.Course c : courses) {
+                for (TarcParse.Lesson l : c.lessons) {
+                    if (l.day != d) continue;
+                    lines.add(new String[]{c.name, DayTimeline.clock(l.startMin) + "–" + DayTimeline.clock(l.endMin) + " · " + l.type + " · " + l.venue});
+                    order.add(new int[]{l.startMin, lines.size() - 1});
+                }
+            }
+            if (lines.isEmpty()) continue;
+            order.sort((x, y) -> Integer.compare(x[0], y[0]));
+            section(d.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH));
+            for (int[] o : order) row(R.drawable.ic_today, lines.get(o[1])[0], lines.get(o[1])[1]);
+        }
+        section("Courses");
+        for (TarcParse.Course c : courses) {
+            ListRow r = row(R.drawable.ic_school, c.name, c.code + (c.attendance >= 0 ? " · attendance so far" : ""));
+            if (c.attendance >= 0) r.setValue(Math.round(c.attendance) + "%", false);
+        }
     }
 
     // ---- signing in and reading ------------------------------------------------
@@ -341,6 +379,10 @@ public class TarcActivity extends Activity {
             web.goBack();
             return;
         }
+        if (mode == Mode.WEEK) {
+            showDone();
+            return;
+        }
         if (mode == Mode.SIGNIN || mode == Mode.READING) {
             readSeq++;
             web.stopLoading();
@@ -431,7 +473,7 @@ public class TarcActivity extends Activity {
         stage.addView(t, lp);
     }
 
-    private void row(int icon, String title, String subtitle) {
+    private ListRow row(int icon, String title, String subtitle) {
         ListRow r = new ListRow(this);
         r.setIcon(icon);
         r.setTitle(title);
@@ -441,6 +483,7 @@ public class TarcActivity extends Activity {
         r.setClickable(false);
         r.setBackground(null);
         stage.addView(r);
+        return r;
     }
 
     private TextView text(String s, int color, int sp) {

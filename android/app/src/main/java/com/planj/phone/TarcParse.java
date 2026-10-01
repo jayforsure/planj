@@ -86,6 +86,107 @@ final class TarcParse {
         return out;
     }
 
+    /** One weekly class of a course: "Mon, 12:00 PM ~ 2:00 PM, Lecture, DK ABA". */
+    static final class Lesson {
+        final java.time.DayOfWeek day;
+        final int startMin, endMin;
+        final String type, venue;
+
+        Lesson(java.time.DayOfWeek day, int startMin, int endMin, String type, String venue) {
+            this.day = day;
+            this.startMin = startMin;
+            this.endMin = endMin;
+            this.type = type;
+            this.venue = venue;
+        }
+    }
+
+    /** A course this semester, its attendance so far, and its weekly classes. */
+    static final class Course {
+        final String code, name;
+        final double attendance; // percent, or -1 when not shown
+        final List<Lesson> lessons = new ArrayList<>();
+
+        Course(String code, String name, double attendance) {
+            this.code = code;
+            this.name = name;
+            this.attendance = attendance;
+        }
+    }
+
+    private static final Pattern COURSE_CODE = Pattern.compile("<strong>\\s*([A-Z]{2,5}-?\\d{4})\\s*</strong>(?:\\s|&nbsp;)*([^<]+)");
+    private static final Pattern BADGE = Pattern.compile("badge[^>]*>\\s*(\\d+(?:\\.\\d+)?)\\s*%");
+    private static final Pattern LESSON = Pattern.compile("(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s*,\\s*(\\d{1,2}:\\d{2}\\s*[AP]M)\\s*~\\s*(\\d{1,2}:\\d{2}\\s*[AP]M)\\s*\\(\\s*([A-Za-z]+)",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CLOCK = Pattern.compile("(\\d{1,2}):(\\d{2})\\s*([AP]M)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WEEK = Pattern.compile("Week\\s*(\\d+)\\s*:\\s*(\\d{4}-\\d{2}-\\d{2})\\s*~\\s*(\\d{4}-\\d{2}-\\d{2})");
+
+    /** The courses on the timetable page's "By Course" table, with their weekly classes. */
+    static List<Course> courses(String html) {
+        List<Course> out = new ArrayList<>();
+        int at = html.indexOf("Timetable By Course");
+        if (at < 0) return out;
+        Course current = null;
+        Matcher r = ROW.matcher(html.substring(at));
+        while (r.find()) {
+            String row = r.group(1);
+            List<String> cells = new ArrayList<>();
+            Matcher c = CELL.matcher(row);
+            while (c.find()) cells.add(c.group(1));
+            if (cells.isEmpty()) continue;
+            int first = 0;
+            Matcher code = COURSE_CODE.matcher(row);
+            if (row.contains("viewAttendance") && code.find()) { // the first row of a course
+                Matcher badge = BADGE.matcher(row);
+                current = new Course(code.group(1), titleCase(text(code.group(2)).trim()),
+                        badge.find() ? Double.parseDouble(badge.group(1)) : -1);
+                out.add(current);
+                first = 2; // its number and the course cell come before the class
+            }
+            if (current == null || cells.size() <= first) continue;
+            Matcher l = LESSON.matcher(text(cells.get(first)).replace('\n', ' '));
+            if (!l.find()) continue;
+            String venue = cells.size() > first + 1 ? text(cells.get(first + 1)).replace('\n', ' ') : "";
+            current.lessons.add(new Lesson(day(l.group(1)), clock(l.group(2)), clock(l.group(3)),
+                    l.group(4).substring(0, 1).toUpperCase(Locale.ROOT) + l.group(4).substring(1).toLowerCase(Locale.ROOT), venue));
+        }
+        return out;
+    }
+
+    /** The teaching weeks of the semester: [week number, first day, last day]. */
+    static List<Object[]> weeks(String html) {
+        List<Object[]> out = new ArrayList<>();
+        Matcher w = WEEK.matcher(html);
+        while (w.find()) {
+            try {
+                out.add(new Object[]{Integer.parseInt(w.group(1)), LocalDate.parse(w.group(2)), LocalDate.parse(w.group(3))});
+            } catch (RuntimeException ignored) {
+                // a malformed week is skipped
+            }
+        }
+        return out;
+    }
+
+    static int clock(String s) {
+        Matcher m = CLOCK.matcher(s);
+        if (!m.find()) return -1;
+        int h = Integer.parseInt(m.group(1)) % 12;
+        if (m.group(3).equalsIgnoreCase("PM")) h += 12;
+        return h * 60 + Integer.parseInt(m.group(2));
+    }
+
+    private static java.time.DayOfWeek day(String d) {
+        switch (d.toLowerCase(Locale.ROOT)) {
+            case "mon": return java.time.DayOfWeek.MONDAY;
+            case "tue": return java.time.DayOfWeek.TUESDAY;
+            case "wed": return java.time.DayOfWeek.WEDNESDAY;
+            case "thu": return java.time.DayOfWeek.THURSDAY;
+            case "fri": return java.time.DayOfWeek.FRIDAY;
+            case "sat": return java.time.DayOfWeek.SATURDAY;
+            default: return java.time.DayOfWeek.SUNDAY;
+        }
+    }
+
     /** TAR UMT hides results until the semester's course evaluation is done. */
     static boolean resultsHidden(String html) {
         String t = html.toLowerCase(Locale.ROOT);

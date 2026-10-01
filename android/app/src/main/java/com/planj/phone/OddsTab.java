@@ -58,7 +58,9 @@ final class OddsTab {
             if (!r.forecasts.isEmpty()) OddsEngine.record(a, today, r.forecasts);
             r.live = OddsEngine.settle(a, r.hist);
             r.back = OddsEngine.backtest(r.hist);
-            r.tomorrow = Agenda.on(a, today.plusDays(1));
+            r.tomorrow = new java.util.ArrayList<>(Agenda.on(a, today.plusDays(1)));
+            r.tomorrow.addAll(TarcTimetable.asPlans(a, today.plusDays(1))); // classes from TAR UMT
+            r.tomorrow.sort((x, y) -> Long.compare(x.startMs, y.startMs));
             a.runOnUiThread(() -> {
                 render(r);
                 running = false;

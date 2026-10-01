@@ -42,6 +42,7 @@ final class OddsEngine {
         List<int[]> away;           // off the home Wi-Fi; null until network samples exist
         Map<String, List<int[]>> at; // time at each place other than home; null when places are off
         PcFocus pc;                  // null when the PC's focus that day can't be known
+        Integer nextClassMin;        // the next day's first class (minutes), -1 none, null not known
 
         Day(LocalDate date) {
             this.date = date;
@@ -163,6 +164,8 @@ final class OddsEngine {
             new Lever("pc_watch_heavy", "after 1h+ watching", "after under 1h watching",
                     (d, b) -> d.pc == null ? null : d.pc.watchH > 1),
             new Lever("out_at_place", "after a day out", "after a day at home", (d, b) -> d.at == null ? null : !d.at.isEmpty()),
+            new Lever("class_morning", "before a morning class", "before no morning class",
+                    (d, b) -> d.nextClassMin == null ? null : d.nextClassMin >= 0 && d.nextClassMin < 11 * 60),
             new Lever("charged", "charging overnight", "not charging overnight", (d, b) -> d.charged),
             new Lever("weekend_next", "before a weekend day", "before a weekday",
                     (d, b) -> d.date.getDayOfWeek().getValue() >= 5) // Fri or Sat evening
@@ -201,6 +204,7 @@ final class OddsEngine {
             if (u.screenMs == 0 && u.appMs.isEmpty()) continue;
             Day d = new Day(date);
             d.pc = pc;
+            d.nextClassMin = TarcTimetable.firstClass(ctx, date.plusDays(1));
             d.away = away;
             d.at = at;
             List<int[]> used = new ArrayList<>();
