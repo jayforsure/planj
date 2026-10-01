@@ -297,6 +297,7 @@ public class MainActivity extends Activity {
                 UsageCollector.collect(this);
                 try (OutputStream out = getContentResolver().openOutputStream(uri, "w")) {
                     UsageCollector.export(this, out);
+                    TarcStore.export(this, out); // what planj read from TAR UMT, if connected
                 }
                 toast("Exported");
             } catch (Exception e) {

@@ -9,7 +9,7 @@ import android.widget.TextView;
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final ListRow tracking, priv, reminder, places, devices;
+    private final ListRow tracking, priv, reminder, places, devices, tarc;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -20,6 +20,10 @@ final class SettingsTab {
         reminder = root.findViewById(R.id.row_reminder);
         places = root.findViewById(R.id.row_places);
         places.setOnClickListener(v -> a.placesTapped());
+        tarc = root.findViewById(R.id.row_tarc);
+        tarc.setOnClickListener(v -> a.startActivity(new Intent(a, TarcActivity.class)));
+        android.graphics.drawable.Drawable tarcIcon = AppPalette.icon(a, TarcActivity.TARC_APP);
+        if (tarcIcon != null) tarc.setImage(tarcIcon); // the TARC app's own icon, when it is on this phone
         devices = root.findViewById(R.id.row_devices);
         devices.setOnClickListener(v -> a.startActivity(new Intent(a, AccountActivity.class)
                 .putExtra(AccountActivity.EXTRA_SCREEN, AccountStore.signedIn(a) ? "devices" : "welcome")));
@@ -57,6 +61,7 @@ final class SettingsTab {
 
     void refresh(boolean granted) {
         devices.setSubtitle(DeviceNames.phone(a) + " · " + DeviceNames.pc(a));
+        tarc.setSubtitle(TarcStore.connected(a) ? "Connected · timetable and results" : "Timetable and results · not connected");
         tracking.setSubtitle(granted ? "On" : "Off");
         tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
         boolean p = PrivateMode.isOn(a);

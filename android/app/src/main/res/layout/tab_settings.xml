@@ -54,6 +54,15 @@
             app:rowIcon="@drawable/ic_star"
             app:rowTitle="Quick Settings tile" />
 
+        <TextView style="@style/Auth.Section" android:text="Connections" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_tarc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_school"
+            app:rowTitle="TAR UMT" />
+
         <TextView style="@style/Auth.Section" android:text="Journal" />
 
         <com.planj.phone.ListRow
