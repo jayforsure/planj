@@ -39,8 +39,13 @@ import java.util.regex.Pattern;
 public class TarcActivity extends Activity {
     static final String TARC_APP = "app.tarc.edu.my";
     private static final String LOGIN = "https://web.tarc.edu.my/portal/login.jsp";
-    private static final Pattern TIMETABLE = Pattern.compile("time\\s*-?\\s*table|class schedule|jadual", Pattern.CASE_INSENSITIVE);
-    private static final Pattern RESULTS = Pattern.compile("result|grade|transcript|gpa|exam", Pattern.CASE_INSENSITIVE);
+    /** The portal's own menu items for what planj reads, and what each is kept as. */
+    private static final String[][] WANTED = {
+            {"My Timetable", "timetable"},
+            {"Overall Result", "results"},
+            {"Academic Transcript", "results"},
+            {"Exam Timetable", "exams"},
+    };
 
     private enum Mode { INTRO, SIGNIN, READING, DONE }
 
@@ -104,6 +109,7 @@ public class TarcActivity extends Activity {
         section("What planj reads");
         row(R.drawable.ic_today, "Timetable", "Your classes: day, time, subject and room");
         row(R.drawable.ic_target, "Results", "Your grades each semester");
+        row(R.drawable.ic_edit, "Exams", "Your exam dates, times and venues");
         section("What it never does");
         row(R.drawable.ic_lock, "Your password", "You sign in on TAR UMT's own page. planj never sees or keeps it");
         row(R.drawable.ic_shield, "Anything else", "Only those pages are read, and they stay on this phone");
@@ -148,6 +154,8 @@ public class TarcActivity extends Activity {
         int tt = TarcStore.rows(this, "timetable"), rs = TarcStore.rows(this, "results");
         row(R.drawable.ic_today, "Timetable", tt > 0 ? "Read · " + tt + " rows" : "Not found on your portal yet");
         row(R.drawable.ic_target, "Results", rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
+        List<TarcParse.Exam> exams = TarcExams.read(this);
+        row(R.drawable.ic_edit, "Exams", exams.isEmpty() ? "None on your exam timetable" : TarcExams.summary(exams));
         if (tt == 0 || rs == 0) {
             TextView note = text("Your portal's pages were saved, so planj can learn where these live. "
                     + "They are part of Export my data.", R.color.muted, 13);
@@ -203,17 +211,14 @@ public class TarcActivity extends Activity {
                 List<String[]> found = new ArrayList<>();
                 try {
                     JSONArray all = new JSONArray((String) new JSONTokener(links).nextValue());
-                    int tt = 0, rs = 0;
-                    for (int i = 0; i < all.length(); i++) {
-                        JSONArray a = all.getJSONArray(i);
-                        String text = a.optString(0), href = a.optString(1), what = text + " " + href;
-                        if (href.isEmpty() || !tarc(Uri.parse(href)) || what.toLowerCase(Locale.ROOT).contains("logout")) continue;
-                        if (TIMETABLE.matcher(what).find() && tt < 2) {
-                            found.add(new String[]{"timetable", href});
-                            tt++;
-                        } else if (RESULTS.matcher(what).find() && rs < 2) {
-                            found.add(new String[]{"results", href});
-                            rs++;
+                    java.util.Set<String> taken = new java.util.HashSet<>();
+                    for (String[] want : WANTED) { // the menu's exact names, not the dashboard's reminders
+                        for (int i = 0; i < all.length(); i++) {
+                            JSONArray a = all.getJSONArray(i);
+                            String text = a.optString(0).trim(), href = a.optString(1);
+                            if (!text.equalsIgnoreCase(want[0]) || href.isEmpty() || !tarc(Uri.parse(href)) || !taken.add(href)) continue;
+                            found.add(new String[]{want[1], href});
+                            break;
                         }
                     }
                 } catch (Exception ignored) {
@@ -241,7 +246,8 @@ public class TarcActivity extends Activity {
         if (what == capturing) return;
         capturing = what;
         int seq = readSeq;
-        progress(what[0].equals("timetable") ? "Reading your timetable" : what[0].equals("results") ? "Reading your results" : "Reading your portal");
+        progress(what[0].equals("timetable") ? "Reading your timetable" : what[0].equals("results") ? "Reading your results"
+                : what[0].equals("exams") ? "Reading your exam timetable" : "Reading your portal");
         ui.postDelayed(() -> {
             if (seq != readSeq) return;
             web.evaluateJavascript(CAPTURE, page -> {
