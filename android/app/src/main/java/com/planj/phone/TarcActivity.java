@@ -41,9 +41,8 @@ public class TarcActivity extends Activity {
     private static final String LOGIN = "https://web.tarc.edu.my/portal/login.jsp";
     /** The portal's own menu items for what planj reads, and what each is kept as. */
     private static final String[][] WANTED = {
-            {"My Timetable", "timetable"},
+            {"My Timetable", "sessions"}, // the list of semesters; the newest one's timetable is opened from it
             {"Overall Result", "results"},
-            {"Academic Transcript", "results"},
             {"Exam Timetable", "exams"},
     };
 
@@ -107,7 +106,7 @@ public class TarcActivity extends Activity {
         blurb("Your timetable and results let planj know your week: when classes are, when exams come, "
                 + "and how your days line up with your grades.");
         section("What planj reads");
-        row(R.drawable.ic_today, "Timetable", "Your classes: day, time, subject and room");
+        row(R.drawable.ic_today, "Timetable", "Your classes this semester: day, time, subject and room");
         row(R.drawable.ic_target, "Results", "Your grades each semester");
         row(R.drawable.ic_edit, "Exams", "Your exam dates, times and venues");
         section("What it never does");
@@ -152,8 +151,14 @@ public class TarcActivity extends Activity {
         blurb(read == 0 ? "Connected. Everything stays on this phone." : "Read " + when(read) + ". Everything stays on this phone.");
         section("Found");
         int tt = TarcStore.rows(this, "timetable"), rs = TarcStore.rows(this, "results");
+        row(R.drawable.ic_school, "Semester", semester(st));
         row(R.drawable.ic_today, "Timetable", tt > 0 ? "Read · " + tt + " rows" : "Not found on your portal yet");
-        row(R.drawable.ic_target, "Results", rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
+        boolean hidden = false;
+        for (JSONObject p : TarcStore.pages(this)) {
+            if ("results".equals(p.optString("kind")) && TarcParse.resultsHidden(p.optString("html"))) hidden = true;
+        }
+        row(R.drawable.ic_target, "Results", hidden ? "Hidden by TAR UMT until you finish this semester's course evaluation"
+                : rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
         List<TarcParse.Exam> exams = TarcExams.read(this);
         row(R.drawable.ic_edit, "Exams", exams.isEmpty() ? "None on your exam timetable" : TarcExams.summary(exams));
         if (tt == 0 || rs == 0) {
@@ -169,6 +174,23 @@ public class TarcActivity extends Activity {
                     showIntro();
                 }));
     }
+
+    /** "202605 · 15 Jun – 20 Sep · 14 weeks", and whether it has ended. */
+    private static String semester(JSONObject st) {
+        String code = st.optString("session");
+        if (code.isEmpty()) return "Not found on your portal yet";
+        try {
+            java.time.LocalDate start = java.time.LocalDate.parse(st.optString("start"));
+            java.time.LocalDate end = java.time.LocalDate.parse(st.optString("end"));
+            String span = start.format(DAY_MONTH) + " – " + end.format(DAY_MONTH);
+            if (end.isBefore(java.time.LocalDate.now())) return code + " · ended " + end.format(DAY_MONTH) + ". The next appears when TAR UMT releases it";
+            return code + " · " + span + " · " + st.optInt("weeks") + " weeks";
+        } catch (RuntimeException e) {
+            return code;
+        }
+    }
+
+    private static final java.time.format.DateTimeFormatter DAY_MONTH = java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
 
     /** "today at 21:40" or "21:40, 3 Oct". */
     private static String when(long ms) {
@@ -255,12 +277,30 @@ public class TarcActivity extends Activity {
                     JSONObject p = new JSONObject((String) new JSONTokener(page).nextValue());
                     p.put("at", System.currentTimeMillis());
                     TarcStore.savePage(this, what[0], p);
+                    if (what[0].equals("sessions")) openNewestSemester(p.optString("html"));
                 } catch (Exception ignored) {
                     // this page is skipped
                 }
                 next();
             });
         }, 1500); // the portal draws some of its pages with scripts after loading
+    }
+
+    /** From the list of semesters: keep the newest one's dates, and open its timetable next. */
+    private void openNewestSemester(String html) {
+        List<TarcParse.Session> sessions = TarcParse.sessions(html);
+        if (sessions.isEmpty()) return;
+        TarcParse.Session s = sessions.get(0);
+        queue.addFirst(new String[]{"timetable", s.timetableUrl()});
+        try {
+            JSONObject st = TarcStore.state(this);
+            st.put("session", s.code).put("weeks", s.weeks);
+            if (s.start != null) st.put("start", s.start.toString());
+            if (s.end != null) st.put("end", s.end.toString());
+            TarcStore.saveState(this, st);
+        } catch (Exception ignored) {
+            // the timetable is still read
+        }
     }
 
     private void next() {

@@ -31,6 +31,67 @@ final class TarcParse {
         }
     }
 
+    /** One semester on the My Timetable list, and how to open its timetable. */
+    static final class Session {
+        final String code, fsid, branch;
+        final LocalDate start, end;
+        final int weeks;
+
+        Session(String code, String fsid, String branch, LocalDate start, LocalDate end, int weeks) {
+            this.code = code;
+            this.fsid = fsid;
+            this.branch = branch;
+            this.start = start;
+            this.end = end;
+            this.weeks = weeks;
+        }
+
+        String timetableUrl() {
+            return "https://web.tarc.edu.my/portal/courseReg/viewTimetable.jsp?fsid=" + fsid + "&fsession=" + code + "&fbrncd=" + branch;
+        }
+    }
+
+    private static final Pattern OPEN = Pattern.compile("getTimetable\\('([^']*)','([^']*)','([^']*)'\\)");
+    private static final Pattern DMY = Pattern.compile("(\\d{2})-(\\d{2})-(\\d{4})");
+
+    /** The semesters on the My Timetable page, newest first. */
+    static List<Session> sessions(String html) {
+        List<Session> out = new ArrayList<>();
+        Matcher r = ROW.matcher(html);
+        while (r.find()) {
+            Matcher o = OPEN.matcher(r.group(1));
+            if (!o.find()) continue;
+            LocalDate start = null, end = null;
+            int weeks = 0;
+            for (String cell : cells(r.group(1))) {
+                Matcher d = DMY.matcher(cell);
+                List<LocalDate> dates = new ArrayList<>();
+                while (d.find()) {
+                    try {
+                        dates.add(LocalDate.of(Integer.parseInt(d.group(3)), Integer.parseInt(d.group(2)), Integer.parseInt(d.group(1))));
+                    } catch (RuntimeException ignored) {
+                        // not a date after all
+                    }
+                }
+                if (dates.size() == 2) {
+                    start = dates.get(0);
+                    end = dates.get(1);
+                } else if (cell.matches("\\d{1,2}")) {
+                    weeks = Integer.parseInt(cell);
+                }
+            }
+            out.add(new Session(o.group(2), o.group(1), o.group(3), start, end, weeks));
+        }
+        out.sort((a, b) -> b.code.compareTo(a.code));
+        return out;
+    }
+
+    /** TAR UMT hides results until the semester's course evaluation is done. */
+    static boolean resultsHidden(String html) {
+        String t = html.toLowerCase(Locale.ROOT);
+        return t.contains("block viewing") || t.contains("not completed your online evaluation");
+    }
+
     private static final Pattern ROW = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final Pattern CELL = Pattern.compile("<td[^>]*>(.*?)</td>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final Pattern DATE = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})");

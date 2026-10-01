@@ -32,6 +32,19 @@ public class TarcParseCheck {
         check(b.name.equals("Data and the Web"), "a name already in mixed case is kept");
         check(TarcParse.duration("10.00AM (90m)") == 90 && TarcParse.duration("9.00AM (1.5h)") == 90 && TarcParse.duration("9.00AM") == 0, "durations");
         check(TarcParse.exams("<p>No exams</p>").isEmpty(), "a page without the table gives none");
+        String list = "<table id=\"simple-table\"><thead><tr><th>No</th><th>Session</th><th>Campus</th><th>Duration Date</th>"
+                + "<th>Total Week</th><th>View Access</th></tr></thead><tbody>"
+                + "<tr><td>1</td> <td>202905</td> <td>Main Campus</td> <td>Monday, 11-06-2029 ~ Sunday, 16-09-2029</td>"
+                + "<td align=\"center\">14</td><td><button onclick=\"getTimetable('AAA-111','202905','KL');\">View Timetable</button></td></tr>"
+                + "<tr><td>2</td> <td>203001</td> <td>Main Campus</td> <td>Monday, 07-01-2030 ~ Sunday, 14-04-2030</td>"
+                + "<td align=\"center\">14</td><td><button onclick=\"getTimetable('BBB-222','203001','KL');\">View Timetable</button></td></tr>"
+                + "</tbody></table>";
+        List<TarcParse.Session> ss = TarcParse.sessions(list);
+        check(ss.size() == 2 && ss.get(0).code.equals("203001"), "sessions, newest first");
+        TarcParse.Session s0 = ss.get(0);
+        check(s0.start.equals(LocalDate.of(2030, 1, 7)) && s0.end.equals(LocalDate.of(2030, 4, 14)) && s0.weeks == 14, "semester dates and weeks");
+        check(s0.timetableUrl().endsWith("viewTimetable.jsp?fsid=BBB-222&fsession=203001&fbrncd=KL"), "how to open its timetable");
+        check(TarcParse.resultsHidden("<b>Block Viewing</b> You have not completed your online evaluation") && !TarcParse.resultsHidden("<table></table>"), "hidden results are recognised");
         System.out.println(failures == 0 ? "ALL PASS" : failures + " FAILED");
         System.exit(failures == 0 ? 0 : 1);
     }
