@@ -181,7 +181,8 @@ public final class ListRow extends LinearLayout {
         subtitle.setLineSpacing(2 * dp, 1f);
     }
 
-    private static final class LetterDrawable extends android.graphics.drawable.Drawable {
+    /** A letter drawn in the middle of the square, for things with no icon of their own. */
+    static final class LetterDrawable extends android.graphics.drawable.Drawable {
         private final String letter;
         private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
 

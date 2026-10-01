@@ -273,6 +273,8 @@ final class TodayTab {
         } else {
             PcAppRows.bindIcon(a, now, l.name);
             now.setTitle(l.name);
+            final String liveName = l.name;
+            now.setOnClickListener(v -> a.startActivity(PcAppActivity.open(a, liveName, LocalDate.now())));
             long ms = System.currentTimeMillis() - l.sinceMs;
             now.setSubtitle(ms < 60_000 ? "Just now" : Fmt.shortDuration(ms) + " so far");
             now.setValue("● Now", false);
@@ -331,7 +333,7 @@ final class TodayTab {
         int total = 0;
         if (apps != null) for (PcDays.App x : apps) total += x.minutes;
         ((TextView) root.findViewById(R.id.pc_total)).setText(Fmt.shortDuration(total * 60_000L));
-        PcAppRows.fill(a, root.findViewById(R.id.pc_apps), apps, 5);
+        PcAppRows.fill(a, root.findViewById(R.id.pc_apps), apps, 5, day);
         root.findViewById(R.id.pc_see_all).setOnClickListener(v -> a.startActivity(
                 new Intent(a, PcAppsActivity.class).putExtra(PcAppsActivity.EXTRA_DAY, day.toString())));
     }

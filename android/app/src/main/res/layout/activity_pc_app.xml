@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:scrollbars="none">
+
+    <LinearLayout style="@style/Page">
+
+        <ImageView
+            android:id="@+id/back"
+            style="@style/CircleButton"
+            android:layout_marginBottom="20dp"
+            android:contentDescription="Back"
+            android:src="@drawable/ic_back" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/PageTitle" />
+
+        <TextView
+            android:id="@+id/subtitle"
+            style="@style/PageSubtitle" />
+
+        <LinearLayout style="@style/SectionRow">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:text="Last 7 days" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <com.planj.phone.BarChartView
+                android:id="@+id/chart"
+                android:layout_width="match_parent"
+                android:layout_height="120dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/cat_section"
+            style="@style/SectionRow">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:text="Counts as" />
+        </LinearLayout>
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_cat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout style="@style/SectionRow">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:text="Sessions" />
+
+            <TextView
+                android:id="@+id/sessions_aside"
+                style="@style/SectionAside" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/sessions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>

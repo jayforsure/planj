@@ -83,6 +83,24 @@ final class PcDays {
         }
     }
 
+    /** Each stretch on one app or site that day, as [startMin, endMin]; empty when unknown. */
+    static List<int[]> sessions(Context ctx, LocalDate day, String name) {
+        List<int[]> out = new ArrayList<>();
+        File f = new File(dir(ctx), day + ".json");
+        if (!f.exists()) return out;
+        try {
+            JSONArray all = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8)).optJSONArray("sessions");
+            if (all == null) return out;
+            for (int i = 0; i < all.length(); i++) {
+                JSONArray x = all.getJSONArray(i);
+                if (name.equals(x.getString(2))) out.add(new int[]{x.getInt(0), x.getInt(1)});
+            }
+        } catch (JSONException | IOException e) {
+            // an older summary without sessions
+        }
+        return out;
+    }
+
     /** Null when the PC has not reported that day. */
     static List<Seg> load(Context ctx, LocalDate day) {
         File f = new File(dir(ctx), day + ".json");

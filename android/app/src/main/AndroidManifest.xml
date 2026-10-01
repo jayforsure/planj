@@ -47,6 +47,7 @@
         <activity android:name=".AccountActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".PlacesActivity" android:exported="false" />
         <activity android:name=".PcAppsActivity" android:exported="false" />
+        <activity android:name=".PcAppActivity" android:exported="false" />
         <activity android:name=".PlacePickerActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
         <activity android:name=".DayDetailActivity" android:exported="false" />
         <activity android:name=".AppDetailActivity" android:exported="false" />

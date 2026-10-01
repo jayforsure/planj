@@ -18,6 +18,8 @@ type DaySummary struct {
 	Spans [][3]any `json:"spans"`        // [startMin, endMin, category]
 	Apps  [][3]any `json:"apps"`         // [name, minutes, category], most used first
 	At    string   `json:"at,omitempty"` // when this was worked out; the phone keeps the newest
+	// [startMin, endMin, name]: each stretch on one app or site, for its own page on the phone
+	Sessions [][3]any `json:"sessions"`
 }
 
 // Screens that are the computer waiting for you, not you using it.
@@ -48,6 +50,11 @@ func SummarizeDayWith(dir string, day time.Time, loc *time.Location, extra []Spa
 		cat  string
 	}
 	var segs []seg
+	type run struct {
+		s, e time.Time
+		name string
+	}
+	var runs []run
 	appMin := map[string]float64{}
 	appCat := map[string]string{}
 	var recs []spanRec
@@ -87,12 +94,14 @@ func SummarizeDayWith(dir string, day time.Time, loc *time.Location, extra []Spa
 		if !e.After(s) {
 			continue
 		}
+		name := DisplayName(r.App, r.Name)
 		cat := r.Cat
 		if cat == "" {
 			cat = CatOther
 		}
+		cat = ApplyOverride(name, cat) // the person's own choice, for past records too
+		runs = append(runs, run{s, e, name})
 		segs = append(segs, seg{int(s.Sub(start).Minutes()), int(e.Sub(start).Minutes() + 0.999), cat})
-		name := DisplayName(r.App, r.Name)
 		appMin[name] += e.Sub(s).Minutes()
 		if name == "Other websites" {
 			appCat[name] = CatOther // an unnamed page never claims to be focus or fun in the list
@@ -112,7 +121,29 @@ func SummarizeDayWith(dir string, day time.Time, loc *time.Location, extra []Spa
 		}
 		merged = append(merged, g)
 	}
-	out := DaySummary{Event: "pc_day", Day: start.Format("2006-01-02"), Spans: [][3]any{}, Apps: [][3]any{}}
+	out := DaySummary{Event: "pc_day", Day: start.Format("2006-01-02"), Spans: [][3]any{}, Apps: [][3]any{}, Sessions: [][3]any{}}
+	// One app or site in a row, with breaks under a minute, is one session; a glance at
+	// something else for under 30 seconds does not split it.
+	sort.Slice(runs, func(i, j int) bool { return runs[i].s.Before(runs[j].s) })
+	var joined []run
+	for _, r := range runs {
+		if r.e.Sub(r.s) < 30*time.Second {
+			continue
+		}
+		if n := len(joined); n > 0 && joined[n-1].name == r.name && r.s.Sub(joined[n-1].e) <= time.Minute {
+			if r.e.After(joined[n-1].e) {
+				joined[n-1].e = r.e
+			}
+			continue
+		}
+		joined = append(joined, r)
+	}
+	for _, r := range joined {
+		if r.e.Sub(r.s) < 30*time.Second || len(out.Sessions) == 500 {
+			continue
+		}
+		out.Sessions = append(out.Sessions, [3]any{int(r.s.Sub(start).Minutes()), int(r.e.Sub(start).Minutes() + 0.999), r.name})
+	}
 	names := make([]string, 0, len(appMin))
 	for n := range appMin {
 		names = append(names, n)
@@ -152,8 +183,15 @@ func Locked(app string) bool {
 
 // SummaryLines is today's and yesterday's summary as JSON lines, ready to seal.
 func SummaryLines(dir string, now time.Time) []byte {
+	return SummaryLinesDays(dir, now, 2)
+}
+
+// SummaryLinesDays is the summaries of the last n days, today included; after the person
+// re-sorts something, two weeks are sent again so the phone's history agrees.
+func SummaryLinesDays(dir string, now time.Time, n int) []byte {
 	var buf []byte
-	for _, d := range []time.Time{now.AddDate(0, 0, -1), now} {
+	for i := n - 1; i >= 0; i-- {
+		d := now.AddDate(0, 0, -i)
 		sum := SummarizeDay(dir, d, now.Location())
 		sum.At = now.UTC().Format(time.RFC3339)
 		line, err := json.Marshal(sum)

@@ -55,8 +55,16 @@ func pullOnce(root, inbox string, client *http.Client, base string, p Pairing) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	resorted := false
 	n, err := Pull(ctx, client, base, p,
-		func(_ string, jsonl []byte) error { return appendPhoneData(inbox, time.Now(), jsonl) },
+		func(_ string, jsonl []byte) error {
+			rest, changed := TakeRules(jsonl) // what the person re-sorted on the phone
+			resorted = resorted || changed
+			if len(rest) == 0 {
+				return nil
+			}
+			return appendPhoneData(inbox, time.Now(), rest)
+		},
 		func(id string, err error) { log.Printf("dropped undecryptable relay item %s: %v", id, err) })
 	if err != nil {
 		log.Printf("relay pull: %v", err)
@@ -66,7 +74,11 @@ func pullOnce(root, inbox string, client *http.Client, base string, p Pairing) {
 	// Confirm regularly, not only when data arrived: a phone with nothing to send still
 	// needs to learn that a PC with the same code is listening.
 	if n > 0 || time.Since(lastConfirm) >= confirmEvery {
-		if err := Confirm(ctx, client, base, p, n, SummaryLines(filepath.Join(root, "activity"), time.Now())); err != nil {
+		days := 2
+		if resorted {
+			days = 14 // the re-sorted past goes back to the phone too
+		}
+		if err := Confirm(ctx, client, base, p, n, SummaryLinesDays(filepath.Join(root, "activity"), time.Now(), days)); err != nil {
 			log.Printf("confirm: %v", err)
 		} else {
 			lastConfirm = time.Now()

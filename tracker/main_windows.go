@@ -120,6 +120,7 @@ func run(root string) {
 	liveCh := make(chan liveUpdate, 1)
 	go liveLoop(root, liveCh)
 	LoadPrograms(root)
+	LoadOverrides(root)
 	iconCh := make(chan programSeen, 64)
 	go iconLoop(root, iconCh)
 	go warmUp(dir, iconCh)
@@ -149,7 +150,8 @@ func run(root string) {
 			site = sites.Site(windows.GetForegroundWindow(), title)
 		}
 		cat, name := ClassifyWithSite(app, title, site, rules)
-		if app != lastProgram { // a program came to the front: know its name, and send its icon once
+		cat = ApplyOverride(DisplayName(app, name), cat) // what the person chose on the phone wins
+		if app != lastProgram {                          // a program came to the front: know its name, and send its icon once
 			lastProgram = app
 			if !IsBrowser(app) && !Locked(app) {
 				pname, _ := programName(app, path)

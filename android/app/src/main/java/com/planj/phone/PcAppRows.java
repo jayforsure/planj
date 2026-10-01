@@ -11,10 +11,15 @@ import java.util.List;
 final class PcAppRows {
     private PcAppRows() {}
 
-    static void fill(Activity a, LinearLayout list, List<PcDays.App> apps, int limit) {
+    static void fill(Activity a, LinearLayout list, List<PcDays.App> apps, int limit, java.time.LocalDate day) {
         list.removeAllViews();
         if (apps == null) return;
-        for (int i = 0; i < Math.min(limit, apps.size()); i++) list.addView(row(a, list, apps.get(i)));
+        for (int i = 0; i < Math.min(limit, apps.size()); i++) {
+            ListRow row = row(a, list, apps.get(i));
+            String name = apps.get(i).name;
+            row.setOnClickListener(v -> a.startActivity(PcAppActivity.open(a, name, day)));
+            list.addView(row);
+        }
     }
 
     private static final java.util.Set<String> FETCHING = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -24,8 +29,6 @@ final class PcAppRows {
         row.setTag(x.name);
         row.setTitle(x.name);
         row.setValue(Fmt.shortDuration(x.minutes * 60_000L), false);
-        row.setClickable(false);
-        row.setBackground(null);
         int glyph = glyph(x.name);
         if (glyph != 0) {
             row.setIcon(glyph);
