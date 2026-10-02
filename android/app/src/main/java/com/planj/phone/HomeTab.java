@@ -100,16 +100,47 @@ final class HomeTab {
             case OddsEngine.FOCUS: return "You get 2h+ focus on your PC tomorrow";
             default: {
                 Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
-                return rt == null ? fc.outcome.question : RoutineNames.name(a, rt) + " " + rt.window() + " tomorrow";
+                if (rt == null) return fc.outcome.question;
+                String name = RoutineNames.name(a, rt), when = rt.window();
+                if (rt.kind == Routines.Kind.FREE && name.equals(rt.kind.defaultName)) return "Your phone stays down " + when + " tomorrow";
+                if (rt.kind == Routines.Kind.AWAY && name.equals(rt.kind.defaultName)) return "You're out " + when + " tomorrow";
+                if (rt.kind == Routines.Kind.AT) return "You're at " + name + " " + when + " tomorrow";
+                return name + " " + when + " tomorrow";
             }
         }
     }
 
-    /** Why, in a few words: higher or lower than usual, and what tipped it. */
+    /** Why, in plain words: more or less likely than usual, and because of what. */
     static String why(OddsEngine.Forecast fc) {
         String usual = "usually " + Math.round(fc.base * 100) + "%";
-        if (fc.leverText == null) return Character.toUpperCase(usual.charAt(0)) + usual.substring(1);
-        return (fc.prob < fc.base ? "Lower" : "Higher") + " than usual " + fc.leverText + " · " + usual;
+        String because = because(fc.leverText);
+        if (because == null || Math.abs(fc.prob - fc.base) < 0.03) return Character.toUpperCase(usual.charAt(0)) + usual.substring(1);
+        return (fc.prob < fc.base ? "Less" : "More") + " likely than usual, because " + because + " (" + usual + ")";
+    }
+
+    /** What tipped a forecast, as the second half of "because …". */
+    private static String because(String leverText) {
+        if (leverText == null) return null;
+        for (OddsEngine.Lever l : OddsEngine.LEVERS) {
+            boolean yes = leverText.equals(l.whenTrue);
+            if (!yes && !leverText.equals(l.whenFalse)) continue;
+            switch (l.id) {
+                case "short_night": return yes ? "last night was short" : "last night was a full one";
+                case "late_phone": return yes ? "you were on your phone past midnight" : "you were off your phone by midnight";
+                case "social_heavy": return yes ? "you spent 2h+ on social today" : "you were under 2h on social today";
+                case "many_unlocks": return yes ? "you unlocked your phone more than usual today" : "you unlocked your phone less than usual today";
+                case "pc_focus_day": return yes ? "you had a focused day on your PC" : "you had little focus on your PC today";
+                case "pc_watch_late": return yes ? "you watched past 11pm" : "you didn't watch late";
+                case "pc_watch_heavy": return yes ? "you watched over an hour today" : "you watched under an hour today";
+                case "out_at_place": return yes ? "you were out today" : "you stayed home today";
+                case "class_morning": return yes ? "you have a morning class" : "you have no morning class";
+                case "early_plans": return yes ? "you have plans before 10am" : "your morning is free";
+                case "charged": return yes ? "your phone charges overnight" : "your phone isn't charging overnight";
+                case "weekend_next": return yes ? "tomorrow's a weekend day" : "tomorrow's a weekday";
+                default: return null;
+            }
+        }
+        return null;
     }
 
     private void learning(int days) {
