@@ -85,7 +85,10 @@ public class MainActivity extends Activity {
         content.setAlpha(0f);
         content.setTranslationY(48 * dp);
         nav.setAlpha(0f);
+        boolean[] risen = {false};
         Runnable rise = () -> {
+            if (risen[0]) return;
+            risen[0] = true;
             content.animate().alpha(1f).translationY(0f).setDuration(520).setStartDelay(60)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
             nav.animate().alpha(1f).setDuration(400).setStartDelay(220).start();
@@ -102,6 +105,7 @@ public class MainActivity extends Activity {
                         .withEndAction(splash::remove).start();
                 rise.run();
             });
+            content.postDelayed(rise, 1200); // some launches show no splash, and then never call it
         } else {
             content.post(rise);
         }
