@@ -163,7 +163,7 @@ public class OddsDetailActivity extends Activity {
         tl.topMargin = page.dp(8);
         box.addView(track, tl);
         TextView from = new TextView(this);
-        from.setText(k + " of " + n + " days like this" + (tag == null ? "" : " · like today"));
+        from.setText(k + " of " + n + (tag == null ? " days like this" : " days like today"));
         from.setTextColor(getColor(R.color.muted));
         from.setTextSize(12);
         from.setPadding(0, page.dp(6), 0, 0);
