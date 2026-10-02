@@ -281,6 +281,7 @@ final class TarcReader {
             } catch (Exception ignored) {
                 // shown as read without a time
             }
+            new Thread(() -> TarcAttendance.record(ctx)).start(); // kept past this semester's pages
             finish(Result.OK);
             return;
         }

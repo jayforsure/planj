@@ -11,7 +11,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 
 final class OddsTab {
     private final MainActivity a;
@@ -34,7 +33,7 @@ final class OddsTab {
     }
 
     static final class Result {
-        TreeMap<LocalDate, OddsEngine.Day> hist;
+        OddsEngine.History hist;
         List<OddsEngine.Forecast> forecasts;
         Map<String, OddsEngine.Record> live;
     }
@@ -166,6 +165,20 @@ final class OddsTab {
             row.setValue("–", true);
             list.addView(row);
         }
+        if (!shown.contains(OddsEngine.CLASS) && TarcStore.connected(a)) { // only the evening before a class day
+            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.CLASS);
+            boolean learning = days < OddsEngine.MIN_HISTORY;
+            ListRow row = plainRow(R.drawable.ic_school, "Make your first class", learning
+                    ? "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " class days"
+                    : Boolean.TRUE.equals(TarcTimetable.inSemester(a, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start");
+            row.setValue("–", true);
+            if (!learning) { // its record is still worth a look
+                row.setClickable(true);
+                row.setBackgroundResource(R.drawable.btn_text);
+                row.setOnClickListener(v -> OddsDetailActivity.open(a, OddsEngine.CLASS));
+            }
+            list.addView(row);
+        }
     }
 
     /** What each question is about, as the icon in its square. */
@@ -179,6 +192,7 @@ final class OddsTab {
             case "social_2h": return R.drawable.ic_people;
             case "up_by_8": return R.drawable.ic_sun;
             case OddsEngine.FOCUS: return R.drawable.ic_monitor;
+            case OddsEngine.CLASS: return R.drawable.ic_school;
             default: return R.drawable.ic_odds;
         }
     }

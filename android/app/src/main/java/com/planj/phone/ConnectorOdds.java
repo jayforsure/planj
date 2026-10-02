@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * What a connector adds to your odds: the forecasts it answers (with today's odds, or how far
@@ -52,6 +51,7 @@ final class ConnectorOdds {
     /** The connector whose data answers a forecast. */
     static String owner(String outcomeId) {
         if (outcomeId.equals(OddsEngine.FOCUS)) return "pc";
+        if (outcomeId.equals(OddsEngine.CLASS)) return "tarc";
         Routines.Routine r = Routines.Routine.parse(outcomeId);
         if (r != null) return r.kind == Routines.Kind.AT ? "places" : "phone";
         return "phone";
@@ -61,7 +61,7 @@ final class ConnectorOdds {
     static String summary(String id) {
         int forecasts = 0, signals = 0;
         for (OddsEngine.Outcome o : OddsEngine.OUTCOMES) if (owner(o.id).equals(id)) forecasts++;
-        if (id.equals("tarc")) forecasts++; // finishing what's due
+        if (id.equals("tarc")) forecasts += 2; // making your first class, finishing what's due
         for (String[] s : SIGNALS.values()) if (s[0].equals(id)) signals++;
         List<String> parts = new ArrayList<>();
         if (forecasts > 0) parts.add(forecasts + (forecasts == 1 ? " forecast" : " forecasts"));
@@ -72,7 +72,7 @@ final class ConnectorOdds {
 
     /** Works it out; call off the main thread. */
     static List<Row> rows(Context ctx, String id) {
-        TreeMap<LocalDate, OddsEngine.Day> hist = OddsEngine.history(ctx);
+        OddsEngine.History hist = OddsEngine.history(ctx);
         LocalDate today = LocalDate.now();
         List<OddsEngine.Forecast> forecasts = OddsEngine.forecast(hist, today);
         List<Row> out = new ArrayList<>();
@@ -105,6 +105,16 @@ final class ConnectorOdds {
         }
 
         if (id.equals("tarc")) {
+            OddsEngine.Forecast fc = find(forecasts, OddsEngine.CLASS);
+            int days = OddsEngine.daysFor(hist, today, OddsEngine.CLASS);
+            if (fc != null) {
+                out.add(new Row(R.drawable.ic_school, OddsWords.title(ctx, OddsEngine.CLASS, fc.outcome.question),
+                        "Tomorrow · usually " + Math.round(fc.base * 100) + "%", Math.round(fc.prob * 100) + "%", false));
+            } else {
+                out.add(new Row(R.drawable.ic_school, "Make your first class", days < OddsEngine.MIN_HISTORY
+                        ? "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " class days"
+                        : "Forecast the evening before each class day", "–", true));
+            }
             String odds = TarcDeadlines.odds(ctx);
             int seen = TarcDeadlines.settled(ctx);
             List<TarcDeadlines.Pending> pending = TarcDeadlines.pending(ctx);

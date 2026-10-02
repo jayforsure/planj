@@ -15,6 +15,11 @@ final class OddsWords {
             case "social_2h": return "You spend 2h+ on social apps tomorrow";
             case "up_by_8": return "You're up by 8 tomorrow";
             case OddsEngine.FOCUS: return "You get 2h+ focus on your PC tomorrow";
+            case OddsEngine.CLASS: {
+                TarcTimetable.OnDay c = firstClassTomorrow(ctx);
+                return c == null ? "You make it to your first class"
+                        : "You make it to " + c.course.name + " at " + Routines.clock(c.lesson.startMin) + " tomorrow";
+            }
             default: {
                 Routines.Routine rt = Routines.Routine.parse(outcomeId);
                 if (rt == null) return question;
@@ -36,6 +41,10 @@ final class OddsWords {
             case "social_2h": return "2h+ on social";
             case "up_by_8": return "Up by 8";
             case OddsEngine.FOCUS: return "2h+ PC focus";
+            case OddsEngine.CLASS: {
+                TarcTimetable.OnDay c = firstClassTomorrow(ctx);
+                return c == null ? "Make your first class" : "Make your " + Routines.clock(c.lesson.startMin) + " class";
+            }
             default: {
                 Routines.Routine rt = Routines.Routine.parse(outcomeId);
                 return rt == null ? question : RoutineNames.name(ctx, rt) + " " + rt.window();
@@ -43,9 +52,15 @@ final class OddsWords {
         }
     }
 
+    private static TarcTimetable.OnDay firstClassTomorrow(Context ctx) {
+        java.util.List<TarcTimetable.OnDay> on = TarcTimetable.on(ctx, java.time.LocalDate.now().plusDays(1));
+        return on.isEmpty() ? null : on.get(0);
+    }
+
     /** "Less likely than usual, because tomorrow's a weekend day", or "Usually 53%". */
     static String why(OddsEngine.Forecast fc) {
-        String b = because(fc.leverId, fc.leverSide);
+        String b = "recent".equals(fc.leverId) ? "you made " + fc.sideK + " of your last " + fc.sideN + " class days"
+                : because(fc.leverId, fc.leverSide);
         if (b == null || Math.abs(fc.prob - fc.base) < 0.03) return "Usually " + Math.round(fc.base * 100) + "%";
         return (fc.prob < fc.base ? "Less" : "More") + " likely than usual, because " + b;
     }

@@ -72,8 +72,8 @@ public class TarcActivity extends Activity {
         icon();
         title("TAR UMT");
         blurb(Connectors.get("tarc").about + ".");
-        note(ConnectorOdds.summary("tarc") + " to your odds once connected: whether you finish what's due in time, "
-                + "and morning classes as a signal for your nights and mornings.");
+        note(ConnectorOdds.summary("tarc") + " to your odds once connected: whether you make your first class, "
+                + "checked against your attendance, whether you finish what's due, and morning classes as a signal for your nights.");
         note("You sign in on TAR UMT's own page. Pages stay on this phone, and money or identity pages are never opened.");
         primary("Connect", () -> read(false));
     }

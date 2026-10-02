@@ -80,6 +80,28 @@ public class TarcParseCheck {
         check(dl.size() == 3, "three reminders, the repeat counted once");
         check(dl.get(0).title.equals("Exam Slip") && dl.get(0).due.equals(LocalDate.of(2030, 10, 8)), "soonest first, title without 'by'");
         check(dl.get(1).title.equals("Course Survey") && dl.get(1).due.equals(LocalDate.of(2030, 11, 2)), "title and date in separate spans");
+        String att = "<table><thead><tr role=\"row\"><th>No</th><th>Date</th><th>Lecturer/Tutor</th><th>Class Venue</th>"
+                + "<th>Attendance</th><th>Registered Date</th></tr></thead><tbody>"
+                + "<tr role=\"row\" class=\"odd\"><td class=\"hidden-480\">1</td>"
+                + "<td><span class=\"hidden\">20300107</span> Mon 07/01/30<span class=\"hidden-480\">, 10:00AM-12:00PM</span></td>"
+                + "<td class=\"hidden-480\">Someone</td><td>ROOM 1 (L)</td>"
+                + "<td><i class=\"fa fa-check green\" data-original-title=\"Present\"></i> &nbsp;</td>"
+                + "<td class=\"hidden-480 small\"><i class=\"fa fa-mobile\" data-original-title=\"Mobile registered attendance\"></i> A Student on Mon 07/01/30 10:05AM</td></tr>"
+                + "<tr role=\"row\" class=\"even\"><td class=\"hidden-480\">2</td>"
+                + "<td><span class=\"hidden\">20300109</span> Wed 09/01/30<span class=\"hidden-480\">, 02:30PM-03:30PM</span></td>"
+                + "<td class=\"hidden-480\">Someone</td><td>LAB 2 (P)</td>"
+                + "<td><i class=\"fa fa-close red\" data-original-title=\"Absent\"></i> &nbsp;</td><td class=\"hidden-480 small\"></td></tr>"
+                + "<tr role=\"row\" class=\"odd\"><td class=\"hidden-480\">3</td>"
+                + "<td><span class=\"hidden\">20300111</span> Fri 11/01/30<span class=\"hidden-480\">, 09:00AM-10:00AM</span></td>"
+                + "<td class=\"hidden-480\">Someone</td><td>ROOM 3 (T)</td><td>&nbsp;</td><td></td></tr>"
+                + "</tbody></table>";
+        List<TarcParse.Mark> ms = TarcParse.attendance(att);
+        check(ms.size() == 3, "three classes, the header skipped");
+        check(ms.get(0).date.equals(LocalDate.of(2030, 1, 7)) && ms.get(0).startMin == 600 && ms.get(0).type.equals("Lecture")
+                && Boolean.TRUE.equals(ms.get(0).present), "present at a 10:00 lecture, not the 10:05 check-in");
+        check(ms.get(1).startMin == 14 * 60 + 30 && ms.get(1).type.equals("Practical") && Boolean.FALSE.equals(ms.get(1).present), "absent from a practical");
+        check(ms.get(2).present == null && ms.get(2).type.equals("Tutorial"), "neither mark: unknown");
+        check(TarcParse.attendance("<p>None</p>").isEmpty(), "a page without the table gives none");
         System.out.println(failures == 0 ? "ALL PASS" : failures + " FAILED");
         System.exit(failures == 0 ? 0 : 1);
     }

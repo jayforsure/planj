@@ -153,6 +153,59 @@ final class TarcParse {
         return out;
     }
 
+    /** A class TAR UMT marked you at, from a course's attendance page. */
+    static final class Mark {
+        final LocalDate date;
+        final int startMin;
+        final String type;     // "Lecture", "Practical", "Tutorial", or "" when not shown
+        final Boolean present; // null when the page says neither present nor absent (on leave)
+
+        Mark(LocalDate date, int startMin, String type, Boolean present) {
+            this.date = date;
+            this.startMin = startMin;
+            this.type = type;
+            this.present = present;
+        }
+    }
+
+    private static final Pattern MARK_DAY = Pattern.compile("class=\"hidden\">\\s*(\\d{4})(\\d{2})(\\d{2})\\s*<");
+    private static final Pattern MARK_TYPE = Pattern.compile("\\(([LPT])\\)\\s*$");
+    private static final Pattern MARK_STATE = Pattern.compile("data-original-title=\"(Present|Absent)\"");
+
+    /** Every class so far on one course's attendance page, and whether you were there. */
+    static List<Mark> attendance(String html) {
+        List<Mark> out = new ArrayList<>();
+        Matcher r = ROW.matcher(html);
+        while (r.find()) {
+            String row = r.group(1);
+            Matcher c = CELL.matcher(row);
+            LocalDate date = null;
+            int start = -1;
+            String type = "";
+            while (c.find()) {
+                String cell = c.group(1);
+                Matcher d = MARK_DAY.matcher(cell);
+                if (date == null && d.find()) {
+                    try {
+                        date = LocalDate.of(Integer.parseInt(d.group(1)), Integer.parseInt(d.group(2)), Integer.parseInt(d.group(3)));
+                    } catch (RuntimeException ignored) {
+                        break; // not a date after all
+                    }
+                    start = clock(cell.substring(d.end())); // "Fri 19/06/26, 10:00AM-12:00PM"
+                    continue;
+                }
+                Matcher t = MARK_TYPE.matcher(text(cell));
+                if (date != null && type.isEmpty() && t.find()) {
+                    type = t.group(1).equals("L") ? "Lecture" : t.group(1).equals("P") ? "Practical" : "Tutorial";
+                }
+            }
+            if (date == null || start < 0) continue;
+            Matcher st = MARK_STATE.matcher(row);
+            out.add(new Mark(date, start, type, st.find() ? (Boolean) st.group(1).equals("Present") : null));
+        }
+        return out;
+    }
+
     /** The teaching weeks of the semester: [week number, first day, last day]. */
     static List<Object[]> weeks(String html) {
         List<Object[]> out = new ArrayList<>();

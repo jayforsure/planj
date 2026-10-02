@@ -14,7 +14,6 @@ import android.widget.TextView;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 
 /** One forecast: the odds, why, what moves them, how often planj has been right, and what checks it. */
 public class OddsDetailActivity extends Activity {
@@ -38,7 +37,7 @@ public class OddsDetailActivity extends Activity {
 
     private void load() {
         new Thread(() -> {
-            TreeMap<LocalDate, OddsEngine.Day> hist = OddsEngine.history(this);
+            OddsEngine.History hist = OddsEngine.history(this);
             OddsEngine.Forecast fc = null;
             for (OddsEngine.Forecast f : OddsEngine.forecast(hist, LocalDate.now())) if (f.outcome.id.equals(id)) fc = f;
             List<Object[]> replay = OddsEngine.replay(hist, id);
@@ -73,7 +72,9 @@ public class OddsDetailActivity extends Activity {
         sl.topMargin = page.dp(18);
         head.addView(s, sl);
         TextView why = new TextView(this);
-        why.setText(fc == null ? "Not forecast for tomorrow yet" : OddsWords.why(fc));
+        why.setText(fc != null ? OddsWords.why(fc) : id.equals(OddsEngine.CLASS)
+                ? (Boolean.TRUE.equals(TarcTimetable.inSemester(this, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start")
+                : "Not forecast for tomorrow yet");
         why.setTextColor(getColor(R.color.muted));
         why.setTextSize(13);
         why.setBackgroundResource(R.drawable.chip_soft);
@@ -84,14 +85,17 @@ public class OddsDetailActivity extends Activity {
 
         if (fc != null) {
             page.section("What moves it");
-            if (fc.leverId != null && fc.otherN > 0) {
+            if ("recent".equals(fc.leverId)) { // your last few class days, against all of them
+                bar("Your last " + fc.sideN + " class days", "Made " + fc.sideK + " of " + fc.sideN, true, (int) Math.round(fc.prob * 100));
+                bar("All your class days", "Made " + fc.otherK + " of " + fc.otherN, false, (int) Math.round(fc.base * 100));
+            } else if (fc.leverId != null && fc.otherN > 0) {
                 int here = (int) Math.round(100.0 * (fc.sideK + 1) / (fc.sideN + 2));
                 int there = (int) Math.round(100.0 * (fc.otherK + 1) / (fc.otherN + 2));
-                bar(OddsWords.side(fc.leverId, fc.leverSide), "today", here, fc.sideK, fc.sideN);
-                bar(OddsWords.side(fc.leverId, !fc.leverSide), null, there, fc.otherK, fc.otherN);
+                bar(OddsWords.side(fc.leverId, fc.leverSide), fc.sideK + " of " + fc.sideN + " days like today", true, here);
+                bar(OddsWords.side(fc.leverId, !fc.leverSide), fc.otherK + " of " + fc.otherN + " days like this", false, there);
             } else {
-                page.note("Nothing has moved it yet: it has happened on " + Math.round(fc.base * 100) + "% of your days. "
-                        + "planj looks for what changes it as your days add up.");
+                page.note("Nothing has moved it yet: it has happened on " + Math.round(fc.base * 100) + "% of your "
+                        + (id.equals(OddsEngine.CLASS) ? "class days" : "days") + ". planj looks for what changes it as your days add up.");
             }
         }
 
@@ -101,7 +105,9 @@ public class OddsDetailActivity extends Activity {
             dotCard(liveDots, "Checked each morning since planj started forecasting this");
         }
         if (!replayDots.isEmpty()) {
-            dotCard(replayDots, "Replayed over your past days: what planj would have said, and what happened");
+            dotCard(replayDots, id.equals(OddsEngine.CLASS)
+                    ? "Replayed over your class days: what planj would have said, and what TAR UMT marked"
+                    : "Replayed over your past days: what planj would have said, and what happened");
         }
         if (liveDots.isEmpty() && replayDots.isEmpty()) page.note("No forecasts checked yet. The first is checked tomorrow morning.");
 
@@ -121,8 +127,8 @@ public class OddsDetailActivity extends Activity {
         }
     }
 
-    /** One side of what moves it: a label, its odds, and a bar. */
-    private void bar(String label, String tag, int percent, int k, int n) {
+    /** One side of what moves it: a label, its odds, a bar, and how many days it rests on. */
+    private void bar(String label, String caption, boolean today, int percent) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(0, page.dp(8), 0, page.dp(10));
@@ -131,12 +137,12 @@ public class OddsDetailActivity extends Activity {
         top.setGravity(Gravity.CENTER_VERTICAL);
         TextView l = new TextView(this);
         l.setText(label);
-        l.setTextColor(getColor(tag == null ? R.color.muted : R.color.text));
+        l.setTextColor(getColor(today ? R.color.text : R.color.muted));
         l.setTextSize(15);
         top.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView v = new TextView(this);
         v.setText(percent + "%");
-        v.setTextColor(getColor(tag == null ? R.color.muted : R.color.text));
+        v.setTextColor(getColor(today ? R.color.text : R.color.muted));
         v.setTextSize(17);
         v.setTypeface(getResources().getFont(R.font.display));
         top.addView(v);
@@ -148,7 +154,7 @@ public class OddsDetailActivity extends Activity {
         track.setBackground(t);
         View fill = new View(this);
         android.graphics.drawable.GradientDrawable f = new android.graphics.drawable.GradientDrawable();
-        f.setColor(getColor(tag == null ? R.color.idle : R.color.accent));
+        f.setColor(getColor(today ? R.color.accent : R.color.idle));
         f.setCornerRadius(page.dp(4));
         fill.setBackground(f);
         track.addView(fill, new FrameLayout.LayoutParams(0, page.dp(8)));
@@ -163,7 +169,7 @@ public class OddsDetailActivity extends Activity {
         tl.topMargin = page.dp(8);
         box.addView(track, tl);
         TextView from = new TextView(this);
-        from.setText(k + " of " + n + (tag == null ? " days like this" : " days like today"));
+        from.setText(caption);
         from.setTextColor(getColor(R.color.muted));
         from.setTextSize(12);
         from.setPadding(0, page.dp(6), 0, 0);

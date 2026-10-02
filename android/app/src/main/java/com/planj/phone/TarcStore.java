@@ -15,7 +15,8 @@ import java.util.List;
 
 /**
  * What planj read from TAR UMT, kept only on this phone: the timetable and results pages as
- * they were, and when they were read. Never synced; included in Export my data.
+ * they were, when they were read, and every class marked (`TarcAttendance`). Never synced;
+ * included in Export my data.
  */
 final class TarcStore {
     private TarcStore() {}
@@ -103,6 +104,7 @@ final class TarcStore {
         TarcCreds.clear(ctx);
         TarcSync.cancel(ctx);
         new File(dir(ctx), "state.json").delete();
+        TarcAttendance.file(ctx).delete();
         android.webkit.CookieManager.getInstance().removeAllCookies(null);
         android.webkit.CookieManager.getInstance().flush();
     }
@@ -116,6 +118,11 @@ final class TarcStore {
                 // the line goes out without its label
             }
             out.write((p + "\n").getBytes(StandardCharsets.UTF_8));
+        }
+        File kept = TarcAttendance.file(ctx);
+        if (kept.exists()) { // every class marked, older semesters included
+            String marks = new String(Files.readAllBytes(kept.toPath()), StandardCharsets.UTF_8);
+            out.write(("{\"event\":\"tarc_attendance\",\"kept\":" + marks + "}\n").getBytes(StandardCharsets.UTF_8));
         }
     }
 

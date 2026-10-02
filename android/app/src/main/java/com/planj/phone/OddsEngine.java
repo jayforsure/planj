@@ -70,6 +70,11 @@ final class OddsEngine {
         }
     }
 
+    /** The days, and every first class TAR UMT marked (empty when it isn't connected). */
+    static final class History extends TreeMap<LocalDate, Day> {
+        List<TarcAttendance.ClassDay> classes = Collections.emptyList();
+    }
+
     interface Label {
         Boolean of(Day target, List<Day> before);
     }
@@ -132,6 +137,9 @@ final class OddsEngine {
     }
 
     static final String FOCUS = "pc_focus_2h";
+    static final String CLASS = "class_first";
+    static final Outcome CLASS_OUTCOME = new Outcome(CLASS, "Make your first class", "made your first class", (t, b) -> null);
+    private static final int RECENT_DAYS = 21, RECENT_MAX = 6, RECENT_MIN = 3;
 
     static final List<Outcome> OUTCOMES = List.of(
             new Outcome("off_by_1am", "Off devices by 1am tonight", "off by 1am",
@@ -181,8 +189,13 @@ final class OddsEngine {
 
     // ----- history from the phone's own files -----
 
-    static TreeMap<LocalDate, Day> history(Context ctx) {
-        TreeMap<LocalDate, Day> out = new TreeMap<>();
+    static History history(Context ctx) {
+        History out = new History();
+        try {
+            out.classes = TarcAttendance.days(ctx);
+        } catch (RuntimeException e) {
+            // forecasts without the class one
+        }
         LocalDate today = LocalDate.now();
         ZoneId zone = ZoneId.systemDefault();
         List<DayUsage> usages = new ArrayList<>();
@@ -367,7 +380,7 @@ final class OddsEngine {
         return leverErr < baseErr;
     }
 
-    static List<Forecast> forecast(TreeMap<LocalDate, Day> hist, LocalDate evening) {
+    static List<Forecast> forecast(History hist, LocalDate evening) {
         Day today = hist.get(evening);
         List<Forecast> out = new ArrayList<>();
         if (today == null) return out;
@@ -396,54 +409,144 @@ final class OddsEngine {
             // routine will hold: "92% you'll be out on Tuesday evening" is the point
             if (k == 0 || (k == n && !routine)) continue;
 
-            double bestGap = -1;
-            Lever bestLever = null;
-            boolean bestSide = false;
-            int bestK = 0, bestN = 0, otherK = 0, otherN = 0;
-            for (Lever lv : LEVERS) {
-                Boolean sideToday = lv.test.of(today, pastDays);
-                if (sideToday == null) continue;
-                List<boolean[]> sides = new ArrayList<>();
-                int[][] split = new int[2][2]; // [side][k,n]
-                for (Object[] r : rows) {
-                    @SuppressWarnings("unchecked")
-                    Boolean s = lv.test.of((Day) r[0], (List<Day>) r[1]);
-                    if (s == null) continue;
-                    boolean y = (Boolean) r[2];
-                    sides.add(new boolean[]{s, y});
-                    split[s ? 1 : 0][1]++;
-                    if (y) split[s ? 1 : 0][0]++;
-                }
-                if (split[0][1] < MIN_SIDE || split[1][1] < MIN_SIDE || !earnsItsKeep(sides)) continue;
-                double gap = Math.abs((double) split[1][0] / split[1][1] - (double) split[0][0] / split[0][1]);
-                if (gap > bestGap) {
-                    bestGap = gap;
-                    bestLever = lv;
-                    bestSide = sideToday;
-                    bestK = split[sideToday ? 1 : 0][0];
-                    bestN = split[sideToday ? 1 : 0][1];
-                    otherK = split[sideToday ? 0 : 1][0];
-                    otherN = split[sideToday ? 0 : 1][1];
-                }
-            }
-            if (bestLever != null) {
-                Forecast f = new Forecast(oc, (bestK + 1.0) / (bestN + 2), base, n,
-                        bestSide ? bestLever.whenTrue : bestLever.whenFalse, bestK, bestN);
-                f.leverId = bestLever.id;
-                f.leverSide = bestSide;
-                f.otherK = otherK;
-                f.otherN = otherN;
-                out.add(f);
-            } else {
-                out.add(new Forecast(oc, (k + 1.0) / (n + 2), base, n, null, k, n));
-            }
+            Forecast f = withLever(oc, base, n, bestLever(rows, today, pastDays));
+            out.add(f != null ? f : new Forecast(oc, (k + 1.0) / (n + 2), base, n, null, k, n));
+        }
+        if (today.nextClassMin != null && today.nextClassMin >= 0) { // a class tomorrow
+            Forecast c = classForecast(hist, evening);
+            if (c != null) out.add(c);
         }
         return out;
     }
 
+    /** The signal that splits these days most, among those that would have beaten the plain rate. */
+    private static final class Split {
+        Lever lever;
+        boolean side;
+        int k, n, otherK, otherN;
+    }
+
+    /** rows: {Day evening, List<Day> before, Boolean y}. Null when no signal earns its keep. */
+    private static Split bestLever(List<Object[]> rows, Day today, List<Day> pastDays) {
+        double bestGap = -1;
+        Split best = null;
+        for (Lever lv : LEVERS) {
+            Boolean sideToday = lv.test.of(today, pastDays);
+            if (sideToday == null) continue;
+            List<boolean[]> sides = new ArrayList<>();
+            int[][] split = new int[2][2]; // [side][k,n]
+            for (Object[] r : rows) {
+                @SuppressWarnings("unchecked")
+                Boolean s = lv.test.of((Day) r[0], (List<Day>) r[1]);
+                if (s == null) continue;
+                boolean y = (Boolean) r[2];
+                sides.add(new boolean[]{s, y});
+                split[s ? 1 : 0][1]++;
+                if (y) split[s ? 1 : 0][0]++;
+            }
+            if (split[0][1] < MIN_SIDE || split[1][1] < MIN_SIDE || !earnsItsKeep(sides)) continue;
+            double gap = Math.abs((double) split[1][0] / split[1][1] - (double) split[0][0] / split[0][1]);
+            if (gap > bestGap) {
+                bestGap = gap;
+                best = new Split();
+                best.lever = lv;
+                best.side = sideToday;
+                best.k = split[sideToday ? 1 : 0][0];
+                best.n = split[sideToday ? 1 : 0][1];
+                best.otherK = split[sideToday ? 0 : 1][0];
+                best.otherN = split[sideToday ? 0 : 1][1];
+            }
+        }
+        return best;
+    }
+
+    private static Forecast withLever(Outcome oc, double base, int n, Split s) {
+        if (s == null) return null;
+        Forecast f = new Forecast(oc, (s.k + 1.0) / (s.n + 2), base, n, s.side ? s.lever.whenTrue : s.lever.whenFalse, s.k, s.n);
+        f.leverId = s.lever.id;
+        f.leverSide = s.side;
+        f.otherK = s.otherK;
+        f.otherN = s.otherN;
+        return f;
+    }
+
+    // ----- your first class, from TAR UMT's attendance -----
+
+    /**
+     * Whether you make the first class the day after `evening`. Attendance comes in streaks, so
+     * your last few class days count most, pulled toward your usual rate; that is used only once
+     * replaying it has beaten the usual rate. An evening signal from this phone or PC takes over
+     * when it earns its keep, as it does for every other forecast.
+     */
+    private static Forecast classForecast(History hist, LocalDate evening) {
+        List<TarcAttendance.ClassDay> past = new ArrayList<>();
+        for (TarcAttendance.ClassDay c : hist.classes) if (!c.date.isAfter(evening)) past.add(c);
+        int n = past.size(), k = 0;
+        if (n < MIN_HISTORY) return null;
+        for (TarcAttendance.ClassDay c : past) if (c.made) k++;
+        double base = (double) k / n, usual = (k + 1.0) / (n + 2);
+
+        Day today = hist.get(evening);
+        if (today != null) {
+            List<Object[]> rows = new ArrayList<>();
+            for (TarcAttendance.ClassDay c : past) {
+                LocalDate eve = c.date.minusDays(1);
+                Day d = hist.get(eve);
+                if (d != null) rows.add(new Object[]{d, before(hist, eve), c.made});
+            }
+            Forecast f = withLever(CLASS_OUTCOME, base, n, bestLever(rows, today, before(hist, evening)));
+            if (f != null) return f;
+        }
+
+        int[] recent = recent(past, evening.plusDays(1));
+        if (recent == null || !recentEarnsItsKeep(past)) return new Forecast(CLASS_OUTCOME, usual, base, n, null, k, n);
+        Forecast f = new Forecast(CLASS_OUTCOME, (recent[0] + 2 * usual) / (recent[1] + 2), base, n,
+                "made " + recent[0] + " of the last " + recent[1], recent[0], recent[1]);
+        f.leverId = "recent";
+        f.leverSide = true;
+        f.otherK = k;
+        f.otherN = n;
+        return f;
+    }
+
+    /** {made, of} over your last few class days before `target`; null when too few were lately. */
+    private static int[] recent(List<TarcAttendance.ClassDay> past, LocalDate target) {
+        int made = 0, of = 0;
+        for (int i = past.size() - 1; i >= 0 && of < RECENT_MAX; i--) {
+            TarcAttendance.ClassDay c = past.get(i);
+            if (c.date.isBefore(target.minusDays(RECENT_DAYS))) break; // after a break, last term says little
+            of++;
+            if (c.made) made++;
+        }
+        return of < RECENT_MIN ? null : new int[]{made, of};
+    }
+
+    /** Replaying the class days so far: would leaning on the last few have beaten the usual rate? */
+    private static boolean recentEarnsItsKeep(List<TarcAttendance.ClassDay> past) {
+        double recentErr = 0, usualErr = 0;
+        int compared = 0, k = 0;
+        for (int i = 0; i < past.size(); i++) {
+            if (i >= MIN_HISTORY) {
+                int[] r = recent(past.subList(0, i), past.get(i).date);
+                if (r != null) {
+                    double usual = (k + 1.0) / (i + 2), pr = (r[0] + 2 * usual) / (r[1] + 2), y = past.get(i).made ? 1 : 0;
+                    recentErr += (pr - y) * (pr - y);
+                    usualErr += (usual - y) * (usual - y);
+                    compared++;
+                }
+            }
+            if (past.get(i).made) k++;
+        }
+        return compared >= MIN_HISTORY && recentErr < usualErr;
+    }
+
     /** Days so far on which an outcome could be scored the morning after; forecasts start at MIN_HISTORY. */
-    static int daysFor(TreeMap<LocalDate, Day> hist, LocalDate evening, String outcomeId) {
+    static int daysFor(History hist, LocalDate evening, String outcomeId) {
         int n = 0;
+        if (outcomeId.equals(CLASS)) {
+            for (TarcAttendance.ClassDay c : hist.classes) if (!c.date.isAfter(evening)) n++;
+            return n;
+        }
         for (LocalDate d : hist.keySet()) {
             LocalDate next = d.plusDays(1);
             if (next.isBefore(evening) && hist.containsKey(next) && resolve(hist, next, outcomeId) != null) n++;
@@ -451,7 +554,11 @@ final class OddsEngine {
         return n;
     }
 
-    static Boolean resolve(TreeMap<LocalDate, Day> hist, LocalDate target, String outcomeId) {
+    static Boolean resolve(History hist, LocalDate target, String outcomeId) {
+        if (outcomeId.equals(CLASS)) { // answered once TAR UMT has marked that day's first class
+            for (TarcAttendance.ClassDay c : hist.classes) if (c.date.equals(target)) return c.made;
+            return null;
+        }
         Day t = hist.get(target);
         if (t == null) return null;
         for (Outcome oc : OUTCOMES) if (oc.id.equals(outcomeId)) return oc.label.of(t, before(hist, target));
@@ -459,7 +566,7 @@ final class OddsEngine {
         return r == null ? null : r.happened(t);
     }
 
-    static Map<String, Record> backtest(TreeMap<LocalDate, Day> hist) {
+    static Map<String, Record> backtest(History hist) {
         Map<String, Record> out = new LinkedHashMap<>();
         for (LocalDate evening : hist.keySet()) {
             LocalDate target = evening.plusDays(1);
@@ -478,13 +585,14 @@ final class OddsEngine {
         return new File(ctx.getFilesDir(), "forecasts.jsonl");
     }
 
-    /** Records tonight's forecasts unless the same target day already has them: a forecast, once made, stands. */
+    /** Records tonight's forecasts; one already made for the same day and question stands. */
     static synchronized void record(Context ctx, LocalDate evening, List<Forecast> forecasts) {
         String target = evening.plusDays(1).toString();
-        List<JSONObject> all = readLedger(ctx);
-        for (JSONObject o : all) if (target.equals(o.optString("target"))) return;
+        java.util.Set<String> made = new java.util.HashSet<>();
+        for (JSONObject o : readLedger(ctx)) if (target.equals(o.optString("target"))) made.add(o.optString("outcome"));
         try (OutputStream out = new FileOutputStream(ledger(ctx), true)) {
             for (Forecast fc : forecasts) {
+                if (made.contains(fc.outcome.id)) continue;
                 JSONObject o = new JSONObject().put("target", target).put("outcome", fc.outcome.id)
                         .put("made", Instant.now().toString()).put("prob", fc.prob).put("base", fc.base).put("n", fc.n);
                 if (fc.leverText != null) o.put("lever", fc.leverText);
@@ -511,8 +619,15 @@ final class OddsEngine {
     }
 
     /** What planj would have said on each past evening for one outcome, and what happened: {date, prob, actual}. */
-    static List<Object[]> replay(TreeMap<LocalDate, Day> hist, String outcomeId) {
+    static List<Object[]> replay(History hist, String outcomeId) {
         List<Object[]> out = new ArrayList<>();
+        if (outcomeId.equals(CLASS)) { // over every class day TAR UMT marked, not only the days planj saw
+            for (TarcAttendance.ClassDay c : hist.classes) {
+                Forecast fc = classForecast(hist, c.date.minusDays(1));
+                if (fc != null) out.add(new Object[]{c.date, fc.prob, c.made});
+            }
+            return out;
+        }
         for (LocalDate evening : hist.keySet()) {
             LocalDate target = evening.plusDays(1);
             if (!hist.containsKey(target)) continue;
@@ -525,7 +640,7 @@ final class OddsEngine {
         return out;
     }
 
-    static synchronized Map<String, Record> settle(Context ctx, TreeMap<LocalDate, Day> hist) {
+    static synchronized Map<String, Record> settle(Context ctx, History hist) {
         List<JSONObject> all = readLedger(ctx);
         boolean changed = false;
         Map<String, Record> live = new LinkedHashMap<>();
