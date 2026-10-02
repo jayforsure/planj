@@ -70,6 +70,16 @@ public class TarcParseCheck {
         List<Object[]> ws = TarcParse.weeks(tt);
         check(ws.size() == 2 && ws.get(1)[1].equals(LocalDate.of(2030, 1, 14)), "semester weeks");
         check(TarcParse.clock("12:00 PM") == 720 && TarcParse.clock("12:30 AM") == 30, "noon and midnight");
+        String dash = "<ul><li><a href=\"setNavPath.jsp?a=1\"><span class=\"pull-left\">Course Survey</span>"
+                + "<span class=\"pull-right\">by Nov 02, 2030</span></a></li>"
+                + "<li><a href=\"x\">Exam Slipby Oct 08, 2030</a></li>"
+                + "<li><a href=\"y\">Exam Slip by Oct 08, 2030</a></li>"
+                + "<li><a href=\"z\">Photo by Nov 30, 2121</a></li>"
+                + "<li><a href=\"#\">Profile</a></li></ul>";
+        List<TarcParse.Deadline> dl = TarcParse.deadlines(dash);
+        check(dl.size() == 3, "three reminders, the repeat counted once");
+        check(dl.get(0).title.equals("Exam Slip") && dl.get(0).due.equals(LocalDate.of(2030, 10, 8)), "soonest first, title without 'by'");
+        check(dl.get(1).title.equals("Course Survey") && dl.get(1).due.equals(LocalDate.of(2030, 11, 2)), "title and date in separate spans");
         System.out.println(failures == 0 ? "ALL PASS" : failures + " FAILED");
         System.exit(failures == 0 ? 0 : 1);
     }

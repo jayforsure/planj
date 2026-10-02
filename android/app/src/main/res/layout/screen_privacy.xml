@@ -21,7 +21,7 @@
     <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Off unless you turn it on. The centre of each place stays on this phone and is never synced; only something like “place 3 from 19:04” is recorded. The map and place search send what you type and the part of the map you look at to OpenStreetMap and to your phone’s own place search." />
 
     <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="TAR UMT" />
-    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Only if you connect it. You sign in on TAR UMT’s own page; planj never sees or keeps your password. It reads your timetable and results pages and keeps them only on this phone. Disconnect deletes them." />
+    <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Only if you connect it. planj reads the pages about your studies (timetable, attendance, exams, results, deadlines, announcements) and keeps them only on this phone; billing, payments, profile and income pages are never opened, and no form is ever submitted except the sign-in. You sign in on TAR UMT’s own page. Only if you turn on automatic refresh does planj keep your login, encrypted with a key locked inside this phone, to sign in by itself twice a day. Turning it off or disconnecting deletes it." />
     <TextView style="@style/Auth.Section" android:layout_marginTop="28dp" android:text="Never recorded" />
     <TextView style="@style/Body" android:layout_marginTop="8dp" android:text="Notifications, messages, what you type, or what is on your screen." />
 

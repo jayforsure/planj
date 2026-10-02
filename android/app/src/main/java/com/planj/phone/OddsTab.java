@@ -60,6 +60,7 @@ final class OddsTab {
             r.back = OddsEngine.backtest(r.hist);
             r.tomorrow = new java.util.ArrayList<>(Agenda.on(a, today.plusDays(1)));
             r.tomorrow.addAll(TarcTimetable.asPlans(a, today.plusDays(1))); // classes from TAR UMT
+            r.tomorrow.addAll(TarcDue.asPlans(a, today.plusDays(1)));       // and anything due
             r.tomorrow.sort((x, y) -> Long.compare(x.startMs, y.startMs));
             a.runOnUiThread(() -> {
                 render(r);

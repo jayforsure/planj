@@ -3,50 +3,35 @@ package com.planj.phone;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import java.time.Instant;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 /**
- * Connect TAR UMT. You sign in on TAR UMT's own page, shown here as it is: planj never reads,
- * fills or keeps your password, it only notices when you are signed in. Then it opens your
- * timetable and results pages, reads them on this phone, and keeps them only here.
+ * Connect TAR UMT. You sign in on TAR UMT's own page, shown here as it is, and planj reads the
+ * pages about your studies and keeps them only on this phone. If you turn on automatic refresh,
+ * planj keeps your login encrypted on this phone and checks twice a day by itself.
  */
 public class TarcActivity extends Activity {
     static final String TARC_APP = "app.tarc.edu.my";
-    private static final String LOGIN = "https://web.tarc.edu.my/portal/login.jsp";
-    /** The portal's own menu items for what planj reads, and what each is kept as. */
-    private static final String[][] WANTED = {
-            {"My Timetable", "sessions"}, // the list of semesters; the newest one's timetable is opened from it
-            {"Overall Result", "results"},
-            {"Exam Timetable", "exams"},
-    };
 
-    private enum Mode { INTRO, SIGNIN, READING, DONE, WEEK }
+    private enum Mode { INTRO, SIGNIN, READING, DONE, WEEK, AUTO }
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private WebView web;
@@ -54,9 +39,8 @@ public class TarcActivity extends Activity {
     private View pages, siteBar;
     private TextView siteHost, progressText;
     private Mode mode = Mode.INTRO;
-    private final Deque<String[]> queue = new ArrayDeque<>(); // {kind, url}
-    private String[] pending;
-    private int readSeq;
+    private TarcReader reader;
+    private TarcCreds.Login trying; // a login being checked on the Automatic refresh page
 
     @SuppressLint("SetJavaScriptEnabled") // TAR UMT's own sign-in needs its scripts
     @Override
@@ -70,30 +54,10 @@ public class TarcActivity extends Activity {
         siteHost = findViewById(R.id.site_host);
         findViewById(R.id.back).setOnClickListener(v -> onBackPressed());
 
-        web.getSettings().setJavaScriptEnabled(true);
-        web.getSettings().setDomStorageEnabled(true);
-        web.getSettings().setSaveFormData(false); // nothing typed here is remembered by planj's web view
-        android.webkit.CookieManager.getInstance().setAcceptCookie(true);
         web.setBackgroundColor(0xFFFFFFFF);
-        web.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
-                return !tarc(req.getUrl()); // only TAR UMT's own pages open here
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                pageFinished(url);
-            }
-        });
 
         if (TarcStore.connected(this)) showDone();
         else showIntro();
-    }
-
-    private static boolean tarc(Uri u) {
-        String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
-        return "https".equals(u.getScheme()) && (host.endsWith("tarc.edu.my") || host.endsWith("tarumt.edu.my"));
     }
 
     // ---- pages ---------------------------------------------------------------
@@ -103,25 +67,75 @@ public class TarcActivity extends Activity {
         showPages();
         icon();
         title("Connect TAR UMT");
-        blurb("Your timetable and results let planj know your week: when classes are, when exams come, "
+        blurb("Your student intranet lets planj know your week: when classes are, what's due, when exams come, "
                 + "and how your days line up with your grades.");
         section("What planj reads");
-        row(R.drawable.ic_today, "Timetable", "Your classes this semester: day, time, subject and room");
-        row(R.drawable.ic_target, "Results", "Your grades each semester");
-        row(R.drawable.ic_edit, "Exams", "Your exam dates, times and venues");
+        row(R.drawable.ic_today, "Timetable and attendance", "Your classes, and each class you were marked at");
+        row(R.drawable.ic_edit, "Exams and results", "Exam dates and venues, grades, coursework marks");
+        row(R.drawable.ic_bell, "Deadlines and announcements", "What the dashboard says is due, and notices");
         section("What it never does");
-        row(R.drawable.ic_lock, "Your password", "You sign in on TAR UMT's own page. planj never sees or keeps it");
-        row(R.drawable.ic_shield, "Anything else", "Only those pages are read, and they stay on this phone");
-        primary("Sign in to TAR UMT", this::showSignIn);
+        row(R.drawable.ic_lock, "Your password", "You sign in on TAR UMT's own page. planj keeps it only if you turn on automatic refresh");
+        row(R.drawable.ic_shield, "Money and identity", "Billing, payments, profile and income pages are never opened");
+        primary("Sign in to TAR UMT", () -> read(false));
     }
 
-    private void showSignIn() {
-        mode = Mode.SIGNIN;
-        pages.setVisibility(View.GONE);
-        siteBar.setVisibility(View.VISIBLE);
-        web.setVisibility(View.VISIBLE);
-        web.loadUrl(LOGIN);
+    /** Reads now: from the last session, signing in by itself if automatic refresh is on, else you sign in. */
+    private void read(boolean fresh) {
+        if (TarcReader.busy && reader == null) {
+            toast("planj is reading TAR UMT in the background. Try again in a minute");
+            return;
+        }
+        if (reader != null) reader.cancel();
+        TarcCreds.Login saved = trying != null ? trying : TarcCreds.load(this);
+        showReading(trying != null ? "Checking your login with TAR UMT, then reading your pages."
+                : "Opening TAR UMT. This takes about a minute.");
+        reader = new TarcReader(this, web, saved, listener);
+        if (fresh) reader.startSignIn();
+        else reader.start();
     }
+
+    private final TarcReader.Listener listener = new TarcReader.Listener() {
+        @Override
+        public void progress(String what) {
+            TarcActivity.this.progress(what);
+        }
+
+        @Override
+        public void signInNeeded() {
+            mode = Mode.SIGNIN;
+            pages.setVisibility(View.GONE);
+            siteBar.setVisibility(View.VISIBLE);
+            web.setVisibility(View.VISIBLE);
+            siteHost.setText("web.tarc.edu.my");
+        }
+
+        @Override
+        public void reading() {
+            if (mode == Mode.SIGNIN) showReading("Signed in. Reading your pages; this takes about a minute.");
+        }
+
+        @Override
+        public void done(TarcReader.Result result) {
+            reader = null;
+            TarcCreds.Login checked = trying;
+            trying = null;
+            if (result == TarcReader.Result.OK) {
+                if (checked != null) turnOn(checked);
+                showDone();
+            } else if (result == TarcReader.Result.REJECTED && checked != null) {
+                showAuto("TAR UMT didn't accept that Login ID and password.", checked.id);
+            } else if (result == TarcReader.Result.REJECTED) { // the saved login stopped working
+                TarcCreds.clear(TarcActivity.this);
+                TarcSync.cancel(TarcActivity.this);
+                toast("Your saved password didn't work any more. Sign in on TAR UMT's page");
+                read(false);
+            } else {
+                toast("Couldn't reach TAR UMT. Check your connection and try again");
+                if (TarcStore.connected(TarcActivity.this)) showDone();
+                else showIntro();
+            }
+        }
+    };
 
     private void showReading(String note) {
         mode = Mode.READING;
@@ -169,18 +183,123 @@ public class TarcActivity extends Activity {
                 : rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
         List<TarcParse.Exam> exams = TarcExams.read(this);
         row(R.drawable.ic_edit, "Exams", exams.isEmpty() ? "None on your exam timetable" : TarcExams.summary(exams));
-        if (courses.isEmpty() || (rs == 0 && !hidden)) { // something is genuinely missing, not just hidden
-            TextView note = text("Your portal's pages were saved, so planj can learn where these live. "
-                    + "They are part of Export my data.", R.color.muted, 13);
-            ((LinearLayout.LayoutParams) note.getLayoutParams()).topMargin = dp(8);
+        int more = 0;
+        for (JSONObject p : TarcStore.pages(this)) {
+            String k = p.optString("kind");
+            if (!k.equals("home") && !k.equals("sessions") && !k.equals("timetable") && !k.equals("results") && !k.equals("exams")) more++;
         }
-        primary("Read again", this::readAgain);
+        if (more > 0) row(R.drawable.ic_journal, "More from your portal", more + " more pages: attendance, announcements, evaluation and others. Shown here as planj learns to read them");
+
+        List<TarcParse.Deadline> due = TarcDue.soon(this, 60);
+        if (!due.isEmpty()) {
+            section("Due soon");
+            for (TarcParse.Deadline d : due) {
+                long days = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), d.due);
+                ListRow r = row(R.drawable.ic_bell, d.title, d.due.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)));
+                r.setValue(days == 0 ? "Today" : days == 1 ? "1 day" : days + " days", days > 7);
+            }
+        }
+
+        section("Keeping up to date");
+        boolean auto = TarcCreds.saved(this);
+        long checked = st.optLong("checked", 0);
+        String stopped = st.optString("check");
+        ListRow autoRow = row(R.drawable.ic_sync, "Refresh automatically", auto
+                ? "On · checks twice a day" + (checked > 0 ? " · last " + when(checked) : "")
+                : "REJECTED".equals(stopped) ? "Stopped: your saved password no longer works" : "Off · you tap Read again");
+        autoRow.setChevron(true);
+        autoRow.setClickable(true);
+        autoRow.setBackgroundResource(R.drawable.btn_text);
+        autoRow.setOnClickListener(v -> {
+            if (!TarcCreds.saved(this)) showAuto(null, null);
+            else Sheet.confirm(this, R.drawable.ic_sync, "Turn off automatic refresh?",
+                    "Your saved TAR UMT login is deleted from this phone. You can still tap Read again any time.",
+                    "Turn off", true, () -> {
+                        TarcCreds.clear(this);
+                        TarcSync.cancel(this);
+                        showDone();
+                    });
+        });
+        primary("Read again", () -> read(false));
         secondary("Disconnect", () -> Sheet.confirm(this, R.drawable.ic_close, "Disconnect TAR UMT?",
-                "Everything planj read from TAR UMT is deleted from this phone, and planj is signed out of it.",
+                "Everything planj read from TAR UMT is deleted from this phone, including a saved login, and planj is signed out of it.",
                 "Disconnect", true, () -> {
                     TarcStore.disconnect(this);
                     showIntro();
                 }));
+    }
+
+    /**
+     * Automatic refresh: planj signs in by itself twice a day, which needs your login. It is
+     * checked with TAR UMT first, and kept only if TAR UMT accepts it.
+     */
+    private void showAuto(String error, String id) {
+        mode = Mode.AUTO;
+        showPages();
+        icon();
+        title("Refresh automatically");
+        blurb("planj signs in to TAR UMT by itself twice a day, reads your pages, and tells you when "
+                + "something changes: results, exams, your timetable or a new deadline.");
+        section("Your login");
+        TextView err = text(error == null ? "" : error, R.color.bad, 14);
+        err.setVisibility(error == null ? View.GONE : View.VISIBLE);
+        TextView idLabel = new TextView(this, null, 0, R.style.Auth_Label);
+        idLabel.setText("Login ID");
+        stage.addView(idLabel);
+        android.widget.EditText idField = new android.widget.EditText(this, null, 0, R.style.Auth_Field);
+        idField.setHint("As on TAR UMT's sign-in page");
+        idField.setSingleLine(true);
+        idField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        if (id != null) idField.setText(id);
+        LinearLayout.LayoutParams fl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        fl.topMargin = dp(6);
+        stage.addView(idField, fl);
+        TextView pwLabel = new TextView(this, null, 0, R.style.Auth_Label);
+        pwLabel.setText("Password");
+        stage.addView(pwLabel);
+        android.widget.EditText pwField = new android.widget.EditText(this, null, 0, R.style.Auth_Field);
+        pwField.setHint("Your TAR UMT password");
+        pwField.setSingleLine(true);
+        pwField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pl.topMargin = dp(6);
+        stage.addView(pwField, pl);
+        section("How it is kept");
+        row(R.drawable.ic_lock, "Encrypted on this phone", "With a key locked inside this phone. Never synced, never in exports");
+        row(R.drawable.ic_shield, "Only sent to TAR UMT", "Typed into TAR UMT's own sign-in page, nowhere else");
+        row(R.drawable.ic_close, "Gone when you turn it off", "Turning it off or disconnecting deletes it");
+        primary("Check and turn on", () -> {
+            String i = idField.getText().toString().trim(), pw = pwField.getText().toString();
+            if (i.isEmpty() || pw.isEmpty()) {
+                err.setText(i.isEmpty() ? "Enter your Login ID" : "Enter your password");
+                err.setVisibility(View.VISIBLE);
+                return;
+            }
+            android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+            if (imm != null) imm.hideSoftInputFromWindow(pwField.getWindowToken(), 0);
+            trying = new TarcCreds.Login(i, pw);
+            // sign out of any open session first, so TAR UMT really checks this login
+            android.webkit.CookieManager.getInstance().removeAllCookies(ok -> read(true));
+        });
+        if (id == null) idField.requestFocus();
+        else pwField.requestFocus();
+    }
+
+    private void turnOn(TarcCreds.Login login) {
+        try {
+            TarcCreds.save(this, login);
+            TarcSync.schedule(this);
+            JSONObject st = TarcStore.state(this);
+            st.remove("check");
+            TarcStore.saveState(this, st);
+            toast("Automatic refresh is on");
+        } catch (Exception e) {
+            toast("Couldn't keep your login on this phone, so automatic refresh is off");
+        }
+    }
+
+    private void toast(String s) {
+        android.widget.Toast.makeText(this, s, android.widget.Toast.LENGTH_LONG).show();
     }
 
     /** "202605 · 15 Jun – 20 Sep · 14 weeks", and whether it has ended. */
@@ -237,155 +356,20 @@ public class TarcActivity extends Activity {
         }
     }
 
-    // ---- signing in and reading ------------------------------------------------
-
-    private void pageFinished(String url) {
-        Uri u = Uri.parse(url);
-        siteHost.setText(u.getHost() == null ? "" : u.getHost());
-        if (mode == Mode.SIGNIN && tarc(u) && signedIn(url)) {
-            showReading("Your timetable and results, from TAR UMT. This takes a few seconds.");
-            startRead(url);
-        } else if (mode == Mode.READING) {
-            if (!signedIn(url)) { // the session ended: sign in again
-                showSignIn();
-                return;
-            }
-            if (pending == null) startRead(url);
-            else capture(pending);
-        }
-    }
-
-    private static boolean signedIn(String url) {
-        String u = url.toLowerCase(Locale.ROOT);
-        return !u.contains("login") && !u.contains("retrievenewpass") && !u.startsWith("about:");
-    }
-
-    /** On the first page after signing in: keep it, and find the timetable and results links. */
-    private void startRead(String landing) {
-        TarcStore.clearPages(this);
-        int seq = ++readSeq;
-        progress("Finding your timetable and results");
-        ui.postDelayed(() -> {
-            if (seq != readSeq) return;
-            web.evaluateJavascript(COLLECT, links -> {
-                List<String[]> found = new ArrayList<>();
-                try {
-                    JSONArray all = new JSONArray((String) new JSONTokener(links).nextValue());
-                    java.util.Set<String> taken = new java.util.HashSet<>();
-                    for (String[] want : WANTED) { // the menu's exact names, not the dashboard's reminders
-                        for (int i = 0; i < all.length(); i++) {
-                            JSONArray a = all.getJSONArray(i);
-                            String text = a.optString(0).trim(), href = a.optString(1);
-                            if (!text.equalsIgnoreCase(want[0]) || href.isEmpty() || !tarc(Uri.parse(href)) || !taken.add(href)) continue;
-                            found.add(new String[]{want[1], href});
-                            break;
-                        }
-                    }
-                } catch (Exception ignored) {
-                    // nothing found; the home page is still kept
-                }
-                pending = new String[]{"home", landing};
-                queue.clear();
-                queue.addAll(found);
-                try {
-                    JSONObject st = TarcStore.state(this);
-                    st.put("home", landing);
-                    TarcStore.saveState(this, st);
-                } catch (Exception ignored) {
-                    // the read goes on; Read again starts from the sign-in page instead
-                }
-                capture(pending);
-            });
-        }, 1500);
-    }
-
-    private String[] capturing; // a page can report "finished" more than once; it is read once
-
-    /** Keeps the page now showing, then opens the next one. */
-    private void capture(String[] what) {
-        if (what == capturing) return;
-        capturing = what;
-        int seq = readSeq;
-        progress(what[0].equals("timetable") ? "Reading your timetable" : what[0].equals("results") ? "Reading your results"
-                : what[0].equals("exams") ? "Reading your exam timetable" : "Reading your portal");
-        ui.postDelayed(() -> {
-            if (seq != readSeq) return;
-            web.evaluateJavascript(CAPTURE, page -> {
-                try {
-                    JSONObject p = new JSONObject((String) new JSONTokener(page).nextValue());
-                    p.put("at", System.currentTimeMillis());
-                    TarcStore.savePage(this, what[0], p);
-                    if (what[0].equals("sessions")) openNewestSemester(p.optString("html"));
-                } catch (Exception ignored) {
-                    // this page is skipped
-                }
-                next();
-            });
-        }, 1500); // the portal draws some of its pages with scripts after loading
-    }
-
-    /** From the list of semesters: keep the newest one's dates, and open its timetable next. */
-    private void openNewestSemester(String html) {
-        List<TarcParse.Session> sessions = TarcParse.sessions(html);
-        if (sessions.isEmpty()) return;
-        TarcParse.Session s = sessions.get(0);
-        queue.addFirst(new String[]{"timetable", s.timetableUrl()});
-        try {
-            JSONObject st = TarcStore.state(this);
-            st.put("session", s.code).put("weeks", s.weeks);
-            if (s.start != null) st.put("start", s.start.toString());
-            if (s.end != null) st.put("end", s.end.toString());
-            TarcStore.saveState(this, st);
-        } catch (Exception ignored) {
-            // the timetable is still read
-        }
-    }
-
-    private void next() {
-        pending = queue.poll();
-        if (pending == null) {
-            finishRead();
-            return;
-        }
-        int seq = readSeq;
-        web.loadUrl(pending[1]);
-        ui.postDelayed(() -> { // a page that never finishes loading is skipped
-            if (seq == readSeq && pending != null && mode == Mode.READING) next();
-        }, 25_000);
-    }
-
-    private void finishRead() {
-        readSeq++;
-        try {
-            JSONObject st = TarcStore.state(this);
-            st.put("read", System.currentTimeMillis());
-            TarcStore.saveState(this, st);
-        } catch (Exception ignored) {
-            // shown as connected without a time
-        }
-        showDone();
-    }
-
-    private void readAgain() {
-        String home = TarcStore.state(this).optString("home", "");
-        showReading("Opening TAR UMT. If you were signed out, you'll be asked to sign in again.");
-        pending = null;
-        web.loadUrl(home.isEmpty() ? LOGIN : home);
-    }
-
     @Override
     public void onBackPressed() {
         if (mode == Mode.SIGNIN && web.canGoBack()) {
             web.goBack();
             return;
         }
-        if (mode == Mode.WEEK) {
+        if (mode == Mode.WEEK || (mode == Mode.AUTO && TarcStore.connected(this))) {
             showDone();
             return;
         }
         if (mode == Mode.SIGNIN || mode == Mode.READING) {
-            readSeq++;
-            web.stopLoading();
+            if (reader != null) reader.cancel();
+            reader = null;
+            trying = null;
             if (TarcStore.connected(this) && TarcStore.state(this).has("read")) showDone();
             else finish();
             return;
@@ -395,22 +379,10 @@ public class TarcActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        readSeq++;
+        if (reader != null) reader.cancel();
         web.destroy();
         super.onDestroy();
     }
-
-    /** Every link on the page and in its frames: [text, address]. */
-    private static final String COLLECT = "(function(){var out=[];function grab(d){try{var as=d.querySelectorAll('a');"
-            + "for(var i=0;i<as.length;i++){var a=as[i];out.push([((a.innerText||a.textContent||'')+'').trim().slice(0,80),a.href||'']);}"
-            + "var fs=d.querySelectorAll('iframe,frame');for(var j=0;j<fs.length;j++){try{grab(fs[j].contentDocument)}catch(e){}}}catch(e){}}"
-            + "grab(document);return JSON.stringify(out);})()";
-
-    /** The page as it is drawn now, frames included: its title, address, text and markup. */
-    private static final String CAPTURE = "(function(){function all(d){var h=d.documentElement?d.documentElement.outerHTML:'';"
-            + "var t=d.body?d.body.innerText:'';var fs=d.querySelectorAll('iframe,frame');for(var j=0;j<fs.length;j++){"
-            + "try{var r=all(fs[j].contentDocument);h+='\\n<!-- frame -->\\n'+r[0];t+='\\n'+r[1];}catch(e){}}return [h,t];}"
-            + "var r=all(document);return JSON.stringify({title:document.title,url:location.href,html:r[0],text:r[1]});})()";
 
     // ---- building pages --------------------------------------------------------
 

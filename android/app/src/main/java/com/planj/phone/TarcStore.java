@@ -40,14 +40,30 @@ final class TarcStore {
         write(new File(dir(ctx), "state.json"), state.toString());
     }
 
-    /** Starts a fresh read: the pages of the last read are replaced, not added to. */
+    /** Deletes the pages of the last read. */
     static void clearPages(Context ctx) {
         File[] old = new File(dir(ctx), "pages").listFiles();
         if (old != null) for (File f : old) f.delete();
     }
 
+    /** Starts a fresh read in a staging area, so a read that fails part way keeps the last one. */
+    static void beginRead(Context ctx) {
+        File[] old = new File(dir(ctx), "pages_new").listFiles();
+        if (old != null) for (File f : old) f.delete();
+    }
+
+    /** The read finished: its pages replace the last read's. */
+    static synchronized void commitRead(Context ctx) {
+        File staged = new File(dir(ctx), "pages_new"), live = new File(dir(ctx), "pages");
+        File[] fresh = staged.listFiles();
+        if (fresh == null || fresh.length == 0) return;
+        clearPages(ctx);
+        if (!live.isDirectory() && !live.mkdirs()) return;
+        for (File f : fresh) f.renameTo(new File(live, f.getName()));
+    }
+
     static void savePage(Context ctx, String kind, JSONObject page) throws IOException, org.json.JSONException {
-        File d = new File(dir(ctx), "pages");
+        File d = new File(dir(ctx), "pages_new");
         int n = 0;
         while (new File(d, kind + "-" + n + ".json").exists()) n++;
         page.put("kind", kind);
@@ -83,6 +99,9 @@ final class TarcStore {
     /** Forgets everything read, and signs planj's web view out of TAR UMT. */
     static void disconnect(Context ctx) {
         clearPages(ctx);
+        beginRead(ctx); // empties the staging area too
+        TarcCreds.clear(ctx);
+        TarcSync.cancel(ctx);
         new File(dir(ctx), "state.json").delete();
         android.webkit.CookieManager.getInstance().removeAllCookies(null);
         android.webkit.CookieManager.getInstance().flush();

@@ -187,6 +187,43 @@ final class TarcParse {
         }
     }
 
+    /** Something the dashboard says is due: "Course, Lecturer and Tutor Evaluation by Nov 02, 2026". */
+    static final class Deadline {
+        final String title;
+        final LocalDate due;
+
+        Deadline(String title, LocalDate due) {
+            this.title = title;
+            this.due = due;
+        }
+    }
+
+    private static final Pattern ANCHOR = Pattern.compile("<a\\b[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern DUE = Pattern.compile("^(.*?)\\s*by\\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\.?\\s+(\\d{1,2}),?\\s*(\\d{4})\\s*$",
+            Pattern.CASE_INSENSITIVE);
+    private static final String MONTHS = "janfebmaraprmayjunjulaugsepoctnovdec";
+
+    /** The dashboard's "due by" reminders, each once, soonest first. */
+    static List<Deadline> deadlines(String html) {
+        List<Deadline> out = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        Matcher a = ANCHOR.matcher(html);
+        while (a.find()) {
+            Matcher d = DUE.matcher(text(a.group(1)).replace('\n', ' ').trim());
+            if (!d.find() || d.group(1).trim().isEmpty()) continue;
+            try {
+                int month = MONTHS.indexOf(d.group(2).substring(0, 3).toLowerCase(Locale.ROOT)) / 3 + 1;
+                LocalDate due = LocalDate.of(Integer.parseInt(d.group(4)), month, Integer.parseInt(d.group(3)));
+                String title = d.group(1).trim();
+                if (seen.add(title + "|" + due)) out.add(new Deadline(title, due));
+            } catch (RuntimeException ignored) {
+                // not a real date
+            }
+        }
+        out.sort((x, y) -> x.due.compareTo(y.due));
+        return out;
+    }
+
     /** TAR UMT hides results until the semester's course evaluation is done. */
     static boolean resultsHidden(String html) {
         String t = html.toLowerCase(Locale.ROOT);
