@@ -195,6 +195,10 @@ public class MainActivity extends Activity {
         select(home.view(), navOdds);
     }
 
+    void showDays() {
+        select(today.view(), navToday);
+    }
+
     /** Every forecast, routines and the track record: opened from the home page. */
     void showAllOdds() {
         select(odds.view(), navOdds);

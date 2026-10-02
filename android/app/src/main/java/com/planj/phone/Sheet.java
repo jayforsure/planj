@@ -117,6 +117,17 @@ final class Sheet {
         s.dialog.show();
     }
 
+    /** A sheet holding any view (a mood picker, say). Returns the dialog, to close it when done. */
+    static Dialog custom(Activity a, String title, String subtitle, View content) {
+        Sheet s = new Sheet(a, 0, title, subtitle);
+        s.root.findViewById(R.id.sheet_yes).setVisibility(View.GONE);
+        LinearLayout list = s.root.findViewById(R.id.sheet_options);
+        list.setVisibility(View.VISIBLE);
+        list.addView(content);
+        s.dialog.show();
+        return s.dialog;
+    }
+
     /** A quick edit of one short piece of text, with a live count against its limit. */
     static void input(Activity a, int icon, String title, String message, String current, String hint, int max,
                       Consumer<String> onSave) {

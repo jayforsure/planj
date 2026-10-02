@@ -103,6 +103,9 @@ final class OddsEngine {
         final double prob, base;
         final int n, sideK, sideN;
         final String leverText; // null when the base rate stands alone
+        String leverId;          // which signal moved it, and which side of it today is on
+        boolean leverSide;
+        int otherK, otherN;      // the same history on the other side of that signal
 
         Forecast(Outcome outcome, double prob, double base, int n, String leverText, int sideK, int sideN) {
             this.outcome = outcome;
@@ -396,7 +399,7 @@ final class OddsEngine {
             double bestGap = -1;
             Lever bestLever = null;
             boolean bestSide = false;
-            int bestK = 0, bestN = 0;
+            int bestK = 0, bestN = 0, otherK = 0, otherN = 0;
             for (Lever lv : LEVERS) {
                 Boolean sideToday = lv.test.of(today, pastDays);
                 if (sideToday == null) continue;
@@ -419,11 +422,18 @@ final class OddsEngine {
                     bestSide = sideToday;
                     bestK = split[sideToday ? 1 : 0][0];
                     bestN = split[sideToday ? 1 : 0][1];
+                    otherK = split[sideToday ? 0 : 1][0];
+                    otherN = split[sideToday ? 0 : 1][1];
                 }
             }
             if (bestLever != null) {
-                out.add(new Forecast(oc, (bestK + 1.0) / (bestN + 2), base, n,
-                        bestSide ? bestLever.whenTrue : bestLever.whenFalse, bestK, bestN));
+                Forecast f = new Forecast(oc, (bestK + 1.0) / (bestN + 2), base, n,
+                        bestSide ? bestLever.whenTrue : bestLever.whenFalse, bestK, bestN);
+                f.leverId = bestLever.id;
+                f.leverSide = bestSide;
+                f.otherK = otherK;
+                f.otherN = otherN;
+                out.add(f);
             } else {
                 out.add(new Forecast(oc, (k + 1.0) / (n + 2), base, n, null, k, n));
             }
@@ -486,6 +496,35 @@ final class OddsEngine {
     }
 
     /** Fills in what happened for forecasts whose day now has data. Returns the live track record. */
+    /**
+     * Forecasts that have been checked, oldest first: {target date, outcome id, prob, actual}.
+     * For one outcome when outcomeId is given, else all.
+     */
+    static synchronized List<Object[]> checked(Context ctx, String outcomeId) {
+        List<Object[]> out = new ArrayList<>();
+        for (JSONObject o : readLedger(ctx)) {
+            if (!o.has("actual") || (outcomeId != null && !outcomeId.equals(o.optString("outcome")))) continue;
+            out.add(new Object[]{o.optString("target"), o.optString("outcome"), o.optDouble("prob"), o.optBoolean("actual")});
+        }
+        out.sort((x, y) -> ((String) x[0]).compareTo((String) y[0]));
+        return out;
+    }
+
+    /** What planj would have said on each past evening for one outcome, and what happened: {date, prob, actual}. */
+    static List<Object[]> replay(TreeMap<LocalDate, Day> hist, String outcomeId) {
+        List<Object[]> out = new ArrayList<>();
+        for (LocalDate evening : hist.keySet()) {
+            LocalDate target = evening.plusDays(1);
+            if (!hist.containsKey(target)) continue;
+            for (Forecast fc : forecast(hist, evening)) {
+                if (!fc.outcome.id.equals(outcomeId)) continue;
+                Boolean y = resolve(hist, target, outcomeId);
+                if (y != null) out.add(new Object[]{target, fc.prob, y});
+            }
+        }
+        return out;
+    }
+
     static synchronized Map<String, Record> settle(Context ctx, TreeMap<LocalDate, Day> hist) {
         List<JSONObject> all = readLedger(ctx);
         boolean changed = false;

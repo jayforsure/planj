@@ -36,8 +36,7 @@ final class OddsTab {
     static final class Result {
         TreeMap<LocalDate, OddsEngine.Day> hist;
         List<OddsEngine.Forecast> forecasts;
-        Map<String, OddsEngine.Record> live, back;
-        List<Agenda.Event> tomorrow;
+        Map<String, OddsEngine.Record> live;
     }
 
     /** Also told whenever fresh odds are worked out: the home page shows the headline ones. */
@@ -60,11 +59,6 @@ final class OddsTab {
             r.forecasts = OddsEngine.forecast(r.hist, today);
             if (!r.forecasts.isEmpty()) OddsEngine.record(a, today, r.forecasts);
             r.live = OddsEngine.settle(a, r.hist);
-            r.back = OddsEngine.backtest(r.hist);
-            r.tomorrow = new java.util.ArrayList<>(Agenda.on(a, today.plusDays(1)));
-            r.tomorrow.addAll(TarcTimetable.asPlans(a, today.plusDays(1))); // classes from TAR UMT
-            r.tomorrow.addAll(TarcDue.asPlans(a, today.plusDays(1)));       // and anything due
-            r.tomorrow.sort((x, y) -> Long.compare(x.startMs, y.startMs));
             a.runOnUiThread(() -> {
                 render(r);
                 if (onResult != null) onResult.accept(r);
@@ -129,79 +123,47 @@ final class OddsTab {
             pulse.cancel();
             pulse = null;
         }
-        if (fromSkeleton) { // the real cards settle in where the grey ones were
+        if (fromSkeleton) { // the real rows settle in where the grey ones were
             list.setAlpha(0f);
             list.animate().alpha(1f).setDuration(220).start();
         }
         list.removeAllViews();
         first = true;
         LocalDate tomorrow = LocalDate.now().plusDays(1);
+        summary.setText("Tomorrow · " + tomorrow.format(DateTimeFormatter.ofPattern("EEEE d MMM", Locale.ENGLISH)));
         if (r.forecasts.isEmpty()) {
-            summary.setText(r.hist.size() + " of " + OddsEngine.MIN_HISTORY + " days recorded");
+            header("LEARNING");
+            ListRow row = plainRow(R.drawable.ic_odds, "Getting to know you", r.hist.size() + " of " + OddsEngine.MIN_HISTORY + " days so far");
+            list.addView(row);
             return;
         }
-        summary.setText("Tomorrow · " + tomorrow.format(DateTimeFormatter.ofPattern("EEEE d MMM", Locale.ENGLISH)));
 
-        if (!r.tomorrow.isEmpty()) {
-            header("TOMORROW'S PLANS");
-            for (Agenda.Event e : r.tomorrow) {
-                list.addView(plainRow(R.drawable.ic_journal, e.title, e.allDay ? "All day" : Fmt.clock(e.startMs)));
+        // planj's record first, as dots: is it worth listening to?
+        List<Object[]> checked = OddsEngine.checked(a, null);
+        if (!checked.isEmpty()) {
+            List<Boolean> dots = new java.util.ArrayList<>();
+            int hits = 0;
+            for (Object[] c : checked.subList(Math.max(0, checked.size() - 60), checked.size())) {
+                boolean right = ((Double) c[2] >= 0.5) == (Boolean) c[3];
+                dots.add(right);
+                if (right) hits++;
             }
-        } else if (!Agenda.allowed(a)) {
-            header("TOMORROW'S PLANS");
-            ListRow cal = plainRow(R.drawable.ic_journal, "Calendar", "Not connected · connect it to see tomorrow's plans");
-            cal.setChevron(true);
-            cal.setClickable(true);
-            cal.setBackgroundResource(R.drawable.btn_text);
-            cal.setOnClickListener(v -> a.startActivity(new android.content.Intent(a, ConnectorActivity.class)
-                    .putExtra(ConnectorActivity.EXTRA_ID, "calendar")));
-            list.addView(cal);
+            header("PLANJ'S RECORD", "Right " + hits + " of " + dots.size());
+            DotStrip strip = new DotStrip(a);
+            strip.setDots(dots);
+            list.addView(strip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
-        List<OddsEngine.Forecast> routines = new java.util.ArrayList<>(), plain = new java.util.ArrayList<>();
-        for (OddsEngine.Forecast fc : r.forecasts) (fc.outcome.id.startsWith("rt_") ? routines : plain).add(fc);
-        if (!routines.isEmpty()) {
-            header("YOUR ROUTINES");
-            for (OddsEngine.Forecast fc : routines) list.addView(card(fc));
-        }
-        header("FORECASTS");
-        for (OddsEngine.Forecast fc : plain) list.addView(card(fc));
-        boolean focusShown = false;
-        for (OddsEngine.Forecast fc : plain) focusShown |= fc.outcome.id.equals(OddsEngine.FOCUS);
-        if (!focusShown) {
-            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.FOCUS);
-            list.addView(plainRow(R.drawable.ic_monitor, "2h+ focus on your PC", days < OddsEngine.MIN_HISTORY
-                    ? "Gathering · " + days + " of " + OddsEngine.MIN_HISTORY + " days"
-                    : "Not reached in " + days + " days yet"));
-        }
-
-        List<TarcDeadlines.Pending> due = TarcStore.connected(a) ? TarcDeadlines.pending(a) : new java.util.ArrayList<>();
-        due.removeIf(d -> d.due.isAfter(LocalDate.now().plusDays(60)));
-        if (!due.isEmpty()) { // TAR UMT's to-dos: will you finish each in time? checked by the dashboard itself
-            String odds = TarcDeadlines.odds(a);
-            int seen = TarcDeadlines.settled(a);
-            header("DUE", "TAR UMT");
-            for (TarcDeadlines.Pending d : due) {
-                ListRow row = plainRow(R.drawable.ic_bell, d.title, "Due " + d.due.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH))
-                        + " · " + (odds == null ? "learning, " + seen + " of " + TarcDeadlines.MIN_SEEN + " seen" : "odds you finish in time"));
-                row.setSubtitleLines(2);
-                if (odds != null) row.setBigValue(odds, false);
-                else row.setValue(Upcoming.daysLeft(d.due), true);
-                list.addView(row);
-            }
-        }
-
-        header("TRACK RECORD", "live");
-        for (OddsEngine.Forecast fc : r.forecasts) {
-            OddsEngine.Record lv = r.live.get(fc.outcome.id), bk = r.back.get(fc.outcome.id);
-            Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
-            String label = rt == null ? fc.outcome.resolved
-                    : RoutineNames.name(a, rt).toLowerCase(Locale.ENGLISH) + " " + rt.window();
-            // right: how the forecasts made so far turned out; below: the same rule replayed over past days
-            String replay = bk != null && bk.n > 0
-                    ? "Replay " + bk.hits + "/" + bk.n + " · average " + bk.baseHits + "/" + bk.n : "No replay yet";
-            ListRow row = plainRow(iconFor(fc.outcome.id), label.substring(0, 1).toUpperCase(Locale.ENGLISH) + label.substring(1), replay);
-            row.setValue(lv != null && lv.n > 0 ? lv.hits + "/" + lv.n : "–", lv == null || lv.n == 0);
+        header("TOMORROW", r.forecasts.size() + " odds");
+        for (OddsEngine.Forecast fc : HomeTab.top(r.forecasts, r.forecasts.size())) list.addView(card(fc));
+        java.util.Set<String> shown = new java.util.HashSet<>();
+        for (OddsEngine.Forecast fc : r.forecasts) shown.add(fc.outcome.id);
+        for (OddsEngine.Outcome o : OddsEngine.OUTCOMES) { // questions still being learned, quietly at the end
+            if (shown.contains(o.id)) continue;
+            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), o.id);
+            if (days >= OddsEngine.MIN_HISTORY) continue; // the same every day so far: nothing to say
+            ListRow row = plainRow(iconFor(o.id), OddsWords.title(a, o.id, o.question), "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " days");
+            row.setValue("–", true);
             list.addView(row);
         }
     }
@@ -266,31 +228,17 @@ final class OddsTab {
         list.addView(line);
     }
 
+    /** One odds as a quiet row: its title, more or less likely than usual, and the number. Opens its page. */
     private View card(OddsEngine.Forecast fc) {
-        Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
-        String evidence = "Usually " + Math.round(fc.base * 100) + "%";
-        if (fc.leverText != null) evidence += " · " + fc.sideK + " of " + fc.sideN + " " + fc.leverText;
-        ListRow row = plainRow(iconFor(fc.outcome.id), rt == null ? fc.outcome.question : RoutineNames.title(a, rt), evidence);
-        row.setSubtitleLines(2);
+        String trend = Math.abs(fc.prob - fc.base) < 0.03 ? "As usual" : fc.prob < fc.base ? "Less likely than usual" : "More likely than usual";
+        ListRow row = plainRow(iconFor(fc.outcome.id), OddsWords.title(a, fc.outcome.id, fc.outcome.question), trend);
         row.setBigValue(Math.round(fc.prob * 100) + "%", false);
-        if (rt != null) { // a routine can be named; tapping asks what it is
-            row.setBackgroundResource(R.drawable.btn_text);
-            row.setClickable(true);
-            row.setOnClickListener(v -> askName(rt));
-        }
+        row.setClickable(true);
+        row.setBackgroundResource(R.drawable.btn_text);
+        row.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
         return row;
     }
 
-    /** One question, asked only if the person wants to: what is this routine? */
-    private void askName(Routines.Routine rt) {
-        String current = RoutineNames.name(a, rt);
-        boolean unnamed = current.equals(rt.kind.defaultName) || current.equals(Places.labelFor(a, rt.place));
-        Sheet.input(a, iconFor(rt.id()), "What is this?", rt.days() + " " + rt.window() + ". A name makes the forecast easier to read.",
-                unnamed ? "" : current, "Gym, class, work…", 30, name -> {
-                    RoutineNames.set(a, rt, name);
-                    refresh();
-                });
-    }
 
     private int dp(int v) {
         return Math.round(v * density);

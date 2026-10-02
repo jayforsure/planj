@@ -1,10 +1,13 @@
 package com.planj.phone;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -16,66 +19,229 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Home: tomorrow's odds at a glance. The three most telling odds in plain words, and how often
- * planj has been right. Everything else is one tap away, under All odds.
+ * Home: tomorrow. The most telling odds as a ring, quick things to do, the rest of tomorrow's
+ * odds to swipe through, and planj's record as dots. Each odds opens its own page.
  */
 final class HomeTab {
     private final MainActivity a;
     private final View root;
-    private final LinearLayout cards;
-    private final TextView date, proof;
-    private final Button all;
+    private final LinearLayout body;
+    private final TextView date, initial;
+    private final ImageView photo;
 
     HomeTab(MainActivity a, ViewGroup container) {
         this.a = a;
         root = a.getLayoutInflater().inflate(R.layout.tab_home, container, false);
         container.addView(root);
-        cards = root.findViewById(R.id.home_cards);
+        body = root.findViewById(R.id.home_body);
         date = root.findViewById(R.id.home_date);
-        proof = root.findViewById(R.id.home_proof);
-        all = root.findViewById(R.id.home_all);
-        all.setOnClickListener(v -> a.showAllOdds());
-        proof.setOnClickListener(v -> a.showAllOdds());
-        date.setText(LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)));
-        proof.setVisibility(View.GONE);
-        all.setVisibility(View.GONE);
+        initial = root.findViewById(R.id.home_initial);
+        photo = root.findViewById(R.id.home_photo);
+        root.findViewById(R.id.home_avatar).setOnClickListener(v -> a.showAccount());
+        header();
     }
 
     View view() {
         return root;
     }
 
-    void show(OddsTab.Result r) {
+    private void header() {
         date.setText(LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)));
-        cards.removeAllViews();
+        Avatar.show(a, photo, initial);
+    }
+
+    void show(OddsTab.Result r) {
+        header();
+        body.removeAllViews();
         if (!Connectors.usageAccess(a)) {
-            card(null, "planj can't see your phone yet",
-                    "It learns your days from Android's usage access: which apps, when the screen is on, when you put it down. Nothing leaves this phone unencrypted.",
-                    "Allow usage access", () -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
-            proof.setVisibility(View.GONE);
-            all.setVisibility(View.GONE);
+            LinearLayout c = card();
+            c.addView(heading("planj can't see your phone yet"));
+            c.addView(words("It learns your days from Android's usage access: which apps, when the screen is on, when you put it down.", R.color.muted, 14, 8));
+            Button b = new Button(a, null, 0, R.style.Pill_Primary);
+            b.setText("Allow usage access");
+            b.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+            lp.topMargin = dp(18);
+            c.addView(b, lp);
+            actions();
             return;
         }
         if (r.forecasts.isEmpty()) {
             learning(Math.min(r.hist.size(), OddsEngine.MIN_HISTORY));
-            proof.setVisibility(View.GONE);
-            all.setVisibility(View.GONE);
+            actions();
             return;
         }
-        for (OddsEngine.Forecast fc : top(r.forecasts, 3)) {
-            View c = card(Math.round(fc.prob * 100) + "%", sentence(fc), why(fc), null, null);
-            c.setOnClickListener(v -> a.showAllOdds());
+        List<OddsEngine.Forecast> ranked = top(r.forecasts, r.forecasts.size());
+        hero(ranked.get(0));
+        actions();
+        if (ranked.size() > 1) more(ranked.subList(1, ranked.size()));
+        record();
+    }
+
+    /** The headline: the one odds that says most about tomorrow. */
+    private void hero(OddsEngine.Forecast fc) {
+        LinearLayout c = card();
+        c.setGravity(Gravity.CENTER_HORIZONTAL);
+        OddsRing ring = new OddsRing(a);
+        ring.setPercent((int) Math.round(fc.prob * 100));
+        c.addView(ring, new LinearLayout.LayoutParams(dp(168), dp(168)));
+        TextView s = words(OddsWords.sentence(a, fc.outcome.id, fc.outcome.question), R.color.text, 19, 16);
+        s.setGravity(Gravity.CENTER);
+        s.setTypeface(a.getResources().getFont(R.font.display));
+        s.setFontVariationSettings("'wght' 700, 'opsz' 40, 'wdth' 100");
+        c.addView(s);
+        TextView why = words(OddsWords.why(fc), R.color.muted, 13, 12);
+        why.setBackgroundResource(R.drawable.chip_soft);
+        why.setPadding(dp(12), dp(7), dp(12), dp(7));
+        LinearLayout.LayoutParams wl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        wl.topMargin = dp(12);
+        c.addView(why, wl);
+        c.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
+    }
+
+    /** Things to do, Wise-style: a row of buttons under the headline. */
+    private void actions() {
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(8);
+        lp.bottomMargin = dp(8);
+        body.addView(row, lp);
+        boolean paused = PrivateMode.isOn(a);
+        action(row, R.drawable.ic_mood, "Check in", this::checkIn);
+        action(row, R.drawable.ic_today, "Your day", a::showDays);
+        action(row, R.drawable.ic_private, paused ? "Resume" : "Pause", () -> a.setPrivate(!paused));
+        action(row, R.drawable.ic_add, "Connect", () -> a.startActivity(new Intent(a, ConnectorsActivity.class)));
+    }
+
+    private void action(LinearLayout row, int icon, String label, Runnable onClick) {
+        LinearLayout col = new LinearLayout(a);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        col.setBackgroundResource(R.drawable.btn_text);
+        col.setPadding(0, dp(8), 0, dp(8));
+        col.setOnClickListener(v -> onClick.run());
+        ImageView b = new ImageView(a);
+        b.setImageResource(icon);
+        b.setBackgroundResource(R.drawable.btn_circle);
+        b.setPadding(dp(15), dp(15), dp(15), dp(15));
+        b.setImageTintList(android.content.res.ColorStateList.valueOf(a.getColor(R.color.text)));
+        col.addView(b, new LinearLayout.LayoutParams(dp(54), dp(54)));
+        TextView t = words(label, R.color.text, 13, 8);
+        t.setGravity(Gravity.CENTER);
+        col.addView(t);
+        row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+    }
+
+    /** How was today: the five moods in a sheet, saved with one tap. */
+    private void checkIn() {
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(12), 0, dp(4));
+        LocalDate day = MoodStore.today();
+        Dialog[] sheet = new Dialog[1];
+        MoodPicker picker = new MoodPicker(a, row, mood -> {
+            MoodStore.Entry e = MoodStore.entryFor(a, day);
+            a.saveEntry(day, mood, e == null ? "" : e.note, e == null ? List.of() : e.tags);
+            if (sheet[0] != null) sheet[0].dismiss();
+            a.toast("Saved. Add a note any time in Days");
+        });
+        MoodStore.Entry now = MoodStore.entryFor(a, day);
+        picker.select(now == null ? 0 : now.mood);
+        sheet[0] = Sheet.custom(a, "How was today?", "One tap. planj learns how your days feel next to how they went.", row);
+    }
+
+    /** Tomorrow's other odds, as cards to swipe through. */
+    private void more(List<OddsEngine.Forecast> rest) {
+        LinearLayout title = new LinearLayout(a);
+        title.setOrientation(LinearLayout.HORIZONTAL);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
+        h.setText("More for tomorrow");
+        title.addView(h, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        TextView all = new TextView(a, null, 0, R.style.SectionLink);
+        all.setText("See all");
+        all.setOnClickListener(v -> a.showAllOdds());
+        title.addView(all);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tl.topMargin = dp(20);
+        tl.bottomMargin = dp(12);
+        body.addView(title, tl);
+
+        SnapScroller scroller = new SnapScroller(a);
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        scroller.addView(row);
+        for (OddsEngine.Forecast fc : rest) {
+            LinearLayout c = new LinearLayout(a);
+            c.setOrientation(LinearLayout.VERTICAL);
+            c.setBackgroundResource(R.drawable.card_clickable);
+            c.setPadding(dp(16), dp(16), dp(16), dp(16));
+            OddsRing ring = new OddsRing(a);
+            ring.setPercent((int) Math.round(fc.prob * 100));
+            c.addView(ring, new LinearLayout.LayoutParams(dp(72), dp(72)));
+            TextView t = words(OddsWords.title(a, fc.outcome.id, fc.outcome.question), R.color.text, 15, 12);
+            t.setMaxLines(2);
+            c.addView(t);
+            TextView w = words(Math.abs(fc.prob - fc.base) < 0.03 ? "As usual" : fc.prob < fc.base ? "Less likely than usual" : "More likely than usual",
+                    R.color.muted, 12, 4);
+            c.addView(w);
+            c.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(156), ViewGroup.LayoutParams.MATCH_PARENT);
+            lp.setMarginEnd(dp(10));
+            row.addView(c, lp);
         }
-        int hits = 0, n = 0;
-        if (r.live != null) for (OddsEngine.Record rec : r.live.values()) {
-            hits += rec.hits;
-            n += rec.n;
+        body.addView(scroller, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    /** planj's record: one dot per forecast already checked, filled when it was right. */
+    private void record() {
+        List<Object[]> checked = OddsEngine.checked(a, null);
+        List<Boolean> dots = new ArrayList<>();
+        int hits = 0;
+        for (Object[] c : checked.subList(Math.max(0, checked.size() - 60), checked.size())) {
+            boolean right = ((Double) c[2] >= 0.5) == (Boolean) c[3];
+            dots.add(right);
+            if (right) hits++;
         }
-        proof.setText(n == 0 ? "Every forecast is checked against what really happens, the next morning."
-                : "Right " + hits + " of " + n + " times so far. Every forecast is checked the next morning.");
-        proof.setVisibility(View.VISIBLE);
-        all.setText(r.forecasts.size() > 3 ? "All " + r.forecasts.size() + " odds" : "All odds");
-        all.setVisibility(View.VISIBLE);
+        LinearLayout title = new LinearLayout(a);
+        title.setOrientation(LinearLayout.HORIZONTAL);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
+        h.setText("planj's record");
+        title.addView(h, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        TextView aside = new TextView(a, null, 0, R.style.SectionAside);
+        aside.setText(dots.isEmpty() ? "" : "Right " + hits + " of " + dots.size());
+        title.addView(aside);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tl.topMargin = dp(24);
+        tl.bottomMargin = dp(12);
+        body.addView(title, tl);
+        LinearLayout c = card();
+        if (dots.isEmpty()) {
+            c.addView(words("Your first forecasts are checked tomorrow morning, against what really happened.", R.color.muted, 14, 0));
+        } else {
+            DotStrip strip = new DotStrip(a);
+            strip.setDots(dots);
+            c.addView(strip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            c.addView(words("Each dot is a forecast, checked the next morning. Filled means planj was right.", R.color.muted, 13, 12));
+        }
+        c.setOnClickListener(v -> a.showAllOdds());
+    }
+
+    private void learning(int days) {
+        LinearLayout c = card();
+        c.setGravity(Gravity.CENTER_HORIZONTAL);
+        OddsRing ring = new OddsRing(a);
+        ring.setPercent(Math.round(100f * Math.max(1, days) / OddsEngine.MIN_HISTORY));
+        c.addView(ring, new LinearLayout.LayoutParams(dp(140), dp(140)));
+        TextView t = words("Getting to know you · day " + Math.max(1, days) + " of " + OddsEngine.MIN_HISTORY, R.color.text, 18, 16);
+        t.setGravity(Gravity.CENTER);
+        t.setTypeface(a.getResources().getFont(R.font.display));
+        c.addView(t);
+        TextView b = words("In a few days planj starts telling you tomorrow's odds, and checks every one the next morning.", R.color.muted, 14, 8);
+        b.setGravity(Gravity.CENTER);
+        c.addView(b);
     }
 
     /** The most telling first: those that differ most from your usual, then the surest. */
@@ -89,135 +255,32 @@ final class HomeTab {
         return sorted.subList(0, Math.min(k, sorted.size()));
     }
 
-    /** The forecast as a plain sentence about you. */
-    String sentence(OddsEngine.Forecast fc) {
-        switch (fc.outcome.id) {
-            case "off_by_1am": return "You're off all devices by 1am tonight";
-            case "quiet_7h": return "You get 7+ hours device-free tonight";
-            case "heavy_screen": return "Tomorrow is a heavier screen day than usual";
-            case "social_2h": return "You spend 2h+ on social apps tomorrow";
-            case "up_by_8": return "You're up by 8 tomorrow";
-            case OddsEngine.FOCUS: return "You get 2h+ focus on your PC tomorrow";
-            default: {
-                Routines.Routine rt = Routines.Routine.parse(fc.outcome.id);
-                if (rt == null) return fc.outcome.question;
-                String name = RoutineNames.name(a, rt), when = rt.window();
-                if (rt.kind == Routines.Kind.FREE && name.equals(rt.kind.defaultName)) return "Your phone stays down " + when + " tomorrow";
-                if (rt.kind == Routines.Kind.AWAY && name.equals(rt.kind.defaultName)) return "You're out " + when + " tomorrow";
-                if (rt.kind == Routines.Kind.AT) return "You're at " + name + " " + when + " tomorrow";
-                return name + " " + when + " tomorrow";
-            }
-        }
-    }
-
-    /** Why, in plain words: more or less likely than usual, and because of what. */
-    static String why(OddsEngine.Forecast fc) {
-        String usual = "usually " + Math.round(fc.base * 100) + "%";
-        String because = because(fc.leverText);
-        if (because == null || Math.abs(fc.prob - fc.base) < 0.03) return Character.toUpperCase(usual.charAt(0)) + usual.substring(1);
-        return (fc.prob < fc.base ? "Less" : "More") + " likely than usual, because " + because + " (" + usual + ")";
-    }
-
-    /** What tipped a forecast, as the second half of "because …". */
-    private static String because(String leverText) {
-        if (leverText == null) return null;
-        for (OddsEngine.Lever l : OddsEngine.LEVERS) {
-            boolean yes = leverText.equals(l.whenTrue);
-            if (!yes && !leverText.equals(l.whenFalse)) continue;
-            switch (l.id) {
-                case "short_night": return yes ? "last night was short" : "last night was a full one";
-                case "late_phone": return yes ? "you were on your phone past midnight" : "you were off your phone by midnight";
-                case "social_heavy": return yes ? "you spent 2h+ on social today" : "you were under 2h on social today";
-                case "many_unlocks": return yes ? "you unlocked your phone more than usual today" : "you unlocked your phone less than usual today";
-                case "pc_focus_day": return yes ? "you had a focused day on your PC" : "you had little focus on your PC today";
-                case "pc_watch_late": return yes ? "you watched past 11pm" : "you didn't watch late";
-                case "pc_watch_heavy": return yes ? "you watched over an hour today" : "you watched under an hour today";
-                case "out_at_place": return yes ? "you were out today" : "you stayed home today";
-                case "class_morning": return yes ? "you have a morning class" : "you have no morning class";
-                case "early_plans": return yes ? "you have plans before 10am" : "your morning is free";
-                case "charged": return yes ? "your phone charges overnight" : "your phone isn't charging overnight";
-                case "weekend_next": return yes ? "tomorrow's a weekend day" : "tomorrow's a weekday";
-                default: return null;
-            }
-        }
-        return null;
-    }
-
-    private void learning(int days) {
-        LinearLayout c = cardShell();
-        TextView t = new TextView(a, null, 0, R.style.Heading);
-        t.setText("Getting to know you");
-        c.addView(t);
-        TextView big = bigNumber("Day " + Math.max(1, days) + " of " + OddsEngine.MIN_HISTORY);
-        ((LinearLayout.LayoutParams) big.getLayoutParams()).topMargin = dp(14);
-        c.addView(big);
-        ProgressBar bar = new ProgressBar(a, null, android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(OddsEngine.MIN_HISTORY);
-        bar.setProgress(Math.max(1, days));
-        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(a.getColor(R.color.accent)));
-        bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(a.getColor(R.color.surface_alt)));
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(8));
-        bl.topMargin = dp(12);
-        c.addView(bar, bl);
-        TextView body = text("In a few days planj starts telling you tomorrow's odds: when you'll put your phone down, "
-                + "how long you'll stay off it, and more. Every one is checked the next morning.", R.color.muted, 14);
-        ((LinearLayout.LayoutParams) body.getLayoutParams()).topMargin = dp(14);
-        c.addView(body);
-    }
-
-    /** A card: a big number (or none), a sentence, a quieter line, and maybe a button. */
-    private View card(String number, String sentence, String why, String action, Runnable onAction) {
-        LinearLayout c = cardShell();
-        if (number != null) c.addView(bigNumber(number));
-        TextView s = text(sentence, R.color.text, number == null ? 19 : 17);
-        if (number == null) s.setTypeface(a.getResources().getFont(R.font.display));
-        ((LinearLayout.LayoutParams) s.getLayoutParams()).topMargin = dp(number == null ? 0 : 6);
-        c.addView(s);
-        TextView w = text(why, R.color.muted, 13);
-        ((LinearLayout.LayoutParams) w.getLayoutParams()).topMargin = dp(6);
-        c.addView(w);
-        if (action != null) {
-            Button b = new Button(a, null, 0, R.style.Pill_Primary);
-            b.setText(action);
-            b.setOnClickListener(v -> onAction.run());
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-            lp.topMargin = dp(18);
-            c.addView(b, lp);
-        }
-        return c;
-    }
-
-    private LinearLayout cardShell() {
+    private LinearLayout card() {
         LinearLayout c = new LinearLayout(a);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackgroundResource(R.drawable.card_clickable);
-        c.setPadding(dp(20), dp(20), dp(20), dp(20));
+        c.setPadding(dp(20), dp(22), dp(20), dp(22));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(10);
-        cards.addView(c, lp);
+        lp.bottomMargin = dp(8);
+        body.addView(c, lp);
         return c;
     }
 
-    private TextView bigNumber(String s) {
-        TextView t = new TextView(a);
+    private TextView heading(String s) {
+        TextView t = new TextView(a, null, 0, R.style.Heading);
         t.setText(s);
-        t.setTextColor(a.getColor(R.color.text));
-        t.setTextSize(40);
-        t.setTypeface(a.getResources().getFont(R.font.display));
-        t.setFontVariationSettings("'wght' 800, 'opsz' 96, 'wdth' 100");
-        t.setLetterSpacing(-0.03f);
-        t.setIncludeFontPadding(false);
-        t.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return t;
     }
 
-    private TextView text(String s, int color, int sp) {
+    private TextView words(String s, int color, int sp, int topDp) {
         TextView t = new TextView(a);
         t.setText(s);
         t.setTextColor(a.getColor(color));
         t.setTextSize(sp);
-        t.setLineSpacing(dp(3), 1f);
-        t.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        t.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(topDp);
+        t.setLayoutParams(lp);
         return t;
     }
 
