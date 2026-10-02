@@ -43,6 +43,7 @@ final class OddsEngine {
         Map<String, List<int[]>> at; // time at each place other than home; null when places are off
         PcFocus pc;                  // null when the PC's focus that day can't be known
         Integer nextClassMin;        // the next day's first class (minutes), -1 none, null not known
+        Integer nextPlanMin;         // the next day's first timed calendar event, -1 none, null when Calendar isn't connected
 
         Day(LocalDate date) {
             this.date = date;
@@ -166,6 +167,8 @@ final class OddsEngine {
             new Lever("out_at_place", "after a day out", "after a day at home", (d, b) -> d.at == null ? null : !d.at.isEmpty()),
             new Lever("class_morning", "before a morning class", "before no morning class",
                     (d, b) -> d.nextClassMin == null ? null : d.nextClassMin >= 0 && d.nextClassMin < 11 * 60),
+            new Lever("early_plans", "before plans before 10am", "before a free morning",
+                    (d, b) -> d.nextPlanMin == null ? null : d.nextPlanMin >= 0 && d.nextPlanMin < 10 * 60),
             new Lever("charged", "charging overnight", "not charging overnight", (d, b) -> d.charged),
             new Lever("weekend_next", "before a weekend day", "before a weekday",
                     (d, b) -> d.date.getDayOfWeek().getValue() >= 5) // Fri or Sat evening
@@ -187,6 +190,7 @@ final class OddsEngine {
         String carried = null; // the network state at the start of each day
         String carriedPlace = null;
         boolean pcSorting = false; // the PC has sorted focus from watching on some earlier day
+        boolean calendar = Agenda.allowed(ctx);
         for (DayUsage u : usages) {
             LocalDate date = u.day;
             List<int[]> away = awayBlocks(u, carried, home, zone);
@@ -205,6 +209,10 @@ final class OddsEngine {
             Day d = new Day(date);
             d.pc = pc;
             d.nextClassMin = TarcTimetable.firstClass(ctx, date.plusDays(1));
+            if (calendar) {
+                Agenda.Event first = Agenda.firstTimed(Agenda.on(ctx, date.plusDays(1)));
+                d.nextPlanMin = first == null ? -1 : minuteOfDay(first.startMs, date.plusDays(1), zone);
+            }
             d.away = away;
             d.at = at;
             List<int[]> used = new ArrayList<>();

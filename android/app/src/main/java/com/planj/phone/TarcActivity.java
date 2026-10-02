@@ -71,8 +71,9 @@ public class TarcActivity extends Activity {
         showPages();
         icon();
         title("TAR UMT");
-        blurb("Your student intranet: timetable, attendance, exams, results and deadlines. "
-                + "What's coming up shows on Today, and tomorrow's classes in Odds.");
+        blurb(Connectors.get("tarc").about + ".");
+        note(ConnectorOdds.summary("tarc") + " to your odds once connected: whether you finish what's due in time, "
+                + "and morning classes as a signal for your nights and mornings.");
         note("You sign in on TAR UMT's own page. Pages stay on this phone, and money or identity pages are never opened.");
         primary("Connect", () -> read(false));
     }
@@ -161,6 +162,10 @@ public class TarcActivity extends Activity {
         title("TAR UMT");
         long read = st.optLong("read", 0);
         blurb(read == 0 ? "Connected" : "Connected · updated " + when(read));
+        LinearLayout odds = new LinearLayout(this);
+        odds.setOrientation(LinearLayout.VERTICAL);
+        stage.addView(odds);
+        ConnectorOdds.fillAsync(this, odds, "tarc", Connectors.get("tarc").checkedAgainst);
         section("Settings");
         boolean auto = TarcCreds.saved(this);
         link(R.drawable.ic_sync, "Refresh automatically", auto ? "On · checks twice a day"

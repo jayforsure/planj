@@ -18,6 +18,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class MainActivity extends Activity {
+    /** Asks the main screen to connect something that needs its permission steps ("places"). */
+    static final String EXTRA_CONNECT = "connect";
     private static final int REQ_EXPORT = 1;
 
     private TodayTab today;
@@ -50,6 +52,7 @@ public class MainActivity extends Activity {
         navJournal.setOnClickListener(v -> select(journal.view(), navJournal));
         navSettings.setOnClickListener(v -> select(settings.view(), navSettings));
         select(today.view(), navToday);
+        handleConnect(getIntent());
 
         // The tab bar makes way for the keyboard, so a form gets the whole screen while typing.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -203,6 +206,19 @@ public class MainActivity extends Activity {
         PrivateMode.set(this, on);
         toast(on ? "Private — nothing is recorded until you pinch out or tap the banner" : "Recording again");
         refresh();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleConnect(intent);
+    }
+
+    private void handleConnect(Intent intent) {
+        if (intent == null || !"places".equals(intent.getStringExtra(EXTRA_CONNECT))) return;
+        intent.removeExtra(EXTRA_CONNECT);
+        findViewById(R.id.tabs).post(this::placesTapped);
     }
 
     private boolean resumed;

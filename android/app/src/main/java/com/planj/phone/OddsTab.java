@@ -149,7 +149,8 @@ final class OddsTab {
             cal.setChevron(true);
             cal.setClickable(true);
             cal.setBackgroundResource(R.drawable.btn_text);
-            cal.setOnClickListener(v -> a.startActivity(new android.content.Intent(a, CalendarActivity.class)));
+            cal.setOnClickListener(v -> a.startActivity(new android.content.Intent(a, ConnectorActivity.class)
+                    .putExtra(ConnectorActivity.EXTRA_ID, "calendar")));
             list.addView(cal);
         }
 
@@ -170,6 +171,22 @@ final class OddsTab {
                     : "Not reached in " + days + " days yet"));
         }
 
+        List<TarcDeadlines.Pending> due = TarcStore.connected(a) ? TarcDeadlines.pending(a) : new java.util.ArrayList<>();
+        due.removeIf(d -> d.due.isAfter(LocalDate.now().plusDays(60)));
+        if (!due.isEmpty()) { // TAR UMT's to-dos: will you finish each in time? checked by the dashboard itself
+            String odds = TarcDeadlines.odds(a);
+            int seen = TarcDeadlines.settled(a);
+            header("DUE", "TAR UMT");
+            for (TarcDeadlines.Pending d : due) {
+                ListRow row = plainRow(R.drawable.ic_bell, d.title, "Due " + d.due.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH))
+                        + " · " + (odds == null ? "learning, " + seen + " of " + TarcDeadlines.MIN_SEEN + " seen" : "odds you finish in time"));
+                row.setSubtitleLines(2);
+                if (odds != null) row.setBigValue(odds, false);
+                else row.setValue(Upcoming.daysLeft(d.due), true);
+                list.addView(row);
+            }
+        }
+
         header("TRACK RECORD", "live");
         for (OddsEngine.Forecast fc : r.forecasts) {
             OddsEngine.Record lv = r.live.get(fc.outcome.id), bk = r.back.get(fc.outcome.id);
@@ -186,7 +203,7 @@ final class OddsTab {
     }
 
     /** What each question is about, as the icon in its square. */
-    private static int iconFor(String id) {
+    static int iconFor(String id) {
         Routines.Routine rt = Routines.Routine.parse(id);
         if (rt != null) return rt.kind == Routines.Kind.FREE ? R.drawable.ic_phone : R.drawable.ic_place;
         switch (id) {

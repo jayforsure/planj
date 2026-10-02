@@ -9,24 +9,16 @@ import android.widget.TextView;
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final ListRow tracking, priv, reminder, places, devices, connectors;
+    private final ListRow priv, reminder, connectors;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
         root = a.getLayoutInflater().inflate(R.layout.tab_settings, container, false);
         container.addView(root);
-        tracking = root.findViewById(R.id.row_tracking);
         priv = root.findViewById(R.id.row_private);
         reminder = root.findViewById(R.id.row_reminder);
-        places = root.findViewById(R.id.row_places);
-        places.setOnClickListener(v -> a.placesTapped());
         connectors = root.findViewById(R.id.row_connectors);
         connectors.setOnClickListener(v -> a.startActivity(new Intent(a, ConnectorsActivity.class)));
-        devices = root.findViewById(R.id.row_devices);
-        devices.setOnClickListener(v -> a.startActivity(new Intent(a, AccountActivity.class)
-                .putExtra(AccountActivity.EXTRA_SCREEN, AccountStore.signedIn(a) ? "devices" : "welcome")));
-
-        tracking.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
         priv.setOnClickListener(v -> a.setPrivate(!PrivateMode.isOn(a)));
         root.findViewById(R.id.row_private_apps).setOnClickListener(v -> a.startActivity(new Intent(a, AppPickerActivity.class)));
         reminder.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
@@ -58,7 +50,6 @@ final class SettingsTab {
     }
 
     void refresh(boolean granted) {
-        devices.setSubtitle(DeviceNames.phone(a) + " · " + DeviceNames.pc(a));
         // the connectors you connected, each opening its own page; then the catalogue
         android.widget.LinearLayout list = root.findViewById(R.id.connected_list);
         list.removeAllViews();
@@ -70,20 +61,10 @@ final class SettingsTab {
             list.addView(r);
         }
         connectors.setTitle(on.size() == Connectors.ALL.size() ? "Browse connectors" : "Add connectors");
-        connectors.setSubtitle(on.isEmpty() ? "Bring in your timetable, calendar and more" : null);
-        tracking.setSubtitle(granted ? "On" : "Off");
-        tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
+        connectors.setSubtitle(on.size() == Connectors.ALL.size() ? null : (Connectors.ALL.size() - on.size()) + " more you can connect");
         boolean p = PrivateMode.isOn(a);
         priv.setSubtitle(p ? "On since " + Fmt.clock(PrivateMode.since(a)) : "Off");
         priv.setTint(a.getColor(p ? R.color.accent : R.color.text));
         reminder.setSubtitle(MoodReminder.enabled(a) ? "21:30" : "Off");
-        if (!Places.enabled(a)) {
-            places.setSubtitle("Off");
-        } else if (!Places.hasForeground(a) || !Places.hasBackground(a)) {
-            places.setSubtitle("Needs \u201cAllow all the time\u201d");
-        } else {
-            int n = Places.count(a);
-            places.setSubtitle(n == 0 ? "On" : "On · " + n + (n == 1 ? " place" : " places"));
-        }
     }
 }

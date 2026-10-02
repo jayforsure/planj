@@ -49,7 +49,7 @@
         <activity android:name=".PcAppsActivity" android:exported="false" />
         <activity android:name=".PcAppActivity" android:exported="false" />
         <activity android:name=".ConnectorsActivity" android:exported="false" />
-        <activity android:name=".CalendarActivity" android:exported="false" />
+        <activity android:name=".ConnectorActivity" android:exported="false" />
         <activity android:name=".TarcActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".PlacePickerActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
         <activity android:name=".DayDetailActivity" android:exported="false" />

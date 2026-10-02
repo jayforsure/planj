@@ -316,24 +316,24 @@ final class TodayTab {
         now.setSubtitle(ms < 60_000 ? "Just now" : Fmt.shortDuration(ms) + " so far");
     }
 
-    /** Coming up, from connectors: up to four of today's classes, exams and things due in two weeks. */
+    /** Your next class today, from TAR UMT; nothing outside the semester. Today stays about your day. */
     private void showUpcoming(boolean isToday) {
-        List<Upcoming.Item> items = isToday ? Upcoming.soon(a, 14) : new ArrayList<>();
+        List<Upcoming.Item> items = new ArrayList<>();
+        if (isToday) for (Upcoming.Item it : Upcoming.soon(a, 0)) if (it.icon == R.drawable.ic_today) items.add(it);
         View section = root.findViewById(R.id.up_section);
         LinearLayout list = root.findViewById(R.id.up_list);
         section.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         list.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         list.removeAllViews();
-        for (int i = 0; i < Math.min(4, items.size()); i++) {
-            Upcoming.Item it = items.get(i);
-            ListRow r = new ListRow(a);
-            r.setIcon(it.icon);
-            r.setTitle(it.title);
-            r.setSubtitle(it.subtitle);
-            r.setValue(it.value, false);
-            r.setOnClickListener(v -> openUpcoming());
-            list.addView(r);
-        }
+        if (items.isEmpty()) return;
+        Upcoming.Item it = items.get(0);
+        ListRow r = new ListRow(a);
+        r.setIcon(it.icon);
+        r.setTitle(it.title);
+        r.setSubtitle(it.subtitle);
+        r.setValue(it.value, false);
+        r.setOnClickListener(v -> openUpcoming());
+        list.addView(r);
         root.findViewById(R.id.up_see_all).setOnClickListener(v -> openUpcoming());
     }
 

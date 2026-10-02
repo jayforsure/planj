@@ -137,7 +137,7 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- Coming up: classes left today, exams and things due, from connectors -->
+            <!-- Next class today, from TAR UMT -->
             <LinearLayout
                 android:id="@+id/up_section"
                 style="@style/SectionRow"
@@ -145,12 +145,12 @@
 
                 <TextView
                     style="@style/SectionTitle"
-                    android:text="Coming up" />
+                    android:text="Next class" />
 
                 <TextView
                     android:id="@+id/up_see_all"
                     style="@style/SectionLink"
-                    android:text="See all" />
+                    android:text="Your week" />
             </LinearLayout>
 
             <LinearLayout

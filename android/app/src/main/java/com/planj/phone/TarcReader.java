@@ -273,6 +273,7 @@ final class TarcReader {
         pending = queue.poll();
         if (pending == null) {
             TarcStore.commitRead(ctx);
+            TarcDeadlines.record(ctx); // what left the dashboard since the last read
             try {
                 JSONObject st = TarcStore.state(ctx);
                 st.put("read", System.currentTimeMillis());

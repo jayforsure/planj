@@ -22,7 +22,7 @@ public class ConnectorsActivity extends Activity {
         super.onResume();
         page.clear();
         page.title("Connectors");
-        page.blurb("Let planj use other places your week already lives, so its odds know more.");
+        page.blurb("Everything planj learns from. Each one adds questions planj can forecast, or the answers that check them.");
         List<Connectors.Connector> on = Connectors.connected(this);
         if (!on.isEmpty()) {
             page.section("Connected");
@@ -33,12 +33,12 @@ public class ConnectorsActivity extends Activity {
             if (c.connected(this)) continue;
             if (!any) page.section("Available");
             any = true;
-            add(c, c.about);
+            add(c, ConnectorOdds.summary(c.id) + " · " + c.about.substring(0, 1).toLowerCase(java.util.Locale.ENGLISH) + c.about.substring(1));
         }
     }
 
     private void add(Connectors.Connector c, String subtitle) {
-        ListRow r = page.link(c.glyph, c.name, subtitle, () -> c.open(this));
+        ListRow r = page.link(c.glyph, c.name(this), subtitle, () -> c.open(this));
         Connectors.fillRow(this, r, c, subtitle);
     }
 }
