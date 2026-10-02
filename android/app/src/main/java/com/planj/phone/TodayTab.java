@@ -116,6 +116,7 @@ final class TodayTab {
                 : hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
         appsTitle.setText(DeviceNames.phone(a));
         showPhoneNow();
+        showUpcoming(isToday);
 
         boolean priv = PrivateMode.isOn(a);
         privateBanner.setVisibility(priv ? View.VISIBLE : View.GONE);
@@ -313,6 +314,31 @@ final class TodayTab {
         }
         long ms = System.currentTimeMillis() - a.resumedAtMs();
         now.setSubtitle(ms < 60_000 ? "Just now" : Fmt.shortDuration(ms) + " so far");
+    }
+
+    /** Coming up, from connectors: up to four of today's classes, exams and things due in two weeks. */
+    private void showUpcoming(boolean isToday) {
+        List<Upcoming.Item> items = isToday ? Upcoming.soon(a, 14) : new ArrayList<>();
+        View section = root.findViewById(R.id.up_section);
+        LinearLayout list = root.findViewById(R.id.up_list);
+        section.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        list.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        list.removeAllViews();
+        for (int i = 0; i < Math.min(4, items.size()); i++) {
+            Upcoming.Item it = items.get(i);
+            ListRow r = new ListRow(a);
+            r.setIcon(it.icon);
+            r.setTitle(it.title);
+            r.setSubtitle(it.subtitle);
+            r.setValue(it.value, false);
+            r.setOnClickListener(v -> openUpcoming());
+            list.addView(r);
+        }
+        root.findViewById(R.id.up_see_all).setOnClickListener(v -> openUpcoming());
+    }
+
+    private void openUpcoming() {
+        a.startActivity(new Intent(a, TarcActivity.class).putExtra(TarcActivity.EXTRA_SHOW, "upcoming"));
     }
 
     private void showSection(boolean has) {

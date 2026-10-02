@@ -9,7 +9,7 @@ import android.widget.TextView;
 final class SettingsTab {
     private final MainActivity a;
     private final View root;
-    private final ListRow tracking, priv, reminder, places, devices, tarc;
+    private final ListRow tracking, priv, reminder, places, devices, connectors;
 
     SettingsTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -20,10 +20,8 @@ final class SettingsTab {
         reminder = root.findViewById(R.id.row_reminder);
         places = root.findViewById(R.id.row_places);
         places.setOnClickListener(v -> a.placesTapped());
-        tarc = root.findViewById(R.id.row_tarc);
-        tarc.setOnClickListener(v -> a.startActivity(new Intent(a, TarcActivity.class)));
-        android.graphics.drawable.Drawable tarcIcon = AppPalette.icon(a, TarcActivity.TARC_APP);
-        if (tarcIcon != null) tarc.setImage(tarcIcon); // the TARC app's own icon, when it is on this phone
+        connectors = root.findViewById(R.id.row_connectors);
+        connectors.setOnClickListener(v -> a.startActivity(new Intent(a, ConnectorsActivity.class)));
         devices = root.findViewById(R.id.row_devices);
         devices.setOnClickListener(v -> a.startActivity(new Intent(a, AccountActivity.class)
                 .putExtra(AccountActivity.EXTRA_SCREEN, AccountStore.signedIn(a) ? "devices" : "welcome")));
@@ -61,7 +59,18 @@ final class SettingsTab {
 
     void refresh(boolean granted) {
         devices.setSubtitle(DeviceNames.phone(a) + " · " + DeviceNames.pc(a));
-        tarc.setSubtitle(TarcStore.connected(a) ? "Connected · timetable and results" : "Timetable and results · not connected");
+        // the connectors you connected, each opening its own page; then the catalogue
+        android.widget.LinearLayout list = root.findViewById(R.id.connected_list);
+        list.removeAllViews();
+        java.util.List<Connectors.Connector> on = Connectors.connected(a);
+        for (Connectors.Connector c : on) {
+            ListRow r = new ListRow(a);
+            Connectors.fillRow(a, r, c, c.status(a));
+            r.setOnClickListener(v -> c.open(a));
+            list.addView(r);
+        }
+        connectors.setTitle(on.size() == Connectors.ALL.size() ? "Browse connectors" : "Add connectors");
+        connectors.setSubtitle(on.isEmpty() ? "Bring in your timetable, calendar and more" : null);
         tracking.setSubtitle(granted ? "On" : "Off");
         tracking.setTint(a.getColor(granted ? R.color.text : R.color.warn));
         boolean p = PrivateMode.isOn(a);

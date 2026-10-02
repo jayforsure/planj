@@ -30,6 +30,8 @@ import java.util.Locale;
  */
 public class TarcActivity extends Activity {
     static final String TARC_APP = "app.tarc.edu.my";
+    static final String EXTRA_SHOW = "show";
+    private boolean upcomingOnly; // opened from Today's Coming up: back returns there
 
     private enum Mode { INTRO, SIGNIN, READING, DONE, WEEK, AUTO }
 
@@ -56,7 +58,9 @@ public class TarcActivity extends Activity {
 
         web.setBackgroundColor(0xFFFFFFFF);
 
-        if (TarcStore.connected(this)) showDone();
+        upcomingOnly = "upcoming".equals(getIntent().getStringExtra(EXTRA_SHOW)) && TarcStore.connected(this);
+        if (upcomingOnly) showUpcoming();
+        else if (TarcStore.connected(this)) showDone();
         else showIntro();
     }
 
@@ -66,17 +70,11 @@ public class TarcActivity extends Activity {
         mode = Mode.INTRO;
         showPages();
         icon();
-        title("Connect TAR UMT");
-        blurb("Your student intranet lets planj know your week: when classes are, what's due, when exams come, "
-                + "and how your days line up with your grades.");
-        section("What planj reads");
-        row(R.drawable.ic_today, "Timetable and attendance", "Your classes, and each class you were marked at");
-        row(R.drawable.ic_edit, "Exams and results", "Exam dates and venues, grades, coursework marks");
-        row(R.drawable.ic_bell, "Deadlines and announcements", "What the dashboard says is due, and notices");
-        section("What it never does");
-        row(R.drawable.ic_lock, "Your password", "You sign in on TAR UMT's own page. planj keeps it only if you turn on automatic refresh");
-        row(R.drawable.ic_shield, "Money and identity", "Billing, payments, profile and income pages are never opened");
-        primary("Sign in to TAR UMT", () -> read(false));
+        title("TAR UMT");
+        blurb("Your student intranet: timetable, attendance, exams, results and deadlines. "
+                + "What's coming up shows on Today, and tomorrow's classes in Odds.");
+        note("You sign in on TAR UMT's own page. Pages stay on this phone, and money or identity pages are never opened.");
+        primary("Connect", () -> read(false));
     }
 
     /** Reads now: from the last session, signing in by itself if automatic refresh is on, else you sign in. */
@@ -160,67 +158,23 @@ public class TarcActivity extends Activity {
         showPages();
         icon();
         JSONObject st = TarcStore.state(this);
-        title("TAR UMT connected");
+        title("TAR UMT");
         long read = st.optLong("read", 0);
-        blurb(read == 0 ? "Connected. Everything stays on this phone." : "Read " + when(read) + ". Everything stays on this phone.");
-        section("Found");
-        int tt = TarcStore.rows(this, "timetable"), rs = TarcStore.rows(this, "results");
-        row(R.drawable.ic_school, "Semester", semester(st));
-        List<TarcParse.Course> courses = TarcTimetable.courses(this);
-        ListRow week = row(R.drawable.ic_today, "Timetable", courses.isEmpty() ? (tt > 0 ? "Read, but no classes were listed" : "Not found on your portal yet")
-                : courses.size() + " courses · " + TarcTimetable.lessonsPerWeek(courses) + " classes a week");
-        if (!courses.isEmpty()) {
-            week.setChevron(true);
-            week.setClickable(true);
-            week.setBackgroundResource(R.drawable.btn_text);
-            week.setOnClickListener(v -> showWeek());
-        }
-        boolean hidden = false;
-        for (JSONObject p : TarcStore.pages(this)) {
-            if ("results".equals(p.optString("kind")) && TarcParse.resultsHidden(p.optString("html"))) hidden = true;
-        }
-        row(R.drawable.ic_target, "Results", hidden ? "Hidden by TAR UMT until you finish this semester's course evaluation"
-                : rs > 0 ? "Read · " + rs + " rows" : "Not found on your portal yet");
-        List<TarcParse.Exam> exams = TarcExams.read(this);
-        row(R.drawable.ic_edit, "Exams", exams.isEmpty() ? "None on your exam timetable" : TarcExams.summary(exams));
-        int more = 0;
-        for (JSONObject p : TarcStore.pages(this)) {
-            String k = p.optString("kind");
-            if (!k.equals("home") && !k.equals("sessions") && !k.equals("timetable") && !k.equals("results") && !k.equals("exams")) more++;
-        }
-        if (more > 0) row(R.drawable.ic_journal, "More from your portal", more + " more pages: attendance, announcements, evaluation and others. Shown here as planj learns to read them");
-
-        List<TarcParse.Deadline> due = TarcDue.soon(this, 60);
-        if (!due.isEmpty()) {
-            section("Due soon");
-            for (TarcParse.Deadline d : due) {
-                long days = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), d.due);
-                ListRow r = row(R.drawable.ic_bell, d.title, d.due.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)));
-                r.setValue(days == 0 ? "Today" : days == 1 ? "1 day" : days + " days", days > 7);
-            }
-        }
-
-        section("Keeping up to date");
+        blurb(read == 0 ? "Connected" : "Connected · updated " + when(read));
+        section("Settings");
         boolean auto = TarcCreds.saved(this);
-        long checked = st.optLong("checked", 0);
-        String stopped = st.optString("check");
-        ListRow autoRow = row(R.drawable.ic_sync, "Refresh automatically", auto
-                ? "On · checks twice a day" + (checked > 0 ? " · last " + when(checked) : "")
-                : "REJECTED".equals(stopped) ? "Stopped: your saved password no longer works" : "Off · you tap Read again");
-        autoRow.setChevron(true);
-        autoRow.setClickable(true);
-        autoRow.setBackgroundResource(R.drawable.btn_text);
-        autoRow.setOnClickListener(v -> {
+        link(R.drawable.ic_sync, "Refresh automatically", auto ? "On · checks twice a day"
+                : "REJECTED".equals(st.optString("check")) ? "Stopped: your saved password no longer works" : "Off", () -> {
             if (!TarcCreds.saved(this)) showAuto(null, null);
             else Sheet.confirm(this, R.drawable.ic_sync, "Turn off automatic refresh?",
-                    "Your saved TAR UMT login is deleted from this phone. You can still tap Read again any time.",
+                    "Your saved TAR UMT login is deleted from this phone. You can still refresh by hand any time.",
                     "Turn off", true, () -> {
                         TarcCreds.clear(this);
                         TarcSync.cancel(this);
                         showDone();
                     });
         });
-        primary("Read again", () -> read(false));
+        link(R.drawable.ic_today, "Refresh now", "Read TAR UMT again", () -> read(false));
         secondary("Disconnect", () -> Sheet.confirm(this, R.drawable.ic_close, "Disconnect TAR UMT?",
                 "Everything planj read from TAR UMT is deleted from this phone, including a saved login, and planj is signed out of it.",
                 "Disconnect", true, () -> {
@@ -295,64 +249,71 @@ public class TarcActivity extends Activity {
         android.widget.Toast.makeText(this, s, android.widget.Toast.LENGTH_LONG).show();
     }
 
-    /** "202605 · 15 Jun – 20 Sep · 14 weeks", and whether it has ended. */
-    private static String semester(JSONObject st) {
-        String code = st.optString("session");
-        if (code.isEmpty()) return "Not found on your portal yet";
-        try {
-            java.time.LocalDate start = java.time.LocalDate.parse(st.optString("start"));
-            java.time.LocalDate end = java.time.LocalDate.parse(st.optString("end"));
-            String span = start.format(DAY_MONTH) + " – " + end.format(DAY_MONTH);
-            if (end.isBefore(java.time.LocalDate.now())) return code + " · ended " + end.format(DAY_MONTH) + ". The next appears when TAR UMT releases it";
-            return code + " · " + span + " · " + st.optInt("weeks") + " weeks";
-        } catch (RuntimeException e) {
-            return code;
-        }
-    }
-
-    private static final java.time.format.DateTimeFormatter DAY_MONTH = java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
-
     /** "today at 21:40" or "21:40, 3 Oct". */
-    private static String when(long ms) {
+    static String when(long ms) {
         java.time.ZonedDateTime z = Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault());
         if (z.toLocalDate().equals(java.time.LocalDate.now())) return "today at " + Fmt.clock(ms);
         return Fmt.clock(ms) + ", " + z.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH));
     }
 
-    /** Your week: each day's classes, then each course with your attendance so far. */
-    private void showWeek() {
+    /** Coming up: what's due, exams, the week's classes, and attendance so far. Opened from Today. */
+    private void showUpcoming() {
         mode = Mode.WEEK;
         showPages();
-        title("Your week");
+        title("Coming up");
         JSONObject st = TarcStore.state(this);
-        blurb(st.optString("session").isEmpty() ? "From TAR UMT." : "Semester " + semester(st) + ".");
-        List<TarcParse.Course> courses = TarcTimetable.courses(this);
-        for (java.time.DayOfWeek d : java.time.DayOfWeek.values()) {
-            List<String[]> lines = new ArrayList<>();
-            List<int[]> order = new ArrayList<>();
-            for (TarcParse.Course c : courses) {
-                for (TarcParse.Lesson l : c.lessons) {
-                    if (l.day != d) continue;
-                    lines.add(new String[]{c.name, DayTimeline.clock(l.startMin) + "–" + DayTimeline.clock(l.endMin) + " · " + l.type + " · " + l.venue});
-                    order.add(new int[]{l.startMin, lines.size() - 1});
-                }
+        blurb("From TAR UMT" + (st.optLong("read", 0) == 0 ? "." : ", updated " + when(st.optLong("read", 0)) + "."));
+        java.time.format.DateTimeFormatter day = java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH);
+        List<TarcParse.Deadline> due = TarcDue.soon(this, 120);
+        if (!due.isEmpty()) {
+            section("Due");
+            for (TarcParse.Deadline d : due) row(R.drawable.ic_bell, d.title, d.due.format(day)).setValue(Upcoming.daysLeft(d.due), false);
+        }
+        List<TarcParse.Exam> exams = new ArrayList<>();
+        for (TarcParse.Exam e : TarcExams.read(this)) if (!e.date.isBefore(java.time.LocalDate.now())) exams.add(e);
+        if (!exams.isEmpty()) {
+            section("Exams");
+            for (TarcParse.Exam e : exams) {
+                row(R.drawable.ic_edit, e.name, e.date.format(day) + ", " + DayTimeline.clock(e.startMin) + " · " + e.venue)
+                        .setValue(Upcoming.daysLeft(e.date), false);
             }
-            if (lines.isEmpty()) continue;
-            order.sort((x, y) -> Integer.compare(x[0], y[0]));
-            section(d.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH));
-            for (int[] o : order) row(R.drawable.ic_today, lines.get(o[1])[0], lines.get(o[1])[1]);
         }
-        section("Courses");
-        for (TarcParse.Course c : courses) {
-            ListRow r = row(R.drawable.ic_school, c.name, c.code + (c.attendance >= 0 ? " · attendance so far" : ""));
-            if (c.attendance >= 0) r.setValue(Math.round(c.attendance) + "%", false);
+        List<TarcParse.Course> courses = TarcTimetable.courses(this);
+        Boolean term = TarcTimetable.inSemester(this, java.time.LocalDate.now());
+        if (!courses.isEmpty()) {
+            for (java.time.DayOfWeek d : java.time.DayOfWeek.values()) {
+                List<String[]> lines = new ArrayList<>();
+                List<int[]> order = new ArrayList<>();
+                for (TarcParse.Course c : courses) {
+                    for (TarcParse.Lesson l : c.lessons) {
+                        if (l.day != d) continue;
+                        lines.add(new String[]{c.name, DayTimeline.clock(l.startMin) + "–" + DayTimeline.clock(l.endMin) + " · " + l.type + " · " + l.venue});
+                        order.add(new int[]{l.startMin, lines.size() - 1});
+                    }
+                }
+                if (lines.isEmpty()) continue;
+                order.sort((x, y) -> Integer.compare(x[0], y[0]));
+                section(d.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH)
+                        + (Boolean.TRUE.equals(term) ? "" : " · last semester"));
+                for (int[] o : order) row(R.drawable.ic_today, lines.get(o[1])[0], lines.get(o[1])[1]);
+            }
+            section("Attendance");
+            for (TarcParse.Course c : courses) {
+                ListRow r = row(R.drawable.ic_school, c.name, c.code);
+                if (c.attendance >= 0) r.setValue(Math.round(c.attendance) + "%", false);
+            }
         }
+        if (due.isEmpty() && exams.isEmpty() && courses.isEmpty()) note("Nothing coming up on TAR UMT right now.");
     }
 
     @Override
     public void onBackPressed() {
         if (mode == Mode.SIGNIN && web.canGoBack()) {
             web.goBack();
+            return;
+        }
+        if (mode == Mode.WEEK && upcomingOnly) {
+            finish();
             return;
         }
         if (mode == Mode.WEEK || (mode == Mode.AUTO && TarcStore.connected(this))) {
@@ -436,6 +397,20 @@ public class TarcActivity extends Activity {
         lp.topMargin = dp(28);
         lp.bottomMargin = dp(4);
         stage.addView(t, lp);
+    }
+
+    private ListRow link(int icon, String title, String subtitle, Runnable onClick) {
+        ListRow r = row(icon, title, subtitle);
+        r.setChevron(true);
+        r.setClickable(true);
+        r.setBackgroundResource(R.drawable.btn_text);
+        r.setOnClickListener(v -> onClick.run());
+        return r;
+    }
+
+    private void note(String s) {
+        TextView t = text(s, R.color.muted, 13);
+        ((LinearLayout.LayoutParams) t.getLayoutParams()).topMargin = dp(12);
     }
 
     private ListRow row(int icon, String title, String subtitle) {

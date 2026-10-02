@@ -69,7 +69,6 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             wanted.add(Manifest.permission.POST_NOTIFICATIONS);
         }
-        if (!Agenda.allowed(this)) wanted.add(Manifest.permission.READ_CALENDAR);
         if (!wanted.isEmpty()) requestPermissions(wanted.toArray(new String[0]), 0);
     }
 

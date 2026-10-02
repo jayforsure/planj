@@ -137,6 +137,29 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
+            <!-- Coming up: classes left today, exams and things due, from connectors -->
+            <LinearLayout
+                android:id="@+id/up_section"
+                style="@style/SectionRow"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="Coming up" />
+
+                <TextView
+                    android:id="@+id/up_see_all"
+                    style="@style/SectionLink"
+                    android:text="See all" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/up_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
             <!-- This week -->
             <LinearLayout style="@style/SectionRow">
 

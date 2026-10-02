@@ -29,8 +29,14 @@ final class Agenda {
 
     private Agenda() {}
 
+    /** Connected: Android lets planj read calendars, and you haven't disconnected it in planj. */
     static boolean allowed(Context ctx) {
-        return ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED;
+        return ctx.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+                && ctx.getSharedPreferences("planj_connectors", Context.MODE_PRIVATE).getBoolean("calendar", true);
+    }
+
+    static void setOn(Context ctx, boolean on) {
+        ctx.getSharedPreferences("planj_connectors", Context.MODE_PRIVATE).edit().putBoolean("calendar", on).apply();
     }
 
     static List<Event> on(Context ctx, LocalDate day) {

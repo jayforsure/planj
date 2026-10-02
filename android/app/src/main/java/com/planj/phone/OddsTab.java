@@ -145,7 +145,12 @@ final class OddsTab {
             }
         } else if (!Agenda.allowed(a)) {
             header("TOMORROW'S PLANS");
-            list.addView(plainRow(R.drawable.ic_journal, "Calendar", "Access is off"));
+            ListRow cal = plainRow(R.drawable.ic_journal, "Calendar", "Not connected · connect it to see tomorrow's plans");
+            cal.setChevron(true);
+            cal.setClickable(true);
+            cal.setBackgroundResource(R.drawable.btn_text);
+            cal.setOnClickListener(v -> a.startActivity(new android.content.Intent(a, CalendarActivity.class)));
+            list.addView(cal);
         }
 
         List<OddsEngine.Forecast> routines = new java.util.ArrayList<>(), plain = new java.util.ArrayList<>();
