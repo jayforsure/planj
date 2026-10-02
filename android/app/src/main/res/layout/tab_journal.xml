@@ -7,6 +7,19 @@
 
     <LinearLayout style="@style/Page">
 
+        <ImageView
+
+            android:id="@+id/journal_back"
+
+            style="@style/CircleButton"
+
+            android:layout_marginBottom="16dp"
+
+            android:contentDescription="Back"
+
+            android:src="@drawable/ic_back" />
+
+
         <TextView
             style="@style/PageTitle"
             android:text="Journal" />

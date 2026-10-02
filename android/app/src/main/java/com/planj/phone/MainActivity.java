@@ -13,21 +13,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import java.io.OutputStream;
 import java.time.LocalDate;
 import java.util.List;
 
 public class MainActivity extends Activity {
     /** Asks the main screen to connect something that needs its permission steps ("places"). */
     static final String EXTRA_CONNECT = "connect";
-    private static final int REQ_EXPORT = 1;
 
+    // Three tabs: Odds (home), Days, You. The full odds list and the journal open from them.
+    private HomeTab home;
     private TodayTab today;
     private OddsTab odds;
     private JournalTab journal;
-    private SettingsTab settings;
     private AccountTab accountTab;
-    private View navToday, navOdds, navJournal, navAccount, navSettings;
+    private View navToday, navOdds, navAccount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,24 +34,24 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         if (savedInstanceState == null) launchSequence();
         ViewGroup tabs = findViewById(R.id.tabs);
+        home = new HomeTab(this, tabs);
         today = new TodayTab(this, tabs);
         odds = new OddsTab(this, tabs);
         journal = new JournalTab(this, tabs);
         accountTab = new AccountTab(this, tabs);
-        settings = new SettingsTab(this, tabs);
+        odds.onResult = home::show;
 
         navToday = findViewById(R.id.nav_today);
         navOdds = findViewById(R.id.nav_odds);
-        navJournal = findViewById(R.id.nav_journal);
         navAccount = findViewById(R.id.nav_account);
-        navSettings = findViewById(R.id.nav_settings);
-        navAccount.setOnClickListener(v -> select(accountTab.view(), navAccount));
+        navOdds.setOnClickListener(v -> select(home.view(), navOdds));
         navToday.setOnClickListener(v -> select(today.view(), navToday));
-        navOdds.setOnClickListener(v -> select(odds.view(), navOdds));
-        navJournal.setOnClickListener(v -> select(journal.view(), navJournal));
-        navSettings.setOnClickListener(v -> select(settings.view(), navSettings));
-        select(today.view(), navToday);
+        navAccount.setOnClickListener(v -> select(accountTab.view(), navAccount));
+        odds.view().findViewById(R.id.odds_back).setOnClickListener(v -> select(home.view(), navOdds));
+        journal.view().findViewById(R.id.journal_back).setOnClickListener(v -> select(today.view(), navToday));
+        select(home.view(), navOdds);
         handleConnect(getIntent());
+        if (savedInstanceState == null && IntroActivity.needed(this)) startActivity(new Intent(this, IntroActivity.class));
 
         // The tab bar makes way for the keyboard, so a form gets the whole screen while typing.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -110,10 +109,10 @@ public class MainActivity extends Activity {
 
     private void select(View tab, View navItem) {
         boolean changed = tab.getVisibility() != View.VISIBLE;
-        for (View v : new View[]{today.view(), odds.view(), journal.view(), accountTab.view(), settings.view()}) {
+        for (View v : new View[]{home.view(), today.view(), odds.view(), journal.view(), accountTab.view()}) {
             if (v != tab) v.setVisibility(View.GONE);
         }
-        for (View v : new View[]{navToday, navOdds, navJournal, navAccount, navSettings}) setNavSelected(v, false);
+        for (View v : new View[]{navToday, navOdds, navAccount}) setNavSelected(v, false);
         tab.setVisibility(View.VISIBLE);
         setNavSelected(navItem, true);
         today.setLive(tab == today.view() && resumed);
@@ -193,12 +192,28 @@ public class MainActivity extends Activity {
     }
 
     void showOdds() {
+        select(home.view(), navOdds);
+    }
+
+    /** Every forecast, routines and the track record: opened from the home page. */
+    void showAllOdds() {
         select(odds.view(), navOdds);
     }
 
     void showJournal(LocalDate day) {
         journal.show(day);
-        select(journal.view(), navJournal);
+        select(journal.view(), navToday);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (odds.view().getVisibility() == View.VISIBLE) {
+            select(home.view(), navOdds);
+        } else if (journal.view().getVisibility() == View.VISIBLE) {
+            select(today.view(), navToday);
+        } else {
+            super.onBackPressed();
+        }
     }
 
     void setPrivate(boolean on) {
@@ -252,13 +267,12 @@ public class MainActivity extends Activity {
 
     void refresh() {
         boolean granted = hasUsageAccess();
+        odds.refresh(); // works out tomorrow's odds once, for the home and the full list
         today.refresh(granted);
         // The hidden tabs can wait for the first frame; the visible one cannot.
         findViewById(R.id.tabs).post(() -> {
-            odds.refresh();
             journal.refresh();
             accountTab.refresh();
-            settings.refresh(granted);
         });
     }
 
@@ -288,14 +302,6 @@ public class MainActivity extends Activity {
         return mode == AppOpsManager.MODE_ALLOWED;
     }
 
-    void startExport() {
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
-                .addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("application/octet-stream")
-                .putExtra(Intent.EXTRA_TITLE, "planj-phone-" + LocalDate.now() + ".jsonl");
-        startActivityForResult(intent, REQ_EXPORT);
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -303,23 +309,7 @@ public class MainActivity extends Activity {
         if (requestCode == AccountTab.REQ_AVATAR) {
             if (!Avatar.save(this, data.getData())) toast("Could not read that image");
             refresh();
-            return;
         }
-        if (requestCode != REQ_EXPORT) return;
-        Uri uri = data.getData();
-        new Thread(() -> {
-            try {
-                UsageCollector.collect(this);
-                try (OutputStream out = getContentResolver().openOutputStream(uri, "w")) {
-                    UsageCollector.export(this, out);
-                    TarcStore.export(this, out); // what planj read from TAR UMT, if connected
-                }
-                toast("Exported");
-            } catch (Exception e) {
-                toast("Export failed: " + e.getMessage());
-            }
-            runOnUiThread(this::refresh);
-        }).start();
     }
 
     void toast(String msg) {

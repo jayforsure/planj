@@ -10,7 +10,7 @@
 
         <TextView
             style="@style/PageTitle"
-            android:text="Account" />
+            android:text="You" />
 
         <!-- Signed out -->
         <LinearLayout
@@ -39,13 +39,6 @@
                 android:layout_height="wrap_content"
                 app:rowIcon="@drawable/ic_mail"
                 app:rowTitle="Sign in" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_how"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_shield"
-                app:rowTitle="How privacy works" />
 
             <!-- Older code-paired phones -->
             <com.planj.phone.ListRow
@@ -137,65 +130,50 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <TextView
-                style="@style/Auth.Section"
-                android:text="Your account" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_sync"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_sync"
-                app:rowTitle="Sync" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_devices"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_devices"
-                app:rowTitle="Devices" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_export"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_export"
-                app:rowTitle="Export my data" />
-
-            <TextView
-                style="@style/Auth.Section"
-                android:text="Security" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_password"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_lock"
-                app:rowTitle="Change password" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_recovery"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowIcon="@drawable/ic_key"
-                app:rowTitle="Recovery code" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_signout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:rowChevron="false"
-                app:rowIcon="@drawable/ic_back"
-                app:rowTitle="Sign out on this phone" />
-
-            <com.planj.phone.ListRow
-                android:id="@+id/row_delete"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:rowIcon="@drawable/ic_trash"
-                app:rowTint="@color/bad"
-                app:rowTitle="Delete account" />
         </LinearLayout>
+
+        <!-- Everything else, four rows; each opens its own page -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="20dp" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_connectors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_sync"
+            app:rowTitle="Connectors" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_privacy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_shield"
+            app:rowTitle="Privacy" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_manage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_account"
+            app:rowTitle="Account and devices" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_reminders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_bell"
+            app:rowTitle="Reminders" />
+
+        <TextView
+            android:id="@+id/version"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/btn_text"
+            android:gravity="center"
+            android:paddingVertical="10dp"
+            android:textColor="@color/idle"
+            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

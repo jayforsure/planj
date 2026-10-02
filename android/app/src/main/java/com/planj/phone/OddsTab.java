@@ -33,12 +33,15 @@ final class OddsTab {
         return root;
     }
 
-    private static final class Result {
+    static final class Result {
         TreeMap<LocalDate, OddsEngine.Day> hist;
         List<OddsEngine.Forecast> forecasts;
         Map<String, OddsEngine.Record> live, back;
         List<Agenda.Event> tomorrow;
     }
+
+    /** Also told whenever fresh odds are worked out: the home page shows the headline ones. */
+    java.util.function.Consumer<Result> onResult;
 
     private boolean running, again; // main thread only
 
@@ -64,6 +67,7 @@ final class OddsTab {
             r.tomorrow.sort((x, y) -> Long.compare(x.startMs, y.startMs));
             a.runOnUiThread(() -> {
                 render(r);
+                if (onResult != null) onResult.accept(r);
                 running = false;
                 if (again) {
                     again = false;

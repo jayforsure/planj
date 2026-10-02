@@ -50,6 +50,9 @@
         <activity android:name=".PcAppActivity" android:exported="false" />
         <activity android:name=".ConnectorsActivity" android:exported="false" />
         <activity android:name=".ConnectorActivity" android:exported="false" />
+        <activity android:name=".PrivacyActivity" android:exported="false" />
+        <activity android:name=".AccountManageActivity" android:exported="false" />
+        <activity android:name=".IntroActivity" android:exported="false" />
         <activity android:name=".TarcActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".PlacePickerActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
         <activity android:name=".DayDetailActivity" android:exported="false" />

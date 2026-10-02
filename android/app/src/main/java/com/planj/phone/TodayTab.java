@@ -9,7 +9,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -111,9 +110,7 @@ final class TodayTab {
     void refresh(boolean granted) {
         boolean isToday = shown.equals(LocalDate.now());
         headerDate.setText(shown.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)));
-        int hour = LocalTime.now().getHour();
-        greeting.setText(!isToday ? Fmt.shortDate(shown)
-                : hour < 5 ? "Still up?" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+        greeting.setText(isToday ? "Today" : Fmt.shortDate(shown)); // what happened; the odds live on the home page
         appsTitle.setText(DeviceNames.phone(a));
         showPhoneNow();
         showUpcoming(isToday);

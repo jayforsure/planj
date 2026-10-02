@@ -1,6 +1,7 @@
 package com.planj.phone;
 
 import android.content.Intent;
+import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -8,17 +9,21 @@ import android.widget.TextView;
 
 import org.json.JSONObject;
 
-/** The Account tab: a welcome hero when signed out, a Wise-style profile when signed in. */
+/**
+ * You: your profile (or a welcome when signed out), then four rows, each its own page:
+ * connectors, privacy, account and devices, reminders.
+ */
 final class AccountTab {
     static final int REQ_AVATAR = 7;
 
     private final MainActivity a;
     private final View root;
     private final View signedOut, profile;
-    private final ListRow rowSync, rowDevices, rowRecovery, rowLegacy;
-    private final TextView displayName, email, avatarInitial;
+    private final ListRow rowLegacy, rowConnectors, rowPrivacy, rowManage, rowReminders;
+    private final TextView displayName, email, avatarInitial, version;
     private final ImageView avatarPhoto;
     private String cachedInfoFor;
+    private int devices;
 
     AccountTab(MainActivity a, ViewGroup container) {
         this.a = a;
@@ -26,18 +31,19 @@ final class AccountTab {
         container.addView(root);
         signedOut = root.findViewById(R.id.card_signedout);
         profile = root.findViewById(R.id.card_profile);
-        rowSync = root.findViewById(R.id.row_sync);
-        rowDevices = root.findViewById(R.id.row_devices);
-        rowRecovery = root.findViewById(R.id.row_recovery);
         rowLegacy = root.findViewById(R.id.row_legacy);
+        rowConnectors = root.findViewById(R.id.row_connectors);
+        rowPrivacy = root.findViewById(R.id.row_privacy);
+        rowManage = root.findViewById(R.id.row_manage);
+        rowReminders = root.findViewById(R.id.row_reminders);
         displayName = root.findViewById(R.id.display_name);
         email = root.findViewById(R.id.email);
         avatarInitial = root.findViewById(R.id.avatar_initial);
         avatarPhoto = root.findViewById(R.id.avatar_photo);
+        version = root.findViewById(R.id.version);
 
         root.findViewById(R.id.hero_welcome).setOnClickListener(v -> open("create"));
         root.findViewById(R.id.row_signin).setOnClickListener(v -> open("signin"));
-        root.findViewById(R.id.row_how).setOnClickListener(v -> open("privacy"));
         rowLegacy.setOnClickListener(v -> {
             RelaySync.signOut(a);
             a.toast("The older key is gone — create an account to sync again");
@@ -49,25 +55,19 @@ final class AccountTab {
         root.findViewById(R.id.avatar_camera).setOnClickListener(pick);
         avatarPhoto.setOnClickListener(pick);
         avatarInitial.setOnClickListener(pick);
-        displayName.setOnClickListener(v -> askName());
+        displayName.setOnClickListener(v -> open("name"));
 
-        rowSync.setOnClickListener(v -> a.syncInBackground());
-        rowDevices.setOnClickListener(v -> open("devices"));
-        root.findViewById(R.id.row_export).setOnClickListener(v -> a.startExport());
-        root.findViewById(R.id.row_password).setOnClickListener(v -> open("password"));
-        rowRecovery.setOnClickListener(v -> open("newrecovery"));
-        root.findViewById(R.id.row_delete).setOnClickListener(v -> open("delete"));
-        root.findViewById(R.id.row_signout).setOnClickListener(v -> Sheet.confirm(a, R.drawable.ic_account, "Sign out on this phone?",
-                "Recorded data stays here. Syncing stops until you sign in again.", "Sign out", true, () -> {
-                    String token = AccountStore.token(a);
-                    AccountStore.signOut(a);
-                    new Thread(() -> { try { AccountApi.logout(token); } catch (Exception ignored) {} }).start();
-                    a.refresh();
-                }));
-    }
-
-    private void askName() {
-        open("name");
+        rowConnectors.setOnClickListener(v -> a.startActivity(new Intent(a, ConnectorsActivity.class)));
+        rowPrivacy.setOnClickListener(v -> a.startActivity(new Intent(a, PrivacyActivity.class)));
+        rowManage.setOnClickListener(v -> a.startActivity(new Intent(a, AccountManageActivity.class)));
+        rowReminders.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())));
+        version.setOnClickListener(v -> a.startActivity(new Intent(a, IntroActivity.class)));
+        try {
+            version.setText("planj " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName + " · how planj works");
+        } catch (Exception e) {
+            version.setText("How planj works");
+        }
     }
 
     private void open(String screen) {
@@ -79,9 +79,15 @@ final class AccountTab {
     }
 
     void refresh() {
+        int on = Connectors.connected(a).size();
+        rowConnectors.setSubtitle(on == 0 ? "Nothing connected yet" : on + " connected");
+        rowPrivacy.setSubtitle(PrivateMode.isOn(a) ? "Private mode on since " + Fmt.clock(PrivateMode.since(a)) : "Private mode off");
+        rowReminders.setSubtitle(MoodReminder.enabled(a) ? "Evening check-in at 21:30" : "Off");
+
         boolean in = AccountStore.signedIn(a);
         signedOut.setVisibility(in ? View.GONE : View.VISIBLE);
         profile.setVisibility(in ? View.VISIBLE : View.GONE);
+        rowManage.setVisibility(in ? View.VISIBLE : View.GONE);
         if (!in) {
             rowLegacy.setVisibility(RelaySync.pairedCode(a) != null ? View.VISIBLE : View.GONE);
             cachedInfoFor = null;
@@ -91,33 +97,30 @@ final class AccountTab {
         email.setText(e);
         displayName.setText(Avatar.name(a));
         Avatar.show(a, avatarPhoto, avatarInitial);
-        rowRecovery.setSubtitle(AccountStore.hasRecovery(a) ? "On file · tap for a new one" : "None yet · tap to create one");
-
-        long synced = RelaySync.lastSyncMs(a);
-        long confirmed = RelaySync.confirmedMs(a);
-        String error = RelaySync.lastError(a);
-        String pc = error != null ? "PC retrying" : confirmed > 0 ? "PC confirmed " + Fmt.clock(confirmed)
-                : RelaySync.confirmationOverdue(a) ? "PC not answering — signed in there?" : "waiting for the PC";
-        rowSync.setSubtitle((synced == 0 ? "Not synced yet" : "Phone synced " + Fmt.clock(synced)) + " · " + pc);
-
+        manageSubtitle();
         if (!e.equals(cachedInfoFor)) {
             String token = AccountStore.token(a);
             new Thread(() -> {
                 try {
                     JSONObject me = AccountApi.me(token);
                     int n = me.getJSONArray("devices").length();
+                    DeviceNames.save(a, me.getJSONArray("devices"));
                     a.runOnUiThread(() -> {
                         cachedInfoFor = e;
-                        rowDevices.setSubtitle(n == 1 ? "Just this phone" : n + " signed in");
+                        devices = n;
                         AccountStore.setHasRecovery(a, me.optBoolean("has_recovery"));
-                        rowRecovery.setSubtitle(me.optBoolean("has_recovery") ? "On file · tap for a new one" : "None yet · tap to create one");
+                        manageSubtitle();
                     });
-                } catch (AccountApi.Refused r) {
-                    if (r.status == 401) a.runOnUiThread(() -> rowDevices.setSubtitle("Session ended — sign in again"));
                 } catch (Exception ignored) {
                     // offline: the cached state stays
                 }
             }).start();
         }
+    }
+
+    private void manageSubtitle() {
+        long synced = RelaySync.lastSyncMs(a);
+        String sync = RelaySync.lastError(a) != null ? "Sync retrying" : synced == 0 ? "Not synced yet" : "Synced " + Fmt.clock(synced);
+        rowManage.setSubtitle(sync + (devices > 0 ? " · " + devices + (devices == 1 ? " device" : " devices") : ""));
     }
 }
