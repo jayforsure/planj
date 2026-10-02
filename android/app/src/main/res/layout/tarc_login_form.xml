@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The login form on the TAR UMT "Refresh automatically" page, styled like planj's own sign-in. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/error"
+        style="@style/Auth.Error" />
+
+    <TextView
+        style="@style/Auth.Label"
+        android:text="Login ID" />
+
+    <EditText
+        android:id="@+id/tarc_id"
+        style="@style/Auth.Field"
+        android:hint="As on TAR UMT's sign-in page"
+        android:imeOptions="actionNext"
+        android:inputType="text|textNoSuggestions"
+        android:maxLength="20" />
+
+    <TextView
+        style="@style/Auth.Label"
+        android:text="Password" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <EditText
+            android:id="@+id/tarc_pw"
+            style="@style/Auth.Field"
+            android:layout_marginTop="0dp"
+            android:hint="Your TAR UMT password"
+            android:imeOptions="actionDone"
+            android:inputType="textPassword"
+            android:paddingEnd="52dp" />
+
+        <ImageButton
+            android:id="@+id/tarc_pw_eye"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/btn_text"
+            android:contentDescription="Show password"
+            android:src="@drawable/ic_eye"
+            android:tint="@color/muted" />
+    </FrameLayout>
+</LinearLayout>

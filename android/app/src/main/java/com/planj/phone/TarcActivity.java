@@ -241,29 +241,22 @@ public class TarcActivity extends Activity {
         blurb("planj signs in to TAR UMT by itself twice a day, reads your pages, and tells you when "
                 + "something changes: results, exams, your timetable or a new deadline.");
         section("Your login");
-        TextView err = text(error == null ? "" : error, R.color.bad, 14);
+        View form = getLayoutInflater().inflate(R.layout.tarc_login_form, stage, false);
+        stage.addView(form);
+        TextView err = form.findViewById(R.id.error);
+        err.setText(error == null ? "" : error);
         err.setVisibility(error == null ? View.GONE : View.VISIBLE);
-        TextView idLabel = new TextView(this, null, 0, R.style.Auth_Label);
-        idLabel.setText("Login ID");
-        stage.addView(idLabel);
-        android.widget.EditText idField = new android.widget.EditText(this, null, 0, R.style.Auth_Field);
-        idField.setHint("As on TAR UMT's sign-in page");
-        idField.setSingleLine(true);
-        idField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        android.widget.EditText idField = form.findViewById(R.id.tarc_id), pwField = form.findViewById(R.id.tarc_pw);
         if (id != null) idField.setText(id);
-        LinearLayout.LayoutParams fl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        fl.topMargin = dp(6);
-        stage.addView(idField, fl);
-        TextView pwLabel = new TextView(this, null, 0, R.style.Auth_Label);
-        pwLabel.setText("Password");
-        stage.addView(pwLabel);
-        android.widget.EditText pwField = new android.widget.EditText(this, null, 0, R.style.Auth_Field);
-        pwField.setHint("Your TAR UMT password");
-        pwField.setSingleLine(true);
-        pwField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pl.topMargin = dp(6);
-        stage.addView(pwField, pl);
+        android.widget.ImageButton eye = form.findViewById(R.id.tarc_pw_eye);
+        eye.setOnClickListener(v -> {
+            boolean hidden = pwField.getTransformationMethod() instanceof android.text.method.PasswordTransformationMethod;
+            int at = pwField.getSelectionEnd();
+            pwField.setTransformationMethod(hidden ? android.text.method.HideReturnsTransformationMethod.getInstance()
+                    : android.text.method.PasswordTransformationMethod.getInstance());
+            pwField.setSelection(Math.max(0, at));
+            eye.setImageResource(hidden ? R.drawable.ic_eye_off : R.drawable.ic_eye);
+        });
         section("How it is kept");
         row(R.drawable.ic_lock, "Encrypted on this phone", "With a key locked inside this phone. Never synced, never in exports");
         row(R.drawable.ic_shield, "Only sent to TAR UMT", "Typed into TAR UMT's own sign-in page, nowhere else");
