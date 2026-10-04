@@ -39,8 +39,9 @@ public class IntroActivity extends Activity {
         if (step == 0) {
             page.icon(getDrawable(R.mipmap.ic_launcher), 0);
             page.title("Know your odds");
-            page.blurb("planj learns your days from what you already do, then tells you the odds of tomorrow.");
+            page.blurb("planj learns your days from what you already do, then tells you your chances tomorrow, and how to change them.");
             page.row(R.drawable.ic_phone, "Nothing to type", "It learns from your phone, and your PC or places if you add them");
+            page.row(R.drawable.ic_moon, "Tonight's move", "The one thing tonight that changes tomorrow most, from your own nights");
             page.row(R.drawable.ic_target, "Checked every morning", "Every forecast is scored against what really happened");
             page.row(R.drawable.ic_lock, "Private", "Your data stays on your devices, encrypted between them");
             page.primary("Get started", () -> next(1));
@@ -67,7 +68,10 @@ public class IntroActivity extends Activity {
                 ListRow r = page.link(c.glyph, c.name(this), c.connected(this) ? c.status(this) : ConnectorOdds.summary(c.id), () -> c.open(this));
                 Connectors.fillRow(this, r, c, c.connected(this) ? c.status(this) : ConnectorOdds.summary(c.id));
             }
-            page.primary("Done", this::done);
+            page.primary("Next: your goals", () -> {
+                done();
+                startActivity(new Intent(this, GoalsActivity.class));
+            });
         }
     }
 

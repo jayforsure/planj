@@ -19,8 +19,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Home: tomorrow. The most telling odds as a ring, quick things to do, the rest of tomorrow's
- * odds to swipe through, and planj's record as dots. Each odds opens its own page.
+ * Home: tomorrow, for your goals. The goal tonight can change most as a ring, the move that
+ * changes it, quick things to do, your other goals to swipe through, and planj's record as dots.
+ * Each goal opens its own page.
  */
 final class HomeTab {
     private final MainActivity a;
@@ -66,37 +67,132 @@ final class HomeTab {
             actions();
             return;
         }
-        if (r.forecasts.isEmpty()) {
-            learning(Math.min(r.hist.size(), OddsEngine.MIN_HISTORY));
+        List<Goals.Goal> withOdds = new ArrayList<>();
+        for (Goals.Goal g : r.goals) if (r.forecast(g) != null) withOdds.add(g);
+        if (withOdds.isEmpty()) {
+            if (r.goals.isEmpty()) pickGoals();
+            else learning(Math.min(r.hist.size(), OddsEngine.MIN_HISTORY));
             actions();
+            if (!r.goals.isEmpty()) goals(r, r.goals);
             return;
         }
-        List<OddsEngine.Forecast> ranked = top(r.forecasts, r.forecasts.size());
-        hero(ranked.get(0));
+        Goals.Goal lead = lead(r, withOdds);
+        hero(r, lead);
+        tonight(r, lead);
         actions();
-        if (ranked.size() > 1) more(ranked.subList(1, ranked.size()));
+        List<Goals.Goal> rest = new ArrayList<>(r.goals);
+        rest.remove(lead);
+        if (!rest.isEmpty()) goals(r, rest);
         record();
     }
 
-    /** The headline: the one odds that says most about tomorrow. */
-    private void hero(OddsEngine.Forecast fc) {
+    /** The goal tonight can change most; without any moves yet, the one furthest from usual. */
+    private static Goals.Goal lead(OddsTab.Result r, List<Goals.Goal> withOdds) {
+        Goals.Goal best = null;
+        double bestScore = -1;
+        for (Goals.Goal g : withOdds) {
+            OddsEngine.Move m = r.moves.get(g.id);
+            OddsEngine.Forecast fc = r.forecast(g);
+            double score = m != null ? 1 + m.with() - m.without() : Math.abs(g.chance(fc) - g.usual(fc));
+            if (score > bestScore) {
+                bestScore = score;
+                best = g;
+            }
+        }
+        return best;
+    }
+
+    /** The headline: your chance of one goal, said so the words and the number agree. */
+    private void hero(OddsTab.Result r, Goals.Goal g) {
+        OddsEngine.Forecast fc = r.forecast(g);
+        double chance = g.chance(fc);
         LinearLayout c = card();
         c.setGravity(Gravity.CENTER_HORIZONTAL);
         OddsRing ring = new OddsRing(a);
-        ring.setPercent((int) Math.round(fc.prob * 100));
+        ring.setPercent((int) Math.round(chance * 100));
         c.addView(ring, new LinearLayout.LayoutParams(dp(168), dp(168)));
-        TextView s = words(OddsWords.sentence(a, fc.outcome.id, fc.outcome.question), R.color.text, 19, 16);
+        TextView s = words(OddsWords.goalSentence(a, g, chance), R.color.text, 19, 16);
         s.setGravity(Gravity.CENTER);
         s.setTypeface(a.getResources().getFont(R.font.display));
         s.setFontVariationSettings("'wght' 700, 'opsz' 40, 'wdth' 100");
         c.addView(s);
-        TextView why = words(OddsWords.why(fc), R.color.muted, 13, 12);
+        TextView why = words(OddsWords.goalWhy(g, fc), R.color.muted, 13, 12);
         why.setBackgroundResource(R.drawable.chip_soft);
         why.setPadding(dp(12), dp(7), dp(12), dp(7));
         LinearLayout.LayoutParams wl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         wl.topMargin = dp(12);
         c.addView(why, wl);
-        c.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
+        c.setOnClickListener(v -> OddsDetailActivity.open(a, g.outcomeId));
+    }
+
+    /**
+     * Tonight: the one thing to do, and what it has meant for your goals on nights like it. The
+     * lead goal's move first; every goal it helps is listed under it.
+     */
+    private void tonight(OddsTab.Result r, Goals.Goal lead) {
+        String moveId = null;
+        Goals.Goal opens = lead;
+        if (r.moves.containsKey(lead.id)) {
+            moveId = r.moves.get(lead.id).id;
+        } else {
+            double best = 0;
+            for (Goals.Goal g : r.goals) {
+                OddsEngine.Move m = r.moves.get(g.id);
+                if (m != null && m.with() - m.without() > best) {
+                    best = m.with() - m.without();
+                    moveId = m.id;
+                    opens = g;
+                }
+            }
+        }
+        LinearLayout c = card();
+        LinearLayout top = new LinearLayout(a);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView moon = new ImageView(a);
+        moon.setImageResource(R.drawable.ic_moon);
+        moon.setBackgroundResource(R.drawable.icon_circle);
+        moon.setPadding(dp(13), dp(13), dp(13), dp(13));
+        moon.setImageTintList(android.content.res.ColorStateList.valueOf(a.getColor(R.color.accent)));
+        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(dp(48), dp(48));
+        ml.setMarginEnd(dp(14));
+        top.addView(moon, ml);
+        LinearLayout text = new LinearLayout(a);
+        text.setOrientation(LinearLayout.VERTICAL);
+        text.addView(words("Tonight", R.color.muted, 13, 0));
+        TextView what = words(moveId == null ? "Learning what your nights change" : OddsWords.move(moveId), R.color.text, 18, 2);
+        what.setTypeface(a.getResources().getFont(R.font.display));
+        what.setFontVariationSettings("'wght' 700, 'opsz' 40, 'wdth' 100");
+        text.addView(what);
+        top.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        c.addView(top);
+        if (moveId == null) {
+            c.addView(words("Once planj has seen 4 nights each way, it shows the one thing tonight that changes tomorrow most.", R.color.muted, 13, 12));
+            c.setClickable(false);
+            return;
+        }
+        List<Goals.Goal> helped = new ArrayList<>(r.goals);
+        helped.remove(opens);
+        helped.add(0, opens); // the goal it was picked for first
+        for (Goals.Goal g : helped) {
+            OddsEngine.Move m = r.moves.get(g.id);
+            if (m != null && m.id.equals(moveId)) c.addView(words(OddsWords.moveEffect(g, m), R.color.text, 14, 10));
+        }
+        c.addView(words("From your own nights: a pattern, not a promise.", R.color.muted, 12, 10));
+        Goals.Goal target = opens;
+        c.setOnClickListener(v -> OddsDetailActivity.open(a, target.outcomeId));
+    }
+
+    private void pickGoals() {
+        LinearLayout c = card();
+        c.addView(heading("What do you want more of?"));
+        c.addView(words("Pick a goal or two, and planj gives you the odds of each for tomorrow, and what tonight changes.", R.color.muted, 14, 8));
+        Button b = new Button(a, null, 0, R.style.Pill_Primary);
+        b.setText("Pick your goals");
+        b.setOnClickListener(v -> a.startActivity(new Intent(a, GoalsActivity.class)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        lp.topMargin = dp(18);
+        c.addView(b, lp);
     }
 
     /** Things to do, Wise-style: a row of buttons under the headline. */
@@ -151,13 +247,13 @@ final class HomeTab {
         sheet[0] = Sheet.custom(a, "How was today?", "One tap. planj learns how your days feel next to how they went.", row);
     }
 
-    /** Tomorrow's other odds, as cards to swipe through. */
-    private void more(List<OddsEngine.Forecast> rest) {
+    /** Your other goals, as cards to swipe through. */
+    private void goals(OddsTab.Result r, List<Goals.Goal> list) {
         LinearLayout title = new LinearLayout(a);
         title.setOrientation(LinearLayout.HORIZONTAL);
         title.setGravity(Gravity.CENTER_VERTICAL);
         TextView h = new TextView(a, null, 0, R.style.Heading_Dot);
-        h.setText("More for tomorrow");
+        h.setText("Your goals");
         title.addView(h, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView all = new TextView(a, null, 0, R.style.SectionLink);
         all.setText("See all");
@@ -172,21 +268,23 @@ final class HomeTab {
         LinearLayout row = new LinearLayout(a);
         row.setOrientation(LinearLayout.HORIZONTAL);
         scroller.addView(row);
-        for (OddsEngine.Forecast fc : rest) {
+        for (Goals.Goal g : list) {
+            OddsEngine.Forecast fc = r.forecast(g);
             LinearLayout c = new LinearLayout(a);
             c.setOrientation(LinearLayout.VERTICAL);
             c.setBackgroundResource(R.drawable.card_clickable);
             c.setPadding(dp(16), dp(16), dp(16), dp(16));
             OddsRing ring = new OddsRing(a);
-            ring.setPercent((int) Math.round(fc.prob * 100));
+            ring.setPercent(fc == null ? -1 : (int) Math.round(g.chance(fc) * 100));
             c.addView(ring, new LinearLayout.LayoutParams(dp(72), dp(72)));
-            TextView t = words(OddsWords.title(a, fc.outcome.id, fc.outcome.question), R.color.text, 15, 12);
+            TextView t = words(g.name, R.color.text, 15, 12);
             t.setMaxLines(2);
             c.addView(t);
-            TextView w = words(Math.abs(fc.prob - fc.base) < 0.03 ? "As usual" : fc.prob < fc.base ? "Less likely than usual" : "More likely than usual",
-                    R.color.muted, 12, 4);
-            c.addView(w);
-            c.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
+            c.addView(words(fc == null ? OddsTab.waiting(a, r, g) : OddsWords.verdictLine(g.chance(fc)), R.color.muted, 12, 4));
+            c.setOnClickListener(v -> {
+                if (fc != null) OddsDetailActivity.open(a, g.outcomeId);
+                else a.showAllOdds();
+            });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(156), ViewGroup.LayoutParams.MATCH_PARENT);
             lp.setMarginEnd(dp(10));
             row.addView(c, lp);
@@ -242,17 +340,6 @@ final class HomeTab {
         TextView b = words("In a few days planj starts telling you tomorrow's odds, and checks every one the next morning.", R.color.muted, 14, 8);
         b.setGravity(Gravity.CENTER);
         c.addView(b);
-    }
-
-    /** The most telling first: those that differ most from your usual, then the surest. */
-    static List<OddsEngine.Forecast> top(List<OddsEngine.Forecast> all, int k) {
-        List<OddsEngine.Forecast> sorted = new ArrayList<>(all);
-        sorted.sort((x, y) -> {
-            double dx = Math.abs(x.prob - x.base), dy = Math.abs(y.prob - y.base);
-            if (Math.abs(dx - dy) > 0.02) return Double.compare(dy, dx);
-            return Double.compare(Math.abs(y.prob - 0.5), Math.abs(x.prob - 0.5));
-        });
-        return sorted.subList(0, Math.min(k, sorted.size()));
     }
 
     private LinearLayout card() {

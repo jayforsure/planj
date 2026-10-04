@@ -132,10 +132,17 @@
 
         </LinearLayout>
 
-        <!-- Everything else, four rows; each opens its own page -->
+        <!-- Everything else, five rows; each opens its own page -->
         <View
             android:layout_width="match_parent"
             android:layout_height="20dp" />
+
+        <com.planj.phone.ListRow
+            android:id="@+id/row_goals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:rowIcon="@drawable/ic_target"
+            app:rowTitle="Your goals" />
 
         <com.planj.phone.ListRow
             android:id="@+id/row_connectors"

@@ -174,6 +174,13 @@ public final class ListRow extends LinearLayout {
         chevron.setVisibility(shown ? VISIBLE : GONE);
     }
 
+    /** A tick in place of the chevron, for rows switched on or off; its space is kept when off. */
+    public void setChecked(boolean on) {
+        chevron.setImageResource(R.drawable.ic_check);
+        chevron.setImageTintList(android.content.res.ColorStateList.valueOf(getContext().getColor(R.color.accent)));
+        chevron.setVisibility(on ? VISIBLE : INVISIBLE);
+    }
+
     /** Lets a long subtitle wrap instead of running on, for rows that explain themselves. */
     public void setSubtitleLines(int lines) {
         subtitle.setMaxLines(lines);

@@ -36,6 +36,13 @@ final class OddsTab {
         OddsEngine.History hist;
         List<OddsEngine.Forecast> forecasts;
         Map<String, OddsEngine.Record> live;
+        List<Goals.Goal> goals;
+        Map<String, OddsEngine.Move> moves = new java.util.HashMap<>(); // by goal id, only those with one
+
+        OddsEngine.Forecast forecast(Goals.Goal g) {
+            for (OddsEngine.Forecast f : forecasts) if (f.outcome.id.equals(g.outcomeId)) return f;
+            return null;
+        }
     }
 
     /** Also told whenever fresh odds are worked out: the home page shows the headline ones. */
@@ -58,6 +65,11 @@ final class OddsTab {
             r.forecasts = OddsEngine.forecast(r.hist, today);
             if (!r.forecasts.isEmpty()) OddsEngine.record(a, today, r.forecasts);
             r.live = OddsEngine.settle(a, r.hist);
+            r.goals = Goals.chosen(a);
+            for (Goals.Goal g : r.goals) {
+                OddsEngine.Move m = OddsEngine.move(r.hist, g.outcomeId, g.good);
+                if (m != null) r.moves.put(g.id, m);
+            }
             a.runOnUiThread(() -> {
                 render(r);
                 if (onResult != null) onResult.accept(r);
@@ -153,32 +165,51 @@ final class OddsTab {
             list.addView(strip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
-        header("TOMORROW", r.forecasts.size() + " odds");
-        for (OddsEngine.Forecast fc : HomeTab.top(r.forecasts, r.forecasts.size())) list.addView(card(fc));
-        java.util.Set<String> shown = new java.util.HashSet<>();
-        for (OddsEngine.Forecast fc : r.forecasts) shown.add(fc.outcome.id);
-        for (OddsEngine.Outcome o : OddsEngine.OUTCOMES) { // questions still being learned, quietly at the end
-            if (shown.contains(o.id)) continue;
-            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), o.id);
-            if (days >= OddsEngine.MIN_HISTORY) continue; // the same every day so far: nothing to say
-            ListRow row = plainRow(iconFor(o.id), OddsWords.title(a, o.id, o.question), "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " days");
+        header("YOUR GOALS", "Tomorrow");
+        for (Goals.Goal g : r.goals) list.addView(goalRow(r, g));
+        ListRow change = plainRow(R.drawable.ic_target, "Change your goals", "Pick what you want more of");
+        change.setChevron(true);
+        change.setClickable(true);
+        change.setBackgroundResource(R.drawable.btn_text);
+        change.setOnClickListener(v -> a.startActivity(new android.content.Intent(a, GoalsActivity.class)));
+        list.addView(change);
+    }
+
+    /** One goal: your chance of it tomorrow, said plainly, with tonight's move when there is one. */
+    private View goalRow(Result r, Goals.Goal g) {
+        OddsEngine.Forecast fc = r.forecast(g);
+        OddsEngine.Move m = r.moves.get(g.id);
+        if (fc == null) {
+            ListRow row = plainRow(g.icon, g.name, waiting(a, r, g));
             row.setValue("–", true);
-            list.addView(row);
-        }
-        if (!shown.contains(OddsEngine.CLASS) && TarcStore.connected(a)) { // only the evening before a class day
-            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.CLASS);
-            boolean learning = days < OddsEngine.MIN_HISTORY;
-            ListRow row = plainRow(R.drawable.ic_school, "Make your first class", learning
-                    ? "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " class days"
-                    : Boolean.TRUE.equals(TarcTimetable.inSemester(a, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start");
-            row.setValue("–", true);
-            if (!learning) { // its record is still worth a look
-                row.setClickable(true);
+            if (g.id.equals("class") && OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.CLASS) >= OddsEngine.MIN_HISTORY) {
+                row.setClickable(true); // its record is still worth a look
                 row.setBackgroundResource(R.drawable.btn_text);
-                row.setOnClickListener(v -> OddsDetailActivity.open(a, OddsEngine.CLASS));
+                row.setOnClickListener(v -> OddsDetailActivity.open(a, g.outcomeId));
             }
-            list.addView(row);
+            return row;
         }
+        double chance = g.chance(fc);
+        String sub = OddsWords.verdictLine(chance);
+        if (m != null) sub += "\n" + OddsWords.move(m.id) + ": " + OddsWords.inTen(m.with());
+        ListRow row = plainRow(g.icon, g.name, sub);
+        row.setSubtitleLines(2);
+        row.setBigValue(Math.round(chance * 100) + "%", false);
+        row.setClickable(true);
+        row.setBackgroundResource(R.drawable.btn_text);
+        row.setOnClickListener(v -> OddsDetailActivity.open(a, g.outcomeId));
+        return row;
+    }
+
+    /** Why a goal has no odds for tomorrow yet. */
+    static String waiting(android.content.Context ctx, Result r, Goals.Goal g) {
+        if (g.id.equals("class")) {
+            int days = OddsEngine.daysFor(r.hist, LocalDate.now(), OddsEngine.CLASS);
+            if (days < OddsEngine.MIN_HISTORY) return "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " class days";
+            return Boolean.TRUE.equals(TarcTimetable.inSemester(ctx, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start";
+        }
+        int days = OddsEngine.daysFor(r.hist, LocalDate.now(), g.outcomeId);
+        return days < OddsEngine.MIN_HISTORY ? "Learning · " + days + " of " + OddsEngine.MIN_HISTORY + " days" : "The same every day so far";
     }
 
     /** What each question is about, as the icon in its square. */
@@ -241,18 +272,6 @@ final class OddsTab {
         }
         list.addView(line);
     }
-
-    /** One odds as a quiet row: its title, more or less likely than usual, and the number. Opens its page. */
-    private View card(OddsEngine.Forecast fc) {
-        String trend = Math.abs(fc.prob - fc.base) < 0.03 ? "As usual" : fc.prob < fc.base ? "Less likely than usual" : "More likely than usual";
-        ListRow row = plainRow(iconFor(fc.outcome.id), OddsWords.title(a, fc.outcome.id, fc.outcome.question), trend);
-        row.setBigValue(Math.round(fc.prob * 100) + "%", false);
-        row.setClickable(true);
-        row.setBackgroundResource(R.drawable.btn_text);
-        row.setOnClickListener(v -> OddsDetailActivity.open(a, fc.outcome.id));
-        return row;
-    }
-
 
     private int dp(int v) {
         return Math.round(v * density);

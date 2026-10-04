@@ -470,6 +470,97 @@ final class OddsEngine {
         return f;
     }
 
+    // ----- tonight's move -----
+
+    /** Something you can do tonight: a test of a day's night (which belongs to that day) or of the evening before it. */
+    interface Night {
+        Boolean of(Day day, Day evening); // evening is null when that day isn't known
+    }
+
+    static final class MoveDef {
+        final String id;
+        final Night did;
+
+        MoveDef(String id, Night did) {
+            this.id = id;
+            this.did = did;
+        }
+    }
+
+    static final List<MoveDef> MOVES = List.of(
+            new MoveDef("bed_23", (d, e) -> offBy(d, -1)),
+            new MoveDef("bed_00", (d, e) -> offBy(d, 0)),
+            new MoveDef("bed_01", (d, e) -> offBy(d, 1)),
+            new MoveDef("bed_02", (d, e) -> offBy(d, 2)),
+            new MoveDef("full_night", (d, e) -> d.quietH == null ? null : d.quietH >= 7),
+            new MoveDef("no_late_watch", (d, e) -> e == null || e.pc == null ? null : e.pc.lateWatchMin < 15));
+
+    /** Phone down for the night by this hour (-1 is 11pm, 0 midnight, 1 1am). */
+    private static Boolean offBy(Day d, int hour) {
+        if (d.quietStartHour == null) return null;
+        double h = d.quietStartHour >= 12 ? d.quietStartHour - 24 : d.quietStartHour;
+        return h <= hour;
+    }
+
+    /** A move and what followed: the goal reached on k of n days after nights you did it, otherK of otherN after the rest. */
+    static final class Move {
+        final String id;
+        final int k, n, otherK, otherN;
+
+        Move(String id, int k, int n, int otherK, int otherN) {
+            this.id = id;
+            this.k = k;
+            this.n = n;
+            this.otherK = otherK;
+            this.otherN = otherN;
+        }
+
+        double with() {
+            return (k + 1.0) / (n + 2);
+        }
+
+        double without() {
+            return (otherK + 1.0) / (otherN + 2);
+        }
+    }
+
+    /**
+     * What to do tonight for a goal: the move after which you reached it most more often, from
+     * your own days. It needs MIN_SIDE nights each way, must have predicted better than the plain
+     * rate (leaving each day out), and must lift your chance by at least 10 points. Null until one does.
+     */
+    static Move move(History hist, String outcomeId, boolean good) {
+        LocalDate today = LocalDate.now();
+        List<Object[]> days = new ArrayList<>(); // {Day, Day evening, Boolean reached}
+        for (Day d : hist.values()) {
+            if (!d.date.isBefore(today)) continue; // today isn't over
+            Boolean y = resolve(hist, d.date, outcomeId);
+            if (y != null) days.add(new Object[]{d, hist.get(d.date.minusDays(1)), y == good});
+        }
+        Move best = null;
+        double bestGain = 0.10;
+        for (MoveDef m : MOVES) {
+            if (m.id.equals("full_night") && outcomeId.equals("quiet_7h")) continue; // that's the goal itself
+            List<boolean[]> sides = new ArrayList<>();
+            int[][] split = new int[2][2]; // [did][reached, nights]
+            for (Object[] r : days) {
+                Boolean did = m.did.of((Day) r[0], (Day) r[1]);
+                if (did == null) continue;
+                boolean reached = (Boolean) r[2];
+                sides.add(new boolean[]{did, reached});
+                split[did ? 1 : 0][1]++;
+                if (reached) split[did ? 1 : 0][0]++;
+            }
+            if (split[0][1] < MIN_SIDE || split[1][1] < MIN_SIDE || !earnsItsKeep(sides)) continue;
+            Move mv = new Move(m.id, split[1][0], split[1][1], split[0][0], split[0][1]);
+            if (mv.with() - mv.without() > bestGain) {
+                bestGain = mv.with() - mv.without();
+                best = mv;
+            }
+        }
+        return best;
+    }
+
     // ----- your first class, from TAR UMT's attendance -----
 
     /**

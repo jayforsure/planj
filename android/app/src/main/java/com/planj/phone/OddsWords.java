@@ -32,6 +32,74 @@ final class OddsWords {
         }
     }
 
+    // ----- goals: your chance of getting there, said plainly -----
+
+    /** "A full night tonight is unlikely": the goal, then how likely it is, so the two never disagree. */
+    static String goalSentence(Context ctx, Goals.Goal g, double chance) {
+        String v = verdict(chance);
+        return goalPhrase(ctx, g) + (v.startsWith("could") ? " " : " is ") + v;
+    }
+
+    static String goalPhrase(Context ctx, Goals.Goal g) {
+        switch (g.id) {
+            case "sleep": return "A full night tonight";
+            case "scroll": return "Staying under 2h on social tomorrow";
+            case "early": return "Being up by 8 tomorrow";
+            case "study": return "2h+ of focus on your PC tomorrow";
+            case "class": {
+                TarcTimetable.OnDay c = firstClassTomorrow(ctx);
+                return c == null ? "Making your first class" : "Making " + c.course.name + " at " + Routines.clock(c.lesson.startMin) + " tomorrow";
+            }
+            default: return g.name;
+        }
+    }
+
+    static String verdict(double chance) {
+        if (chance >= 0.8) return "very likely";
+        if (chance >= 0.6) return "likely";
+        if (chance > 0.4) return "could go either way";
+        if (chance > 0.2) return "unlikely";
+        return "very unlikely";
+    }
+
+    /** "7 in 10" */
+    static String inTen(double chance) {
+        return Math.max(1, Math.min(9, Math.round(chance * 10))) + " in 10"; // never "10 in 10": nothing here is certain
+    }
+
+    /** "Unlikely", to sit next to the number. */
+    static String verdictLine(double chance) {
+        String v = verdict(chance);
+        return Character.toUpperCase(v.charAt(0)) + v.substring(1);
+    }
+
+    /** Why it's higher or lower than usual for you, or just what's usual. */
+    static String goalWhy(Goals.Goal g, OddsEngine.Forecast fc) {
+        double chance = g.chance(fc), usual = g.usual(fc);
+        String b = "recent".equals(fc.leverId) ? "you made " + fc.sideK + " of your last " + fc.sideN + " class days"
+                : because(fc.leverId, fc.leverSide);
+        if (b == null || Math.abs(chance - usual) < 0.03) return "Usually " + inTen(usual);
+        return (chance < usual ? "Lower" : "Higher") + " than usual, because " + b;
+    }
+
+    /** The thing to do tonight: "Off your phone by 1am". */
+    static String move(String moveId) {
+        switch (moveId) {
+            case "bed_23": return "Off your phone by 11pm";
+            case "bed_00": return "Off your phone by midnight";
+            case "bed_01": return "Off your phone by 1am";
+            case "bed_02": return "Off your phone by 2am";
+            case "full_night": return "A full night, 7h+ phone down";
+            case "no_late_watch": return "No watching on your PC after 11pm";
+            default: return moveId;
+        }
+    }
+
+    /** "A full night: 7 in 10 instead of 3 in 10" */
+    static String moveEffect(Goals.Goal g, OddsEngine.Move m) {
+        return g.name + ": " + inTen(m.with()) + " instead of " + inTen(m.without());
+    }
+
     /** "Off devices by 1am": for small cards and list rows. */
     static String title(Context ctx, String outcomeId, String question) {
         switch (outcomeId) {

@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** One forecast: the odds, why, what moves them, how often planj has been right, and what checks it. */
+/** One goal: your chance of it tomorrow, what tonight changes, how often planj has been right, and what checks it. */
 public class OddsDetailActivity extends Activity {
     private static final String EXTRA = "outcome";
     private PageBuilder page;
@@ -42,27 +42,31 @@ public class OddsDetailActivity extends Activity {
             for (OddsEngine.Forecast f : OddsEngine.forecast(hist, LocalDate.now())) if (f.outcome.id.equals(id)) fc = f;
             List<Object[]> replay = OddsEngine.replay(hist, id);
             List<Object[]> live = OddsEngine.checked(this, id);
+            Goals.Goal g = Goals.forOutcome(id);
+            OddsEngine.Move move = g == null ? null : OddsEngine.move(hist, id, g.good);
             OddsEngine.Forecast found = fc;
             runOnUiThread(() -> {
-                if (!isFinishing()) render(found, replay, live);
+                if (!isFinishing()) render(found, g, move, replay, live);
             });
         }).start();
     }
 
-    private void render(OddsEngine.Forecast fc, List<Object[]> replay, List<Object[]> live) {
+    private void render(OddsEngine.Forecast fc, Goals.Goal g, OddsEngine.Move move, List<Object[]> replay, List<Object[]> live) {
         page.clear();
         String question = fc != null ? fc.outcome.question : id;
+        double chance = fc == null ? -1 : g != null ? g.chance(fc) : fc.prob;
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.VERTICAL);
         head.setGravity(Gravity.CENTER_HORIZONTAL);
         page.stage.addView(head);
         OddsRing ring = new OddsRing(this);
-        ring.setPercent(fc == null ? -1 : (int) Math.round(fc.prob * 100));
+        ring.setPercent(fc == null ? -1 : (int) Math.round(chance * 100));
         LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(page.dp(184), page.dp(184));
         rl.topMargin = page.dp(4);
         head.addView(ring, rl);
         TextView s = new TextView(this);
-        s.setText(OddsWords.sentence(this, id, question));
+        s.setText(g == null ? OddsWords.sentence(this, id, question)
+                : fc == null ? OddsWords.goalPhrase(this, g) : OddsWords.goalSentence(this, g, chance));
         s.setTextColor(getColor(R.color.text));
         s.setTextSize(22);
         s.setGravity(Gravity.CENTER);
@@ -72,7 +76,7 @@ public class OddsDetailActivity extends Activity {
         sl.topMargin = page.dp(18);
         head.addView(s, sl);
         TextView why = new TextView(this);
-        why.setText(fc != null ? OddsWords.why(fc) : id.equals(OddsEngine.CLASS)
+        why.setText(fc != null ? (g != null ? OddsWords.goalWhy(g, fc) : OddsWords.why(fc)) : id.equals(OddsEngine.CLASS)
                 ? (Boolean.TRUE.equals(TarcTimetable.inSemester(this, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start")
                 : "Not forecast for tomorrow yet");
         why.setTextColor(getColor(R.color.muted));
@@ -83,19 +87,16 @@ public class OddsDetailActivity extends Activity {
         wl.topMargin = page.dp(12);
         head.addView(why, wl);
 
-        if (fc != null) {
-            page.section("What moves it");
-            if ("recent".equals(fc.leverId)) { // your last few class days, against all of them
-                bar("Your last " + fc.sideN + " class days", "Made " + fc.sideK + " of " + fc.sideN, true, (int) Math.round(fc.prob * 100));
-                bar("All your class days", "Made " + fc.otherK + " of " + fc.otherN, false, (int) Math.round(fc.base * 100));
-            } else if (fc.leverId != null && fc.otherN > 0) {
-                int here = (int) Math.round(100.0 * (fc.sideK + 1) / (fc.sideN + 2));
-                int there = (int) Math.round(100.0 * (fc.otherK + 1) / (fc.otherN + 2));
-                bar(OddsWords.side(fc.leverId, fc.leverSide), fc.sideK + " of " + fc.sideN + " days like today", true, here);
-                bar(OddsWords.side(fc.leverId, !fc.leverSide), fc.otherK + " of " + fc.otherN + " days like this", false, there);
+        if (g != null) {
+            page.section("Tonight's move");
+            if (move != null) {
+                bar(OddsWords.move(move.id), "Reached on " + move.k + " of " + move.n + " days after nights like that", true,
+                        (int) Math.round(move.with() * 100));
+                bar("Other nights", "Reached on " + move.otherK + " of " + move.otherN + " days", false, (int) Math.round(move.without() * 100));
+                page.note("From your own nights: a pattern, not a promise.");
             } else {
-                page.note("Nothing has moved it yet: it has happened on " + Math.round(fc.base * 100) + "% of your "
-                        + (id.equals(OddsEngine.CLASS) ? "class days" : "days") + ". planj looks for what changes it as your days add up.");
+                page.note("Nothing yet. planj compares the nights you did something with the nights you didn't, "
+                        + "and shows a move once it has seen 4 of each and it really changed " + g.name.toLowerCase(java.util.Locale.ENGLISH) + ".");
             }
         }
 

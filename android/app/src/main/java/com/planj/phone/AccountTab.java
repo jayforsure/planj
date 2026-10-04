@@ -19,7 +19,7 @@ final class AccountTab {
     private final MainActivity a;
     private final View root;
     private final View signedOut, profile;
-    private final ListRow rowLegacy, rowConnectors, rowPrivacy, rowManage, rowReminders;
+    private final ListRow rowLegacy, rowGoals, rowConnectors, rowPrivacy, rowManage, rowReminders;
     private final TextView displayName, email, avatarInitial, version;
     private final ImageView avatarPhoto;
     private String cachedInfoFor;
@@ -32,6 +32,7 @@ final class AccountTab {
         signedOut = root.findViewById(R.id.card_signedout);
         profile = root.findViewById(R.id.card_profile);
         rowLegacy = root.findViewById(R.id.row_legacy);
+        rowGoals = root.findViewById(R.id.row_goals);
         rowConnectors = root.findViewById(R.id.row_connectors);
         rowPrivacy = root.findViewById(R.id.row_privacy);
         rowManage = root.findViewById(R.id.row_manage);
@@ -57,6 +58,7 @@ final class AccountTab {
         avatarInitial.setOnClickListener(pick);
         displayName.setOnClickListener(v -> open("name"));
 
+        rowGoals.setOnClickListener(v -> a.startActivity(new Intent(a, GoalsActivity.class)));
         rowConnectors.setOnClickListener(v -> a.startActivity(new Intent(a, ConnectorsActivity.class)));
         rowPrivacy.setOnClickListener(v -> a.startActivity(new Intent(a, PrivacyActivity.class)));
         rowManage.setOnClickListener(v -> a.startActivity(new Intent(a, AccountManageActivity.class)));
@@ -79,6 +81,9 @@ final class AccountTab {
     }
 
     void refresh() {
+        java.util.List<String> goals = new java.util.ArrayList<>();
+        for (Goals.Goal g : Goals.chosen(a)) goals.add(g.name);
+        rowGoals.setSubtitle(goals.isEmpty() ? "None yet" : String.join(", ", goals));
         int on = Connectors.connected(a).size();
         rowConnectors.setSubtitle(on == 0 ? "Nothing connected yet" : on + " connected");
         rowPrivacy.setSubtitle(PrivateMode.isOn(a) ? "Private mode on since " + Fmt.clock(PrivateMode.since(a)) : "Private mode off");
