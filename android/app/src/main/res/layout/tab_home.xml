@@ -22,7 +22,8 @@
 
                 <TextView
                     style="@style/PageTitle"
-                    android:text="Tomorrow" />
+                    android:id="@+id/home_title"
+                    android:text="Tonight" />
 
                 <TextView
                     android:id="@+id/home_date"

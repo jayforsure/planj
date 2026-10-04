@@ -83,6 +83,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Not exported: tonight's nudge, from planj's own alarm. -->
+        <receiver
+            android:name=".MoveReminder"
+            android:exported="false" />
+
         <!-- Not exported: only the system's own PendingIntents (Wi-Fi, location) reach it. -->
         <receiver
             android:name=".ArrivalWatch"

@@ -15,7 +15,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** One goal: your chance of it tomorrow, what tonight changes, how often planj has been right, and what checks it. */
+/**
+ * One goal: how often you reached it lately, tonight's move with what followed it on your own
+ * days, planj's guess for tomorrow in words, how often those guesses came true, and what checks it.
+ */
 public class OddsDetailActivity extends Activity {
     private static final String EXTRA = "outcome";
     private PageBuilder page;
@@ -44,92 +47,87 @@ public class OddsDetailActivity extends Activity {
             List<Object[]> live = OddsEngine.checked(this, id);
             Goals.Goal g = Goals.forOutcome(id);
             OddsEngine.Move move = g == null ? null : OddsEngine.move(hist, id, g.good);
+            List<Boolean> lately = g == null ? new ArrayList<>() : OddsEngine.lastDays(hist, id, g.good, 7);
+            OddsTab.Result r = new OddsTab.Result();
+            r.hist = hist;
+            String waiting = g == null ? "" : OddsTab.waiting(this, r, g);
             OddsEngine.Forecast found = fc;
             runOnUiThread(() -> {
-                if (!isFinishing()) render(found, g, move, replay, live);
+                if (!isFinishing() && g != null) render(found, g, move, lately, waiting, replay, live);
+                else if (!isFinishing()) finish(); // every page is a goal's
             });
         }).start();
     }
 
-    private void render(OddsEngine.Forecast fc, Goals.Goal g, OddsEngine.Move move, List<Object[]> replay, List<Object[]> live) {
+    private void render(OddsEngine.Forecast fc, Goals.Goal g, OddsEngine.Move move, List<Boolean> lately, String waiting,
+                        List<Object[]> replay, List<Object[]> live) {
         page.clear();
-        String question = fc != null ? fc.outcome.question : id;
-        double chance = fc == null ? -1 : g != null ? g.chance(fc) : fc.prob;
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.VERTICAL);
         head.setGravity(Gravity.CENTER_HORIZONTAL);
         page.stage.addView(head);
+        int reached = 0;
+        for (boolean b : lately) if (b) reached++;
         OddsRing ring = new OddsRing(this);
-        ring.setPercent(fc == null ? -1 : (int) Math.round(chance * 100));
-        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(page.dp(184), page.dp(184));
+        if (lately.isEmpty()) ring.setPercent(-1);
+        else ring.setCount(reached, lately.size());
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(page.dp(168), page.dp(168));
         rl.topMargin = page.dp(4);
         head.addView(ring, rl);
         TextView s = new TextView(this);
-        s.setText(g == null ? OddsWords.sentence(this, id, question)
-                : fc == null ? OddsWords.goalPhrase(this, g) : OddsWords.goalSentence(this, g, chance));
+        s.setText(g.name);
         s.setTextColor(getColor(R.color.text));
-        s.setTextSize(22);
+        s.setTextSize(24);
         s.setGravity(Gravity.CENTER);
         s.setTypeface(getResources().getFont(R.font.display));
         s.setFontVariationSettings("'wght' 700, 'opsz' 40, 'wdth' 100");
         LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        sl.topMargin = page.dp(18);
+        sl.topMargin = page.dp(16);
         head.addView(s, sl);
-        TextView why = new TextView(this);
-        why.setText(fc != null ? (g != null ? OddsWords.goalWhy(g, fc) : OddsWords.why(fc)) : id.equals(OddsEngine.CLASS)
-                ? (Boolean.TRUE.equals(TarcTimetable.inSemester(this, LocalDate.now().plusDays(1))) ? "No class tomorrow" : "Back when classes start")
-                : "Not forecast for tomorrow yet");
-        why.setTextColor(getColor(R.color.muted));
-        why.setTextSize(13);
-        why.setBackgroundResource(R.drawable.chip_soft);
-        why.setPadding(page.dp(12), page.dp(7), page.dp(12), page.dp(7));
+        TextView chip = new TextView(this);
+        chip.setText(lately.isEmpty() ? g.about : (g.id.equals("class") ? OddsWords.lately(g, lately) : "Reached on " + OddsWords.lately(g, lately)));
+        chip.setTextColor(getColor(R.color.muted));
+        chip.setTextSize(13);
+        chip.setBackgroundResource(R.drawable.chip_soft);
+        chip.setPadding(page.dp(12), page.dp(7), page.dp(12), page.dp(7));
         LinearLayout.LayoutParams wl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        wl.topMargin = page.dp(12);
-        head.addView(why, wl);
+        wl.topMargin = page.dp(10);
+        head.addView(chip, wl);
 
-        if (g != null) {
-            page.section("Tonight's move");
-            if (move != null) {
-                bar(OddsWords.move(move.id), "Reached on " + move.k + " of " + move.n + " days after nights like that", true,
-                        (int) Math.round(move.with() * 100));
-                bar("Other nights", "Reached on " + move.otherK + " of " + move.otherN + " days", false, (int) Math.round(move.without() * 100));
-                page.note("From your own nights: a pattern, not a promise.");
-            } else {
-                page.note("Nothing yet. planj compares the nights you did something with the nights you didn't, "
-                        + "and shows a move once it has seen 4 of each and it really changed " + g.name.toLowerCase(java.util.Locale.ENGLISH) + ".");
-            }
+        page.section("Tonight's move");
+        if (move != null) {
+            bar(OddsWords.move(move.id), move.k + " of " + move.n, "Days you reached it, after nights like that", true, (float) move.k / move.n);
+            bar("Other nights", move.otherK + " of " + move.otherN, "Days you reached it, after the rest", false, (float) move.otherK / move.otherN);
+            page.note("From your own nights: a pattern, not a promise.");
+        } else {
+            page.note("Nothing yet. planj compares nights you did something with nights you didn't, "
+                    + "and shows a move once it has seen 4 of each and it made a real difference.");
+        }
+
+        page.section("Tomorrow");
+        if (fc != null) {
+            page.row(R.drawable.ic_odds, OddsWords.guess(g.chance(fc)), OddsWords.guessWhy(g, fc));
+        } else {
+            page.row(R.drawable.ic_odds, "No guess yet", waiting);
         }
 
         List<Boolean> liveDots = dots(live, 2, 3), replayDots = dots(replay, 1, 2);
-        page.section("planj's record");
-        if (!liveDots.isEmpty()) {
-            dotCard(liveDots, "Checked each morning since planj started forecasting this");
+        boolean liveFirst = liveDots.size() >= 5 || replayDots.isEmpty();
+        List<Boolean> shown = liveFirst ? liveDots : replayDots;
+        if (!shown.isEmpty()) {
+            page.section("planj's record");
+            dotCard(shown, liveFirst ? "How often planj's guess for tomorrow came true"
+                    : "planj's guesses replayed over your past days, and how often they came true");
         }
-        if (!replayDots.isEmpty()) {
-            dotCard(replayDots, id.equals(OddsEngine.CLASS)
-                    ? "Replayed over your class days: what planj would have said, and what TAR UMT marked"
-                    : "Replayed over your past days: what planj would have said, and what happened");
-        }
-        if (liveDots.isEmpty() && replayDots.isEmpty()) page.note("No forecasts checked yet. The first is checked tomorrow morning.");
 
         page.section("How it's checked");
         Connectors.Connector c = Connectors.get(ConnectorOdds.owner(id));
         ListRow r = page.link(c.glyph, c.name(this), c.checkedAgainst, () -> c.open(this));
         Connectors.fillRow(this, r, c, c.checkedAgainst);
-
-        Routines.Routine rt = Routines.Routine.parse(id);
-        if (rt != null) {
-            page.link(R.drawable.ic_edit, "Name this routine", RoutineNames.name(this, rt), () ->
-                    Sheet.input(this, R.drawable.ic_edit, "What is this?", rt.days() + " " + rt.window(), RoutineNames.name(this, rt),
-                            "Gym, class, work…", 30, name -> {
-                                RoutineNames.set(this, rt, name);
-                                load();
-                            }));
-        }
     }
 
-    /** One side of what moves it: a label, its odds, a bar, and how many days it rests on. */
-    private void bar(String label, String caption, boolean today, int percent) {
+    /** One side of a move: a label, a count ("8 of 12"), a bar filled that far, and what it counts. */
+    private void bar(String label, String count, String caption, boolean today, float share) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(0, page.dp(8), 0, page.dp(10));
@@ -142,7 +140,7 @@ public class OddsDetailActivity extends Activity {
         l.setTextSize(15);
         top.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView v = new TextView(this);
-        v.setText(percent + "%");
+        v.setText(count);
         v.setTextColor(getColor(today ? R.color.text : R.color.muted));
         v.setTextSize(17);
         v.setTypeface(getResources().getFont(R.font.display));
@@ -160,7 +158,7 @@ public class OddsDetailActivity extends Activity {
         fill.setBackground(f);
         track.addView(fill, new FrameLayout.LayoutParams(0, page.dp(8)));
         track.addOnLayoutChangeListener((vv, a, b, c, d, e, g, h, i) -> {
-            int w = Math.max(page.dp(8), Math.round((c - a) * percent / 100f));
+            int w = Math.max(page.dp(8), Math.round((c - a) * share));
             if (fill.getLayoutParams().width != w) {
                 fill.getLayoutParams().width = w;
                 fill.requestLayout();

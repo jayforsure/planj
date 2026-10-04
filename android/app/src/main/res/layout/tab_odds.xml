@@ -22,7 +22,7 @@
 
         <TextView
             style="@style/PageTitle"
-            android:text="All odds" />
+            android:text="Your goals" />
 
         <TextView
             android:id="@+id/odds_summary"

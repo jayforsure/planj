@@ -8,12 +8,13 @@ import android.graphics.RectF;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-/** A ring that fills to the odds when it first appears, with the number in the middle. */
+/** A ring that fills when it first appears, with the number in the middle: a percent, or a count like 4/7. */
 final class OddsRing extends View {
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG), arc = new Paint(Paint.ANTI_ALIAS_FLAG), text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF box = new RectF();
     private final float dp;
     private int percent = -1;
+    private String count; // "4/7" in place of the percent
     private float shown;
     private boolean animated;
 
@@ -29,6 +30,12 @@ final class OddsRing extends View {
         text.setTextAlign(Paint.Align.CENTER);
         text.setTypeface(ctx.getResources().getFont(R.font.display));
         text.setFontVariationSettings("'wght' 800, 'opsz' 96, 'wdth' 100");
+    }
+
+    /** k of n, as progress: "4/7" in the middle, the ring filled that far. */
+    void setCount(int k, int n) {
+        count = k + "/" + n;
+        setPercent(n == 0 ? 0 : Math.round(100f * k / n));
     }
 
     /** -1 shows a dash, for odds still being learned. */
@@ -65,7 +72,7 @@ final class OddsRing extends View {
         c.drawArc(box, 0, 360, false, track);
         if (percent >= 0 && shown > 0) c.drawArc(box, -90, 360 * shown / 100f, false, arc);
         text.setTextSize(size * 0.27f);
-        String label = percent < 0 ? "–" : Math.round(animated ? shown : percent) + "%";
+        String label = percent < 0 ? "–" : count != null ? count : Math.round(animated ? shown : percent) + "%";
         Paint.FontMetrics fm = text.getFontMetrics();
         c.drawText(label, getWidth() / 2f, getHeight() / 2f - (fm.ascent + fm.descent) / 2, text);
     }

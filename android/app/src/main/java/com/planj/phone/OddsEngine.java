@@ -561,6 +561,32 @@ final class OddsEngine {
         return best;
     }
 
+    /** Whether you did a move on the night before `day`; null when it can't be told. */
+    static Boolean did(History hist, String moveId, LocalDate day) {
+        Day d = hist.get(day);
+        if (d == null) return null;
+        for (MoveDef m : MOVES) if (m.id.equals(moveId)) return m.did.of(d, hist.get(day.minusDays(1)));
+        return null;
+    }
+
+    /** Whether you reached a goal on each of its last `max` days that can be told, oldest first. */
+    static List<Boolean> lastDays(History hist, String outcomeId, boolean good, int max) {
+        List<Boolean> out = new ArrayList<>();
+        if (outcomeId.equals(CLASS)) { // class days, not calendar days
+            List<TarcAttendance.ClassDay> cs = hist.classes;
+            for (TarcAttendance.ClassDay c : cs.subList(Math.max(0, cs.size() - max), cs.size())) out.add(c.made == good);
+            return out;
+        }
+        LocalDate today = LocalDate.now();
+        boolean byMorning = outcomeId.equals("quiet_7h") || outcomeId.equals("up_by_8"); // today's is already known
+        for (LocalDate d = today.minusDays(max); !d.isAfter(today); d = d.plusDays(1)) {
+            if (d.equals(today) && !byMorning) continue;
+            Boolean y = resolve(hist, d, outcomeId);
+            if (y != null) out.add(y == good);
+        }
+        return new ArrayList<>(out.subList(Math.max(0, out.size() - max), out.size()));
+    }
+
     // ----- your first class, from TAR UMT's attendance -----
 
     /**
